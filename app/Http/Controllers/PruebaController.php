@@ -21,8 +21,11 @@ class PruebaController extends Controller
 
         // 3. Verificar usuario y hash de contraseña
         if ($usuario && Hash::check($request->password, $usuario->password)) {
-            // Si la verificación pasa, redirige a la vista de éxito
-            return redirect()->route('vista.exito', ['id' => $usuario->id]);
+            // Guardamos al usuario en la sesión de Laravel
+            session(['usuario' => $usuario]);
+
+            // Redirigimos sin parámetros de ID en la URL
+            return redirect()->route('dashboard');
         }
 
         // 4. Si la verificación falla, regresa con error a la vista welcome
@@ -31,9 +34,21 @@ class PruebaController extends Controller
         ])->withInput();
     }
 
-    public function mostrarExito($id)
+    public function mostrarExito()
     {
-        $usuario = Prueba::findOrFail($id);
-        return view('exito', compact('usuario'));
+        // Verificar si existe la sesión activa
+        if (!session()->has('usuario')) {
+            return redirect()->route('login');
+        }
+
+        $usuario = session('usuario');
+
+        return view('dashboard', compact('usuario'));
+    }
+
+    public function logout()
+    {
+        session()->forget('usuario');
+        return redirect()->route('login');
     }
 }

@@ -101,6 +101,14 @@
                             >
                                 Entrar a la Consola
                             </button>
+                            <div class="mt-4 text-center">
+                                <a 
+                                    href="{{ route('registro_seleccion') }}" 
+                                    class="text-sm font-medium text-[#0F4280] hover:text-[#0A3160] underline transition-colors duration-200"
+                                >
+                                    ¿Aún no estás registrado? Hazlo aquí
+                                </a>
+                            </div>
                         </form>
                     </div>
 

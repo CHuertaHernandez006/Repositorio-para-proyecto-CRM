@@ -5,6 +5,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CampanasController;
 use App\Http\Controllers\LlamadasController;
+use App\Http\Controllers\RegistroSeleccionController;
+use App\Http\Controllers\RegistroOperadorController; // O el controlador que utilices
+
+// Opción A: Si usas un controlador
+Route::get('/registro-operador', [RegistroOperadorController::class, 'create'])->name('seleccion.registro_operador');
 
 // Ruta de clientes con el nombre que espera app.blade.php ('clientes.index')
 Route::get('/llamadas', [LlamadasController::class, 'index'])->name('llamadas.index');
@@ -26,5 +31,10 @@ Route::post('/login-verificar', [PruebaController::class, 'verificarAcceso'])->n
 // Dashboard limpio utilizando sesión
 Route::get('/dashboard', [PruebaController::class, 'mostrarExito'])->name('dashboard');
 
+
+// Dashboard limpio utilizando sesión
+Route::get('/registro_seleccion', [RegistroSeleccionController::class, 'registroseleccion'])->name('registro_seleccion');
+
 // Cerrar sesión
 Route::post('/logout', [PruebaController::class, 'logout'])->name('logout');
+

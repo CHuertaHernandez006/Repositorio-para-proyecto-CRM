@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Cliente;
 
 class ClienteController extends Controller
 {
@@ -13,7 +14,10 @@ class ClienteController extends Controller
             return redirect()->route('login');
         }
 
-        // 2. Retornar la vista del módulo
-        return view('clientes.index');
+        // 2. Traemos todos los clientes de la base de datos
+        $clientes = Cliente::all();
+
+        // 3. Retornamos la vista, pero ahora pasándole los datos de la BD
+        return view('clientes.index', compact('clientes'));
     }
 }

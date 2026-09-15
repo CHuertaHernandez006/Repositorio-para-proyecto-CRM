@@ -16,6 +16,9 @@ Route::get('/llamadas', [LlamadasController::class, 'index'])->name('llamadas.in
 
 // Ruta de clientes con el nombre que espera app.blade.php ('clientes.index')
 Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
+Route::get('/clientes/crear', [ClienteController::class, 'create'])->name('clientes.create');
+
+Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');
 
 // Ruta de clientes con el nombre que espera app.blade.php ('clientes.index')
 Route::get('/campañas', [CampanasController::class, 'index'])->name('campanas.index');

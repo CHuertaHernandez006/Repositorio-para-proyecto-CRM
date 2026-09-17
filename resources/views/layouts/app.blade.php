@@ -1,11 +1,14 @@
 {{-- resources/views/layouts/app.blade.php --}}
+
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>@yield('title', 'COMICenter - CRM')</title>
 
     <script src="https://unpkg.com/lucide@latest" defer></script>
@@ -19,7 +22,12 @@
             margin: 0;
             background: #0f172a;
             color: #f1f5f9;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                'Segoe UI',
+                Roboto,
+                sans-serif;
         }
 
         .comi-shell,
@@ -35,6 +43,10 @@
             display: flex;
         }
 
+        /* =========================================================
+           SIDEBAR
+        ========================================================== */
+
         .comi-sidebar {
             width: 248px;
             flex-shrink: 0;
@@ -42,11 +54,15 @@
             height: 100dvh;
             position: sticky;
             top: 0;
+
             display: flex;
             flex-direction: column;
+
             padding: 26px 16px 18px;
+
             background: #131e30;
             border-right: 1px solid #2b3a50;
+
             overflow-y: auto;
         }
 
@@ -54,7 +70,9 @@
             display: flex;
             align-items: center;
             gap: 10px;
+
             padding: 0 10px;
+
             color: #f8fafc;
             text-decoration: none;
         }
@@ -62,12 +80,17 @@
         .comi-brand-mark {
             display: grid;
             place-items: center;
+
             width: 38px;
             height: 38px;
+
             border: 1px solid #285569;
             background: #15374a;
+
             border-radius: 11px;
+
             color: #38bdf8;
+
             flex-shrink: 0;
         }
 
@@ -83,41 +106,60 @@
 
         .comi-brand-sub {
             margin: 7px 0 0 58px;
+
             color: #94a3b8;
+
             font-size: 10px;
             letter-spacing: .04em;
         }
 
+        /* =========================================================
+           NAVEGACIÓN
+        ========================================================== */
+
         .comi-nav-label {
             margin: 36px 12px 13px;
+
             color: #91a4bd;
+
             font-size: 10px;
             font-weight: 650;
+
             letter-spacing: .14em;
             text-transform: uppercase;
         }
 
         .comi-nav-list {
             list-style: none;
+
             margin: 0;
             padding: 0;
+
             display: flex;
             flex-direction: column;
+
             gap: 6px;
         }
 
         .comi-nav-link {
             min-height: 46px;
+
             display: flex;
             align-items: center;
+
             gap: 12px;
+
             padding: 12px;
+
             border: 1px solid transparent;
             border-radius: 9px;
+
             color: #b6c8df;
             text-decoration: none;
+
             font-size: 13px;
             font-weight: 500;
+
             transition:
                 background-color .15s,
                 color .15s,
@@ -137,11 +179,16 @@
 
         .comi-nav-link[aria-current="page"]::after {
             content: '';
+
             margin-left: auto;
+
             width: 6px;
             height: 6px;
+
             border-radius: 50%;
+
             background: #38bdf8;
+
             flex-shrink: 0;
         }
 
@@ -156,9 +203,14 @@
 
         .comi-nav-soon {
             margin-left: auto;
+
             font-size: 9px;
             color: #94a3b8;
         }
+
+        /* =========================================================
+           PARTE INFERIOR SIDEBAR
+        ========================================================== */
 
         .comi-sidebar-bottom {
             margin-top: auto;
@@ -167,11 +219,15 @@
 
         .comi-workspace {
             display: flex;
-            gap: 10px;
             align-items: center;
+
+            gap: 10px;
+
             padding: 13px 12px;
+
             border: 1px solid #334155;
             border-radius: 10px;
+
             background: #1a283c;
         }
 
@@ -182,82 +238,123 @@
 
         .comi-workspace strong {
             display: block;
+
             font-size: 12px;
             font-weight: 600;
+
             color: #e2e8f0;
         }
 
         .comi-workspace p {
             margin: 4px 0 0;
+
             color: #a5b4c8;
+
             font-size: 11px;
         }
 
         .comi-sidebar-caption {
             margin: 14px 0 0;
+
             text-align: center;
+
             color: #94a3b8;
+
             font-size: 10px;
         }
+
+        /* =========================================================
+           CONTENEDOR PRINCIPAL
+        ========================================================== */
 
         .comi-main-wrapper {
             display: flex;
             flex-direction: column;
+
             flex: 1;
             min-width: 0;
         }
 
+        /* =========================================================
+           HEADER
+        ========================================================== */
+
         .comi-top-header {
             min-height: 86px;
+
             padding: 18px 30px;
+
             display: flex;
             align-items: center;
             justify-content: space-between;
+
             gap: 20px;
+
             border-bottom: 1px solid #2b3a50;
+
             background: #131e30;
         }
 
         .comi-header-start {
             display: flex;
             align-items: center;
+
             gap: 13px;
+
             min-width: 0;
         }
 
         .comi-header-eyebrow {
             margin: 0 0 5px;
+
             color: #94a3b8;
+
             font-size: 10px;
+
             letter-spacing: .1em;
             text-transform: uppercase;
         }
 
         .comi-header-title {
             margin: 0;
+
             font-size: 17px;
             font-weight: 600;
+
             color: #f1f5f9;
+
             line-height: 1.3;
+
             overflow-wrap: anywhere;
         }
+
+        /* =========================================================
+           USUARIO
+        ========================================================== */
 
         .comi-user-profile {
             display: flex;
             align-items: center;
+
             gap: 11px;
+
             min-width: 0;
         }
 
         .comi-user-avatar {
             display: grid;
             place-items: center;
+
             width: 39px;
             height: 39px;
+
             flex-shrink: 0;
+
             border: 1px solid #31516a;
             border-radius: 11px;
+
             color: #7dd3fc;
+
             background: #17364a;
         }
 
@@ -267,46 +364,117 @@
 
         .comi-user-email {
             max-width: 290px;
+
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+
             color: #e2e8f0;
+
             font-size: 12px;
             font-weight: 600;
         }
 
         .comi-user-role {
             margin: 4px 0 0;
+
             color: #a5b4c8;
+
             font-size: 11px;
         }
 
+        /* =========================================================
+           LOGOUT
+        ========================================================== */
+
+        .comi-logout-form {
+            display: flex;
+            align-items: center;
+
+            margin-left: 8px;
+        }
+
+        .comi-logout-button {
+            display: grid;
+            place-items: center;
+
+            width: 38px;
+            height: 38px;
+
+            border: 1px solid #334155;
+            border-radius: 10px;
+
+            background: #1e293b;
+
+            color: #94a3b8;
+
+            cursor: pointer;
+
+            transition:
+                background-color .15s,
+                border-color .15s,
+                color .15s;
+        }
+
+        .comi-logout-button:hover {
+            background: rgba(239, 68, 68, 0.15);
+
+            border-color: #ef4444;
+
+            color: #f87171;
+        }
+
+        /* =========================================================
+           CONTENIDO
+        ========================================================== */
+
         .comi-content {
             flex: 1;
+
             min-width: 0;
+
             padding: 20px;
         }
 
+        /* =========================================================
+           FOOTER
+        ========================================================== */
+
         .comi-page-footer {
             padding: 16px 30px 20px;
+
             display: flex;
             justify-content: space-between;
+
             gap: 12px;
+
             flex-wrap: wrap;
+
             color: #94a3b8;
+
             font-size: 10px;
         }
+
+        /* =========================================================
+           BOTÓN MENÚ MÓVIL
+        ========================================================== */
 
         .comi-menu-button {
             display: none;
             place-items: center;
+
             width: 42px;
             height: 42px;
+
             flex-shrink: 0;
+
             border: 1px solid #475569;
             border-radius: 9px;
+
             background: #1e293b;
+
             color: #e2e8f0;
+
             cursor: pointer;
         }
 
@@ -315,11 +483,17 @@
             color: #7dd3fc;
         }
 
+        /* =========================================================
+           ICONOS
+        ========================================================== */
+
         .comi-sidebar svg,
         .comi-top-header svg {
             width: 19px;
             height: 19px;
+
             stroke-width: 1.8;
+
             flex-shrink: 0;
         }
 
@@ -329,15 +503,26 @@
             height: 19px;
         }
 
+        /* =========================================================
+           ACCESSIBILITY
+        ========================================================== */
+
         .comi-skip {
             position: fixed;
+
             top: -100px;
             left: 16px;
+
             z-index: 100;
+
             padding: 12px 16px;
+
             background: #0284c7;
+
             color: white;
+
             border-radius: 8px;
+
             text-decoration: none;
         }
 
@@ -349,15 +534,22 @@
             .comi-nav-link,
             .comi-brand,
             .comi-menu-button,
-            .comi-skip
+            .comi-skip,
+            .comi-logout-button
         ):focus-visible {
             outline: 2px solid #38bdf8;
             outline-offset: 3px;
         }
 
+        /* =========================================================
+           RESPONSIVE
+        ========================================================== */
+
         @media (max-width: 1000px) {
+
             .comi-sidebar {
                 width: 220px;
+
                 padding-left: 12px;
                 padding-right: 12px;
             }
@@ -376,15 +568,19 @@
         }
 
         @media (max-width: 760px) {
+
             .comi-shell {
                 flex-direction: column;
             }
 
             .comi-sidebar {
                 position: static;
+
                 width: 100%;
                 height: auto;
+
                 padding: 18px 16px;
+
                 border-right: 0;
                 border-bottom: 1px solid #2b3a50;
             }
@@ -411,8 +607,11 @@
 
             .comi-top-header {
                 min-height: 78px;
+
                 padding: 14px 16px;
+
                 gap: 12px;
+
                 flex-wrap: wrap;
             }
 
@@ -426,6 +625,7 @@
 
             .comi-user-email {
                 max-width: 165px;
+
                 font-size: 11px;
             }
 
@@ -439,7 +639,12 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
+
             .comi-nav-link {
+                transition: none;
+            }
+
+            .comi-logout-button {
                 transition: none;
             }
         }
@@ -454,18 +659,31 @@
 
     $usuarioActual = Auth::user();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Datos del usuario actual
+    |--------------------------------------------------------------------------
+    */
+
     $correoActual =
         $usuarioActual->correo
+        ?? $usuarioActual->email
         ?? data_get(session('usuario'), 'correo')
+        ?? data_get(session('usuario'), 'email')
         ?? 'Usuario';
 
-    $rolActual = (int) ($usuarioActual->id_rol ?? 0);
+    $rolActual = (int) (
+        $usuarioActual->id_rol
+        ?? data_get(session('usuario'), 'id_rol')
+        ?? 0
+    );
 
     $rolEtiqueta = [
         1 => 'Super Admin',
         2 => 'Administrador Cliente',
         3 => 'Operario',
     ][$rolActual] ?? 'Usuario';
+
 
     /*
     |--------------------------------------------------------------------------
@@ -484,10 +702,13 @@
     ] as $prefijo => $etiqueta) {
 
         if (request()->routeIs($prefijo . '.*')) {
+
             $tituloSeccion = $etiqueta;
+
             break;
         }
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -509,6 +730,7 @@
             'patron' => 'dashboard',
             'texto' => 'Dashboard',
             'icono' => 'layout-dashboard',
+
             'visible' => true,
         ],
 
@@ -517,7 +739,9 @@
             'patron' => 'clientes.*',
             'texto' => 'Clientes',
             'icono' => 'users',
-            'visible' => Auth::check()
+
+            'visible' =>
+                Auth::check()
                 && in_array($rolActual, [1, 2], true),
         ],
 
@@ -526,7 +750,9 @@
             'patron' => 'empresas.*',
             'texto' => 'Empresas',
             'icono' => 'building-2',
-            'visible' => Auth::check()
+
+            'visible' =>
+                Auth::check()
                 && $rolActual === 1,
         ],
 
@@ -535,7 +761,9 @@
             'patron' => 'operarios.*',
             'texto' => 'Operarios',
             'icono' => 'user-round',
-            'visible' => Auth::check()
+
+            'visible' =>
+                Auth::check()
                 && in_array($rolActual, [1, 2], true),
         ],
 
@@ -544,6 +772,7 @@
             'patron' => 'campanas.*',
             'texto' => 'Campañas',
             'icono' => 'megaphone',
+
             'visible' => true,
         ],
 
@@ -552,6 +781,7 @@
             'patron' => 'llamadas.*',
             'texto' => 'Llamadas',
             'icono' => 'phone',
+
             'visible' => true,
         ],
 
@@ -559,12 +789,14 @@
 
 @endphp
 
+
 <a
     class="comi-skip"
     href="#contenido-principal"
 >
     Saltar al contenido
 </a>
+
 
 <div
     class="comi-shell"
@@ -590,10 +822,12 @@
         >
 
             <span class="comi-brand-mark">
+
                 <i
                     data-lucide="headset"
                     aria-hidden="true"
                 ></i>
+
             </span>
 
             <span class="comi-brand-name">
@@ -601,6 +835,7 @@
             </span>
 
         </a>
+
 
         <p class="comi-brand-sub">
             Gestión de interacciones y datos
@@ -614,6 +849,7 @@
             <p class="comi-nav-label">
                 Espacio de trabajo
             </p>
+
 
             <ul class="comi-nav-list">
 
@@ -705,6 +941,7 @@
 
             </div>
 
+
             <p class="comi-sidebar-caption">
                 Plataforma COMI
             </p>
@@ -735,6 +972,7 @@
                     type="button"
                     class="comi-menu-button"
                     id="comi-menu-button"
+
                     aria-label="Abrir menú principal"
                     aria-controls="comi-sidebar"
                     aria-expanded="false"
@@ -776,6 +1014,7 @@
 
                 </div>
 
+
                 <div class="comi-user-info">
 
                     <div
@@ -790,6 +1029,37 @@
                     </p>
 
                 </div>
+
+
+                {{-- Cerrar sesión --}}
+
+                @if (Route::has('logout'))
+
+                    <form
+                        action="{{ route('logout') }}"
+                        method="POST"
+                        class="comi-logout-form"
+                    >
+
+                        @csrf
+
+                        <button
+                            type="submit"
+                            class="comi-logout-button"
+                            title="Cerrar sesión"
+                            aria-label="Cerrar sesión"
+                        >
+
+                            <i
+                                data-lucide="log-out"
+                                aria-hidden="true"
+                            ></i>
+
+                        </button>
+
+                    </form>
+
+                @endif
 
             </div>
 
@@ -863,13 +1133,16 @@
                 open
             );
 
+
             toggle.setAttribute(
                 'aria-expanded',
                 String(open)
             );
 
+
             toggle.setAttribute(
                 'aria-label',
+
                 open
                     ? 'Cerrar menú principal'
                     : 'Abrir menú principal'
@@ -889,6 +1162,7 @@
 
         toggle.addEventListener(
             'click',
+
             () => {
 
                 setMenu(
@@ -902,6 +1176,7 @@
 
         document.addEventListener(
             'keydown',
+
             (event) => {
 
                 if (
@@ -922,12 +1197,14 @@
 
         mobile.addEventListener(
             'change',
+
             () => {
 
                 const focusInSidebar =
                     sidebar.contains(
                         document.activeElement
                     );
+
 
                 const focusOnToggle =
                     document.activeElement === toggle;
@@ -963,6 +1240,7 @@
 
         window.addEventListener(
             'DOMContentLoaded',
+
             () => {
 
                 if (window.lucide) {
@@ -977,6 +1255,7 @@
     })();
 
 </script>
+
 
 @stack('scripts')
 

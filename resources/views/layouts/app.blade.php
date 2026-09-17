@@ -43,6 +43,9 @@
         .comi-user-info { min-width: 0; }
         .comi-user-email { max-width: 290px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e2e8f0; font-size: 12px; font-weight: 600; }
         .comi-user-role { margin: 4px 0 0; color: #a5b4c8; font-size: 11px; }
+        .comi-logout-form { display: flex; align-items: center; margin-left: 8px; }
+        .comi-logout-button { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid #334155; border-radius: 10px; background: #1e293b; color: #94a3b8; cursor: pointer; transition: background-color .15s, border-color .15s, color .15s; }
+        .comi-logout-button:hover { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #f87171; }
         .comi-content { flex: 1; min-width: 0; padding: 20px; }
         .comi-page-footer { padding: 16px 30px 20px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: #94a3b8; font-size: 10px; }
         .comi-menu-button { display: none; place-items: center; width: 42px; height: 42px; flex-shrink: 0; border: 1px solid #475569; border-radius: 9px; background: #1e293b; color: #e2e8f0; cursor: pointer; }
@@ -51,7 +54,7 @@
         .comi-sidebar [data-lucide], .comi-top-header [data-lucide] { width: 19px; height: 19px; }
         .comi-skip { position: fixed; top: -100px; left: 16px; z-index: 100; padding: 12px 16px; background: #0284c7; color: white; border-radius: 8px; text-decoration: none; }
         .comi-skip:focus { top: 12px; }
-        :is(.comi-nav-link, .comi-brand, .comi-menu-button, .comi-skip):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+        :is(.comi-nav-link, .comi-brand, .comi-menu-button, .comi-skip, .comi-logout-button):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
         @media (max-width: 1000px) {
             .comi-sidebar { width: 220px; padding-left: 12px; padding-right: 12px; }
             .comi-top-header { padding: 18px 22px; }
@@ -81,7 +84,7 @@
 @php
     $usuarioActual = Auth::user();
     $correoActual = $usuarioActual->correo ?? data_get(session('usuario'), 'correo') ?? 'Usuario';
-    $rolActual = (int) ($usuarioActual->id_rol ?? 0);
+    $rolActual = (int) ($usuarioActual->id_rol ?? data_get(session('usuario'), 'id_rol') ?? 0);
     $rolEtiqueta = [1 => 'Super Admin', 2 => 'Administrador Cliente'][$rolActual] ?? 'Usuario';
     $tituloSeccion = 'Dashboard';
     foreach (['clientes' => 'Clientes', 'empresas' => 'Empresas', 'campanas' => 'Campañas', 'llamadas' => 'Llamadas'] as $prefijo => $etiqueta) {
@@ -91,11 +94,11 @@
         }
     }
     $menuItems = [
-        ['ruta' => 'dashboard', 'patron' => 'dashboard', 'texto' => 'Dashboard', 'icono' => 'layout-dashboard', 'visible' => true],
-        ['ruta' => 'clientes.index', 'patron' => 'clientes.*', 'texto' => 'Clientes', 'icono' => 'users', 'visible' => Auth::check() && in_array($rolActual, [1, 2], true)],
-        ['ruta' => 'empresas.index', 'patron' => 'empresas.*', 'texto' => 'Empresas', 'icono' => 'building-2', 'visible' => Auth::check() && $rolActual === 1],
-        ['ruta' => 'campanas.index', 'patron' => 'campanas.*', 'texto' => 'Campañas', 'icono' => 'megaphone', 'visible' => true],
-        ['ruta' => 'llamadas.index', 'patron' => 'llamadas.*', 'texto' => 'Llamadas', 'icono' => 'phone', 'visible' => true],
+        ['ruta' => 'dashboard', 'patron' => 'dashboard', 'texto' => 'Dashboard', 'icono' => 'layout-dashboard', 'visible' => $rolActual !== 2],
+        ['ruta' => 'clientes.index', 'patron' => 'clientes.*', 'texto' => 'Clientes', 'icono' => 'users', 'visible' => in_array($rolActual, [1, 2], true)],
+        ['ruta' => 'empresas.index', 'patron' => 'empresas.*', 'texto' => 'Empresas', 'icono' => 'building-2', 'visible' => $rolActual === 1],
+        ['ruta' => 'campanas.index', 'patron' => 'campanas.*', 'texto' => 'Campañas', 'icono' => 'megaphone', 'visible' => $rolActual !== 1],
+        ['ruta' => 'llamadas.index', 'patron' => 'llamadas.*', 'texto' => 'Llamadas', 'icono' => 'phone', 'visible' => $rolActual !== 1],
     ];
 @endphp
 <a class="comi-skip" href="#contenido-principal">Saltar al contenido</a>
@@ -157,6 +160,12 @@
                     <div class="comi-user-email" title="{{ $correoActual }}">{{ $correoActual }}</div>
                     <p class="comi-user-role">{{ $rolEtiqueta }}</p>
                 </div>
+                <form action="{{ Route::has('logout') ? route('logout') : '#' }}" method="POST" class="comi-logout-form">
+                    @csrf
+                    <button type="submit" class="comi-logout-button" title="Cerrar sesión" aria-label="Cerrar sesión">
+                        <i data-lucide="log-out" aria-hidden="true"></i>
+                    </button>
+                </form>
             </div>
         </header>
         <main class="comi-content" id="contenido-principal" tabindex="-1">

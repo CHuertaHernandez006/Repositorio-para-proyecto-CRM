@@ -1,4 +1,3 @@
-{{-- resources/views/clientes/create.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'Registrar Cliente - CRM')
@@ -159,7 +158,7 @@
                             <label for="empresa" class="cf-label">Empresa</label>
                             <div class="cf-field">
                                 <i class="bi bi-building" aria-hidden="true"></i>
-                                <input type="text" name="empresa" id="empresa" class="cf-input" value="{{ old('empresa') }}" placeholder="Ej. ACME Corp">
+                                <input type="text" name="empresa" id="empresa" class="cf-input" value="{{ old('empresa') }}" maxlength="150" placeholder="Ej. ACME Corp">
                             </div>
                         </div>
 
@@ -222,15 +221,15 @@
                             <label for="fuente" class="cf-label">Fuente (Origen)</label>
                             <div class="cf-field">
                                 <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                                <input type="text" name="fuente" id="fuente" class="cf-input" placeholder="Ej. Facebook, Referido" value="{{ old('fuente') }}">
+                                <input type="text" name="fuente" id="fuente" class="cf-input" placeholder="Ej. Facebook, Referido" value="{{ old('fuente') }}" maxlength="100">
                             </div>
                         </div>
 
                         <!-- Tipo de Cliente -->
                         <div>
                             <label for="id_tipo_cliente" class="cf-label">Tipo de cliente <span class="cf-required" aria-hidden="true">*</span></label>
-                            <select name="id_tipo_cliente" id_tipo_cliente="id_tipo_cliente" class="cf-input cf-select" required>
-                                <option value="1" {{ old('id_tipo_cliente') == '1' ? 'selected' : '' }}>B2B (Empresa)</option>
+                            <select name="id_tipo_cliente" id="id_tipo_cliente" class="cf-input cf-select" required>
+                                <option value="1" {{ old('id_tipo_cliente', '1') == '1' ? 'selected' : '' }}>B2B (Empresa)</option>
                                 <option value="2" {{ old('id_tipo_cliente') == '2' ? 'selected' : '' }}>B2C (Consumidor final)</option>
                                 <option value="3" {{ old('id_tipo_cliente') == '3' ? 'selected' : '' }}>Socio Comercial</option>
                             </select>
@@ -240,7 +239,7 @@
                         <div>
                             <label for="id_estado_lead" class="cf-label">Estado Lead <span class="cf-required" aria-hidden="true">*</span></label>
                             <select name="id_estado_lead" id="id_estado_lead" class="cf-input cf-select" required>
-                                <option value="1" {{ old('id_estado_lead') == '1' ? 'selected' : '' }}>Nuevo</option>
+                                <option value="1" {{ old('id_estado_lead', '1') == '1' ? 'selected' : '' }}>Nuevo</option>
                                 <option value="2" {{ old('id_estado_lead') == '2' ? 'selected' : '' }}>Contactado</option>
                                 <option value="3" {{ old('id_estado_lead') == '3' ? 'selected' : '' }}>Interesado</option>
                                 <option value="4" {{ old('id_estado_lead') == '4' ? 'selected' : '' }}>Cliente</option>
@@ -272,6 +271,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!selectPais || !selectEstado || !selectCiudad) return;
 
+    const oldPais = @json(old('pais'));
+    const oldEstado = @json(old('estado'));
+    const oldCiudad = @json(old('ciudad'));
+
     // 1. Cargar Paises
     fetch('https://countriesnow.space/api/v0.1/countries')
         .then(response => response.json())
@@ -280,23 +283,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 let option = document.createElement('option');
                 option.value = pais.country;
                 option.textContent = pais.country;
+                if (oldPais && oldPais === pais.country) option.selected = true;
                 selectPais.appendChild(option);
             });
+
+            if (oldPais) {
+                cargarEstados(oldPais, oldEstado, oldCiudad);
+            }
         })
         .catch(() => {});
 
     // 2. Cargar Estados
-    selectPais.addEventListener('change', function() {
+    function cargarEstados(paisNombre, estadoSeleccionado = null, ciudadSeleccionada = null) {
         selectEstado.innerHTML = '<option value="">Cargando estados...</option>';
         selectCiudad.innerHTML = '<option value="">Primero elige un estado</option>';
         selectEstado.disabled = true;
         selectCiudad.disabled = true;
 
-        if (this.value) {
+        if (paisNombre) {
             fetch('https://countriesnow.space/api/v0.1/countries/states', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country: this.value })
+                body: JSON.stringify({ country: paisNombre })
             })
             .then(res => res.json())
             .then(data => {
@@ -305,26 +313,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     let option = document.createElement('option');
                     option.value = estado.name;
                     option.textContent = estado.name;
+                    if (estadoSeleccionado && estadoSeleccionado === estado.name) option.selected = true;
                     selectEstado.appendChild(option);
                 });
                 selectEstado.disabled = false;
+
+                if (estadoSeleccionado) {
+                    cargarCiudades(paisNombre, estadoSeleccionado, ciudadSeleccionada);
+                }
             })
             .catch(() => {
                 selectEstado.innerHTML = '<option value="">Error al cargar estados</option>';
             });
         }
-    });
+    }
 
     // 3. Cargar Ciudades
-    selectEstado.addEventListener('change', function() {
+    function cargarCiudades(paisNombre, estadoNombre, ciudadSeleccionada = null) {
         selectCiudad.innerHTML = '<option value="">Cargando ciudades...</option>';
         selectCiudad.disabled = true;
 
-        if (this.value) {
+        if (estadoNombre) {
             fetch('https://countriesnow.space/api/v0.1/countries/state/cities', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country: selectPais.value, state: this.value })
+                body: JSON.stringify({ country: paisNombre, state: estadoNombre })
             })
             .then(res => res.json())
             .then(data => {
@@ -333,6 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     let option = document.createElement('option');
                     option.value = ciudad;
                     option.textContent = ciudad;
+                    if (ciudadSeleccionada && ciudadSeleccionada === ciudad) option.selected = true;
                     selectCiudad.appendChild(option);
                 });
                 selectCiudad.disabled = false;
@@ -341,6 +355,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectCiudad.innerHTML = '<option value="">Error al cargar ciudades</option>';
             });
         }
+    }
+
+    selectPais.addEventListener('change', function() {
+        cargarEstados(this.value);
+    });
+
+    selectEstado.addEventListener('change', function() {
+        cargarCiudades(selectPais.value, this.value);
     });
 });
 </script>

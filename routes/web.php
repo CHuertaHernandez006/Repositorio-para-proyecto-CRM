@@ -9,7 +9,7 @@ use App\Http\Controllers\LlamadasController;
 use App\Http\Controllers\RegistroSeleccionController;
 use App\Http\Controllers\RegistroOperadorController;
 use App\Http\Controllers\EmpresaController;
-
+use App\Http\Controllers\OperarioController;
 /*
 |--------------------------------------------------------------------------
 | Inicio de sesión
@@ -129,4 +129,31 @@ Route::middleware(['rol:1'])->group(function () {
     Route::get('/empresas/{id_empresa}/editar', [EmpresaController::class, 'edit'])->name('empresas.edit');
     Route::put('/empresas/{id_empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
     Route::delete('/empresas/{id_empresa}', [EmpresaController::class, 'destroy'])->name('empresas.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+
+    Route::get('/operarios', [OperarioController::class, 'index'])
+        ->name('operarios.index');
+
+    Route::get('/operarios/create', [OperarioController::class, 'create'])
+        ->name('operarios.create');
+
+    Route::post('/operarios', [OperarioController::class, 'store'])
+        ->name('operarios.store');
+
+    Route::get('/operarios/{operario}', [OperarioController::class, 'show'])
+        ->name('operarios.show');
+
+    Route::get('/operarios/{operario}/edit', [OperarioController::class, 'edit'])
+        ->name('operarios.edit');
+
+    Route::put('/operarios/{operario}', [OperarioController::class, 'update'])
+        ->name('operarios.update');
+
+    Route::patch('/operarios/{operario}/estado', [OperarioController::class, 'toggleEstado'])
+        ->name('operarios.toggleEstado');
+
+    Route::delete('/operarios/{operario}', [OperarioController::class, 'destroy'])
+        ->name('operarios.destroy');
 });

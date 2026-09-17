@@ -1,43 +1,132 @@
 <?php
 
-use App\Http\Controllers\PruebaController;
 use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CampanasController;
 use App\Http\Controllers\LlamadasController;
 use App\Http\Controllers\RegistroSeleccionController;
-use App\Http\Controllers\RegistroOperadorController; // O el controlador que utilices
+use App\Http\Controllers\RegistroOperadorController;
+use App\Http\Controllers\EmpresaController;
 
-// Opción A: Si usas un controlador
-Route::get('/registro-operador', [RegistroOperadorController::class, 'create'])->name('seleccion.registro_operador');
+/*
+|--------------------------------------------------------------------------
+| Inicio de sesión
+|--------------------------------------------------------------------------
+*/
 
-// Ruta de clientes con el nombre que espera app.blade.php ('clientes.index')
-Route::get('/llamadas', [LlamadasController::class, 'index'])->name('llamadas.index');
-
-// Ruta de clientes con el nombre que espera app.blade.php ('clientes.index')
-Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
-Route::get('/clientes/crear', [ClienteController::class, 'create'])->name('clientes.create');
-
-Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');
-
-// Ruta de clientes con el nombre que espera app.blade.php ('clientes.index')
-Route::get('/campañas', [CampanasController::class, 'index'])->name('campanas.index');
-
-// Mostrar el formulario de login en la raíz
+// Mostrar el formulario de inicio de sesión.
 Route::get('/', function () {
     return view('welcome');
 })->name('login');
 
-// Procesar la verificación del formulario
-Route::post('/login-verificar', [PruebaController::class, 'verificarAcceso'])->name('login.verificar');
+// Verificar las credenciales.
+Route::post('/login-verificar', [
+    AuthController::class, 'verificarAcceso',
+])->name('login.verificar');
 
-// Dashboard limpio utilizando sesión
-Route::get('/dashboard', [PruebaController::class, 'mostrarExito'])->name('dashboard');
+// Cerrar sesión.
+Route::post('/logout', [
+    AuthController::class, 'logout',
+])->name('logout');
 
+/*
+|--------------------------------------------------------------------------
+| Registro
+|--------------------------------------------------------------------------
+*/
 
-// Dashboard limpio utilizando sesión
-Route::get('/registro_seleccion', [RegistroSeleccionController::class, 'registroseleccion'])->name('registro_seleccion');
+// Mostrar la selección de registro.
+Route::get('/registro_seleccion', [
+    RegistroSeleccionController::class, 'registroseleccion',
+])->name('registro_seleccion');
 
-// Cerrar sesión
-Route::post('/logout', [PruebaController::class, 'logout'])->name('logout');
+// Mostrar el formulario de registro de operador.
+Route::get('/registro-operador', [
+    RegistroOperadorController::class, 'create',
+])->name('seleccion.registro_operador');
 
+/*
+|--------------------------------------------------------------------------
+| Dashboard
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/dashboard', [
+    AuthController::class, 'mostrarExito',
+])->name('dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| Clientes: acceso exclusivo para roles 1 y 2
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['rol:1,2'])->group(function () {
+
+    // Listar clientes.
+    Route::get('/clientes', [
+        ClienteController::class, 'index',
+    ])->name('clientes.index');
+
+    // Mostrar el formulario de creación.
+    Route::get('/clientes/crear', [
+        ClienteController::class, 'create',
+    ])->name('clientes.create');
+
+    // Guardar un nuevo cliente.
+    Route::post('/clientes', [
+        ClienteController::class, 'store',
+    ])->name('clientes.store');
+
+    // Mostrar el formulario de edición.
+    Route::get('/clientes/{id_cliente}/editar', [
+        ClienteController::class, 'edit',
+    ])->name('clientes.edit');
+
+    // Actualizar un cliente.
+    Route::put('/clientes/{id_cliente}', [
+        ClienteController::class, 'update',
+    ])->name('clientes.update');
+
+    // Eliminar un cliente.
+    Route::delete('/clientes/{id_cliente}', [
+        ClienteController::class, 'destroy',
+    ])->name('clientes.destroy');
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Campañas
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/campañas', [
+    CampanasController::class, 'index',
+])->name('campanas.index');
+
+/*
+|--------------------------------------------------------------------------
+| Llamadas
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/llamadas', [
+    LlamadasController::class, 'index',
+])->name('llamadas.index');
+
+/*
+|--------------------------------------------------------------------------
+| Empresas: Acceso EXCLUSIVO para Súper Admin (Rol 1)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['rol:1'])->group(function () {
+    Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
+    Route::get('/empresas/crear', [EmpresaController::class, 'create'])->name('empresas.create');
+    Route::post('/empresas', [EmpresaController::class, 'store'])->name('empresas.store');
+    Route::get('/empresas/{id_empresa}/editar', [EmpresaController::class, 'edit'])->name('empresas.edit');
+    Route::put('/empresas/{id_empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
+    Route::delete('/empresas/{id_empresa}', [EmpresaController::class, 'destroy'])->name('empresas.destroy');
+});

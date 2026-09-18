@@ -14,7 +14,18 @@ class ClienteController extends Controller
         ]);
 
         $buscar = trim($datos['buscar'] ?? '');
+
         $consulta = Cliente::query();
+
+        // Super Admin puede ver todos los clientes.
+        // Los demás usuarios solamente ven los clientes
+        // de su propia empresa.
+        if (auth()->user()->id_rol != 1) {
+            $consulta->where(
+                'id_empresa',
+                auth()->user()->id_empresa
+            );
+        }
 
         if ($buscar !== '') {
             $termino = '%' . mb_strtolower($buscar, 'UTF-8') . '%';
@@ -63,14 +74,31 @@ class ClienteController extends Controller
             'id_estado_lead' => 'required|integer',
         ]);
 
+        // La empresa se asigna automáticamente
+        // según el usuario que está creando el cliente.
+        $datos['id_empresa'] = auth()->user()->id_empresa;
+
         Cliente::create($datos);
 
-        return redirect()->route('clientes.index')->with('exito', 'Cliente registrado correctamente.');
+        return redirect()
+            ->route('clientes.index')
+            ->with('exito', 'Cliente registrado correctamente.');
     }
 
     public function edit($id_cliente)
     {
-        $cliente = Cliente::findOrFail($id_cliente);
+        $consulta = Cliente::query();
+
+        // Solo puede editar clientes de su propia empresa.
+        if (auth()->user()->id_rol != 1) {
+            $consulta->where(
+                'id_empresa',
+                auth()->user()->id_empresa
+            );
+        }
+
+        $cliente = $consulta->findOrFail($id_cliente);
+
         return view('clientes.edit', compact('cliente'));
     }
 
@@ -92,17 +120,43 @@ class ClienteController extends Controller
             'id_estado_lead' => 'required|integer',
         ]);
 
-        $cliente = Cliente::findOrFail($id_cliente);
+        $consulta = Cliente::query();
+
+        // Solo puede actualizar clientes de su propia empresa.
+        if (auth()->user()->id_rol != 1) {
+            $consulta->where(
+                'id_empresa',
+                auth()->user()->id_empresa
+            );
+        }
+
+        $cliente = $consulta->findOrFail($id_cliente);
+
         $cliente->update($datos);
 
-        return redirect()->route('clientes.index')->with('exito', 'Cliente actualizado correctamente.');
+        return redirect()
+            ->route('clientes.index')
+            ->with('exito', 'Cliente actualizado correctamente.');
     }
 
     public function destroy($id_cliente)
     {
-        $cliente = Cliente::findOrFail($id_cliente);
+        $consulta = Cliente::query();
+
+        // Solo puede eliminar clientes de su propia empresa.
+        if (auth()->user()->id_rol != 1) {
+            $consulta->where(
+                'id_empresa',
+                auth()->user()->id_empresa
+            );
+        }
+
+        $cliente = $consulta->findOrFail($id_cliente);
+
         $cliente->delete();
 
-        return redirect()->route('clientes.index')->with('exito', 'Cliente eliminado correctamente.');
+        return redirect()
+            ->route('clientes.index')
+            ->with('exito', 'Cliente eliminado correctamente.');
     }
 }

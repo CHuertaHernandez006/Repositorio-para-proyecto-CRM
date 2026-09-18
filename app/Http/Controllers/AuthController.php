@@ -15,19 +15,15 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        // 2. Mapeamos los datos. Laravel usa 'email' por defecto en su tabla 'users', 
-        // pero tu formulario (welcome.blade.php) envía 'correo'. 
+        // 2. Mapeamos los datos
         $credenciales = [
             'email' => $request->correo,
             'password' => $request->password
         ];
 
-        // 3. Auth::attempt busca al usuario, encripta la contraseña escrita y las compara.
-        // Si todo es correcto, automáticamente genera una sesión súper segura.
+        // 3. Autenticación
         if (Auth::attempt($credenciales)) {
             $request->session()->regenerate();
-            
-            // Redirigimos al dashboard
             return redirect()->route('dashboard');
         }
 
@@ -39,20 +35,27 @@ class AuthController extends Controller
 
     public function mostrarExito()
     {
-        // Usamos el Auth nativo para verificar si está logueado
         if (!Auth::check()) {
             return redirect()->route('login');
         }
 
-        // Obtenemos todos los datos del usuario logueado (incluyendo su id_rol y id_empresa)
         $usuario = Auth::user();
+        $metricasData = [];
 
-        return view('dashboard', compact('usuario'));
+        // Si el usuario es Operador (id_rol = 3), podemos preparar/consultar los datos para metricas.index
+        if ($usuario->id_rol == 3) {
+            // Ejemplo de variables si tu vista metricas las requiere:
+            // $metricasData = [
+            //     'llamadasHoy' => 0,
+            //     'tiempoPromedio' => '00:00',
+            // ];
+        }
+
+        return view('dashboard', compact('usuario', 'metricasData'));
     }
 
     public function logout(Request $request)
     {
-        // Cerramos la sesión de Auth y limpiamos tokens por seguridad
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

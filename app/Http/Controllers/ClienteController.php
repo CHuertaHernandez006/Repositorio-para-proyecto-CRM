@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Cliente;
+use Illuminate\Support\Facades\Auth;
 
 class ClienteController extends Controller
 {
@@ -20,10 +21,10 @@ class ClienteController extends Controller
         // Super Admin puede ver todos los clientes.
         // Los demás usuarios solamente ven los clientes
         // de su propia empresa.
-        if (auth()->user()->id_rol != 1) {
+        if (Auth::user()->id_rol != 1) {
             $consulta->where(
                 'id_empresa',
-                auth()->user()->id_empresa
+                Auth::user()->id_empresa
             );
         }
 
@@ -76,7 +77,7 @@ class ClienteController extends Controller
 
         // La empresa se asigna automáticamente
         // según el usuario que está creando el cliente.
-        $datos['id_empresa'] = auth()->user()->id_empresa;
+        $datos['id_empresa'] = Auth::user()->id_empresa;
 
         Cliente::create($datos);
 
@@ -90,10 +91,10 @@ class ClienteController extends Controller
         $consulta = Cliente::query();
 
         // Solo puede editar clientes de su propia empresa.
-        if (auth()->user()->id_rol != 1) {
+        if (Auth::user()->id_rol != 1) {
             $consulta->where(
                 'id_empresa',
-                auth()->user()->id_empresa
+                Auth::user()->id_empresa
             );
         }
 
@@ -123,10 +124,10 @@ class ClienteController extends Controller
         $consulta = Cliente::query();
 
         // Solo puede actualizar clientes de su propia empresa.
-        if (auth()->user()->id_rol != 1) {
+        if (Auth::user()->id_rol != 1) {
             $consulta->where(
                 'id_empresa',
-                auth()->user()->id_empresa
+                Auth::user()->id_empresa
             );
         }
 
@@ -144,10 +145,10 @@ class ClienteController extends Controller
         $consulta = Cliente::query();
 
         // Solo puede eliminar clientes de su propia empresa.
-        if (auth()->user()->id_rol != 1) {
+        if (Auth::user()->id_rol != 1) {
             $consulta->where(
                 'id_empresa',
-                auth()->user()->id_empresa
+                Auth::user()->id_empresa
             );
         }
 

@@ -20,19 +20,20 @@ class Cliente extends Model
         'fecha_actualizacion' => 'date',
     ];
 
-    protected $fillable = [
-        'nombre',
-        'apellido_paterno',
-        'apellido_materno',
-        'empresa',
-        'telefono_principal',
-        'telefono_secundario',
-        'correo',
-        'pais',
-        'estado',
-        'ciudad',
-        'fuente',
-        'id_tipo_cliente',
-        'id_estado_lead',
-    ];
+  protected $fillable = [
+    'nombre',
+    'apellido_paterno',
+    'apellido_materno',
+    'empresa',
+    'telefono_principal',
+    'telefono_secundario',
+    'correo',
+    'pais',
+    'estado',
+    'ciudad',
+    'fuente',
+    'id_tipo_cliente',
+    'id_estado_lead',
+    'id_empresa',
+];
 }

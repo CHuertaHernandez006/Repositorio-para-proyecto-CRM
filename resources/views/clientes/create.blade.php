@@ -155,7 +155,7 @@
                     <legend class="cf-legend"><span class="cf-step" aria-hidden="true">2</span> Contacto y empresa</legend>
                     <div class="cf-grid cf-grid-2">
                         <div>
-                            <label for="empresa" class="cf-label">Empresa</label>
+                            <label for="empresa" class="cf-label">Compañía/Empresa del Contacto</label>
                             <div class="cf-field">
                                 <i class="bi bi-building" aria-hidden="true"></i>
                                 <input type="text" name="empresa" id="empresa" class="cf-input" value="{{ old('empresa') }}" maxlength="150" placeholder="Ej. ACME Corp">

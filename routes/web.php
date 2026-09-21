@@ -10,6 +10,22 @@ use App\Http\Controllers\RegistroSeleccionController;
 use App\Http\Controllers\RegistroOperadorController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OperarioController;
+use App\Http\Controllers\CalendarioController;
+
+/*
+|--------------------------------------------------------------------------
+| Calendario / Citas (Operario)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'rol:3'])->group(function () {
+    Route::get('/calendario', [CalendarioController::class, 'index'])->name('calendario.index');
+    Route::get('/calendario/crear', [CalendarioController::class, 'create'])->name('calendario.create');
+    Route::post('/calendario', [CalendarioController::class, 'store'])->name('calendario.store');
+    Route::get('/calendario/{id_cita}/editar', [CalendarioController::class, 'edit'])->name('calendario.edit');
+    Route::put('/calendario/{id_cita}', [CalendarioController::class, 'update'])->name('calendario.update');
+    Route::delete('/calendario/{id_cita}', [CalendarioController::class, 'destroy'])->name('calendario.destroy');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Inicio de sesión

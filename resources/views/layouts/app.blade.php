@@ -694,11 +694,12 @@
     $tituloSeccion = 'Dashboard';
 
     foreach ([
-        'clientes' => 'Clientes',
-        'empresas' => 'Empresas',
-        'operarios' => 'Operarios',
-        'campanas' => 'Campañas',
-        'llamadas' => 'Llamadas',
+        'clientes'   => 'Clientes',
+        'empresas'   => 'Empresas',
+        'operarios'  => 'Operarios',
+        'campanas'   => 'Campañas',
+        'llamadas'   => 'Llamadas',
+        'calendario' => 'Calendario',
     ] as $prefijo => $etiqueta) {
 
         if (request()->routeIs($prefijo . '.*')) {
@@ -716,7 +717,6 @@
     |--------------------------------------------------------------------------
     |
     | Roles:
-    |
     | 1 = Super Admin
     | 2 = Administrador Cliente
     | 3 = Operario
@@ -783,6 +783,18 @@
             'icono' => 'phone',
 
             'visible' => true,
+        ],
+
+        [
+            'ruta' => 'calendario.index',
+            'patron' => 'calendario.*',
+            'texto' => 'Calendario',
+            'icono' => 'calendar',
+
+            // Exclusivo para el usuario Operario (Rol 3)
+            'visible' =>
+                Auth::check()
+                && $rolActual === 3,
         ],
 
     ];
@@ -859,51 +871,25 @@
 
                         <li>
 
-                            @if (Route::has($item['ruta']))
+                            <a
+                                class="comi-nav-link"
+                                href="{{ Route::has($item['ruta']) ? route($item['ruta']) : '#' }}"
 
-                                <a
-                                    class="comi-nav-link"
-                                    href="{{ route($item['ruta']) }}"
+                                @if (request()->routeIs($item['patron']))
+                                    aria-current="page"
+                                @endif
+                            >
 
-                                    @if (request()->routeIs($item['patron']))
-                                        aria-current="page"
-                                    @endif
-                                >
+                                <i
+                                    data-lucide="{{ $item['icono'] }}"
+                                    aria-hidden="true"
+                                ></i>
 
-                                    <i
-                                        data-lucide="{{ $item['icono'] }}"
-                                        aria-hidden="true"
-                                    ></i>
-
-                                    <span>
-                                        {{ $item['texto'] }}
-                                    </span>
-
-                                </a>
-
-                            @else
-
-                                <span
-                                    class="comi-nav-link"
-                                    aria-disabled="true"
-                                >
-
-                                    <i
-                                        data-lucide="{{ $item['icono'] }}"
-                                        aria-hidden="true"
-                                    ></i>
-
-                                    <span>
-                                        {{ $item['texto'] }}
-                                    </span>
-
-                                    <span class="comi-nav-soon">
-                                        No disponible
-                                    </span>
-
+                                <span>
+                                    {{ $item['texto'] }}
                                 </span>
 
-                            @endif
+                            </a>
 
                         </li>
 

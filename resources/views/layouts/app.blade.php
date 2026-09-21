@@ -697,6 +697,7 @@
         'clientes' => 'Clientes',
         'empresas' => 'Empresas',
         'operarios' => 'Operarios',
+        'citas' => 'Citas',
         'campanas' => 'Campañas',
         'llamadas' => 'Llamadas',
     ] as $prefijo => $etiqueta) {
@@ -765,6 +766,17 @@
             'visible' =>
                 Auth::check()
                 && in_array($rolActual, [1, 2], true),
+        ],
+
+        [
+            'ruta' => 'citas.index',
+            'patron' => 'citas.*',
+            'texto' => 'Citas',
+            'icono' => 'calendar-days',
+
+            'visible' =>
+                Auth::check()
+                && in_array($rolActual, [2, 3], true),
         ],
 
         [

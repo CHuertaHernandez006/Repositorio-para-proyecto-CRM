@@ -743,17 +743,6 @@
             'visible' => Auth::check() && in_array($rolActual, [2, 3], true),
         ],
         [
-            'ruta' => 'citas.index',
-            'patron' => 'citas.*',
-            'texto' => 'Citas',
-            'icono' => 'calendar-days',
-
-            'visible' =>
-                Auth::check()
-                && in_array($rolActual, [2, 3], true),
-        ],
-
-        [
             'ruta' => 'campanas.index',
             'patron' => 'campanas.*',
             'texto' => 'Campañas',

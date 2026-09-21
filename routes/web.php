@@ -9,6 +9,9 @@ use App\Http\Controllers\RegistroSeleccionController;
 use App\Http\Controllers\RegistroOperadorController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OperarioController;
+use App\Http\Controllers\CitaController;
+
+Route::get('/citas', [CitaController::class, 'index'])->name('citas.index');
 /*
 |--------------------------------------------------------------------------
 | Autenticación y Registro Público

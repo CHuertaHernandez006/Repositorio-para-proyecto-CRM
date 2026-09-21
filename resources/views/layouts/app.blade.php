@@ -764,7 +764,7 @@
 
             'visible' =>
                 Auth::check()
-                && in_array($rolActual, [1, 2], true),
+                && in_array($rolActual, [2], true),
         ],
 
         [
@@ -773,7 +773,9 @@
             'texto' => 'Campañas',
             'icono' => 'megaphone',
 
-            'visible' => true,
+            'visible' =>
+                Auth::check()
+                && in_array($rolActual, [2], true),
         ],
 
         [
@@ -782,7 +784,9 @@
             'texto' => 'Llamadas',
             'icono' => 'phone',
 
-            'visible' => true,
+            'visible' =>
+                Auth::check()
+                && in_array($rolActual, [2], true),
         ],
 
     ];

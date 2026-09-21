@@ -103,20 +103,22 @@ Route::middleware(['rol:1,2'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
+Route::middleware(['rol:2,3'])->group(function () {
 Route::get('/campañas', [
     CampanasController::class, 'index',
 ])->name('campanas.index');
-
+});
 /*
 |--------------------------------------------------------------------------
 | Llamadas
 |--------------------------------------------------------------------------
 */
 
+Route::middleware(['rol:2,3'])->group(function () {
 Route::get('/llamadas', [
     LlamadasController::class, 'index',
 ])->name('llamadas.index');
-
+});
 /*
 |--------------------------------------------------------------------------
 | Empresas: Acceso EXCLUSIVO para Súper Admin (Rol 1)
@@ -129,6 +131,8 @@ Route::middleware(['rol:1'])->group(function () {
     Route::get('/empresas/{id_empresa}/editar', [EmpresaController::class, 'edit'])->name('empresas.edit');
     Route::put('/empresas/{id_empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
     Route::delete('/empresas/{id_empresa}', [EmpresaController::class, 'destroy'])->name('empresas.destroy');
+    Route::get('/empresas/{id_empresa}/admin/editar', [EmpresaController::class, 'editAdmin'])->name('empresas.admin.edit');
+    Route::put('/empresas/{id_empresa}/admin', [EmpresaController::class, 'updateAdmin'])->name('empresas.admin.update');
 });
 
 Route::middleware('auth')->group(function () {

@@ -100,4 +100,30 @@ class EmpresaController extends Controller
 
         return redirect()->route('empresas.index');
     }
+    public function editAdmin($id_empresa)
+    {
+        $empresa = Empresa::findOrFail($id_empresa);
+        // Buscamos específicamente al usuario amarrado a esta empresa que sea Admin Cliente (Rol 2)
+        $admin = User::where('id_empresa', $id_empresa)->where('id_rol', 2)->firstOrFail();
+
+        return view('empresas.edit_admin', compact('empresa', 'admin'));
+    }
+
+    public function updateAdmin(Request $request, $id_empresa)
+    {
+        // Encontramos al administrador actual
+        $admin = User::where('id_empresa', $id_empresa)->where('id_rol', 2)->firstOrFail();
+
+        $request->validate([
+            'nombre_admin' => 'required|string|max:100',
+            // El correo debe ser único
+            'correo_admin' => 'required|email|unique:users,email,' . $admin->id,
+        ]);
+
+        $admin->name = $request->nombre_admin;
+        $admin->email = $request->correo_admin;
+        $admin->save();
+
+        return redirect()->route('empresas.index')->with('success', 'Administrador actualizado correctamente.');
+    }
 }

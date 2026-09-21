@@ -67,6 +67,8 @@
     .comi-empresas .ce-actions form { margin: 0; }
     .comi-empresas .ce-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 11px; border: 1px solid #475569; border-radius: 8px; background: #172235; color: #cbd5e1; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
     .comi-empresas .ce-edit:hover { background: #153f54; color: #7dd3fc; border-color: #38bdf8; }
+    .comi-empresas .ce-admin { background: #17364a; color: #7dd3fc; border-color: #31516a; }
+    .comi-empresas .ce-admin:hover { background: #164e63; color: #e0f2fe; border-color: #38bdf8; }
     .comi-empresas .ce-delete:hover { background: #482635; color: #fda4af; border-color: #fb7185; }
     .comi-empresas .ce-footer { border-top: 1px solid var(--ce-border); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
     .comi-empresas .ce-footer p { margin: 0; color: var(--ce-muted); font-size: 12px; }
@@ -154,8 +156,12 @@
                                 <td>
                                     <div class="ce-actions">
                                         <a href="{{ route('empresas.edit', $empresa->id_empresa) }}" class="ce-action ce-edit"
-                                            aria-label="Editar empresa {{ $empresa->nombre }}">
-                                            <i class="bi bi-pencil" aria-hidden="true"></i> Editar
+                                            title="Editar empresa" aria-label="Editar empresa {{ $empresa->nombre }}">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i> Empresa
+                                        </a>
+                                        <a href="{{ route('empresas.admin.edit', $empresa->id_empresa) }}" class="ce-action ce-admin"
+                                            title="Editar administrador" aria-label="Editar administrador de {{ $empresa->nombre }}">
+                                            <i class="bi bi-person-gear" aria-hidden="true"></i> Admin
                                         </a>
                                         <form action="{{ route('empresas.destroy', $empresa->id_empresa) }}" method="POST"
                                             onsubmit="return confirm('¿Estás seguro de eliminar esta empresa?');">

@@ -1,12 +1,10 @@
 {{-- resources/views/layouts/app.blade.php --}}
-
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'COMICenter - CRM')</title>
@@ -656,7 +654,6 @@
 <body>
 
 @php
-
     $usuarioActual = Auth::user();
 
     /*
@@ -664,7 +661,6 @@
     | Datos del usuario actual
     |--------------------------------------------------------------------------
     */
-
     $correoActual =
         $usuarioActual->correo
         ?? $usuarioActual->email
@@ -684,564 +680,296 @@
         3 => 'Operario',
     ][$rolActual] ?? 'Usuario';
 
-
     /*
     |--------------------------------------------------------------------------
     | Título de la sección actual
     |--------------------------------------------------------------------------
     */
-
     $tituloSeccion = 'Dashboard';
 
     foreach ([
-        'clientes'   => 'Clientes',
-        'empresas'   => 'Empresas',
-        'operarios'  => 'Operarios',
-        'campanas'   => 'Campañas',
-        'llamadas'   => 'Llamadas',
-        'calendario' => 'Calendario',
+        'clientes' => 'Clientes',
+        'empresas' => 'Empresas',
+        'operarios' => 'Operarios',
+        'citas' => 'Citas',
+        'campanas' => 'Campañas',
+        'llamadas' => 'Llamadas',
     ] as $prefijo => $etiqueta) {
-
         if (request()->routeIs($prefijo . '.*')) {
-
             $tituloSeccion = $etiqueta;
-
             break;
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
-    | Menú principal
+    | Menú principal (Roles: 1 = Super Admin, 2 = Admin Cliente, 3 = Operario)
     |--------------------------------------------------------------------------
-    |
-    | Roles:
-    | 1 = Super Admin
-    | 2 = Administrador Cliente
-    | 3 = Operario
-    |
     */
-
     $menuItems = [
-
         [
             'ruta' => 'dashboard',
             'patron' => 'dashboard',
             'texto' => 'Dashboard',
             'icono' => 'layout-dashboard',
-
             'visible' => true,
         ],
-
         [
             'ruta' => 'clientes.index',
             'patron' => 'clientes.*',
             'texto' => 'Clientes',
             'icono' => 'users',
-
-            'visible' =>
-                Auth::check()
-                && in_array($rolActual, [1, 2], true),
+            'visible' => Auth::check() && in_array($rolActual, [1, 2], true),
         ],
-
         [
             'ruta' => 'empresas.index',
             'patron' => 'empresas.*',
             'texto' => 'Empresas',
             'icono' => 'building-2',
-
-            'visible' =>
-                Auth::check()
-                && $rolActual === 1,
+            'visible' => Auth::check() && $rolActual === 1,
         ],
-
         [
             'ruta' => 'operarios.index',
             'patron' => 'operarios.*',
             'texto' => 'Operarios',
             'icono' => 'user-round',
-
-            'visible' =>
-                Auth::check()
-                && in_array($rolActual, [1, 2], true),
+            'visible' => Auth::check() && in_array($rolActual, [1, 2], true),
         ],
-
+        [
+            'ruta' => 'citas.index',
+            'patron' => 'citas.*',
+            'texto' => 'Citas',
+            'icono' => 'calendar-days',
+            'visible' => Auth::check() && in_array($rolActual, [2, 3], true),
+        ],
         [
             'ruta' => 'campanas.index',
             'patron' => 'campanas.*',
             'texto' => 'Campañas',
             'icono' => 'megaphone',
-
             'visible' => true,
         ],
-
         [
             'ruta' => 'llamadas.index',
             'patron' => 'llamadas.*',
             'texto' => 'Llamadas',
             'icono' => 'phone',
-
             'visible' => true,
         ],
-
-        [
-            'ruta' => 'calendario.index',
-            'patron' => 'calendario.*',
-            'texto' => 'Calendario',
-            'icono' => 'calendar',
-
-            // Exclusivo para el usuario Operario (Rol 3)
-            'visible' =>
-                Auth::check()
-                && $rolActual === 3,
-        ],
-
     ];
-
 @endphp
 
-
-<a
-    class="comi-skip"
-    href="#contenido-principal"
->
+<a class="comi-skip" href="#contenido-principal">
     Saltar al contenido
 </a>
 
+<div class="comi-shell" id="comi-shell">
 
-<div
-    class="comi-shell"
-    id="comi-shell"
->
-
-    {{-- =========================================================
-         SIDEBAR
-    ========================================================== --}}
-
-    <aside
-        class="comi-sidebar"
-        id="comi-sidebar"
-        aria-label="Menú principal"
-    >
+    {{-- SIDEBAR --}}
+    <aside class="comi-sidebar" id="comi-sidebar" aria-label="Menú principal">
 
         {{-- Marca --}}
-
-        <a
-            class="comi-brand"
-            href="{{ route('dashboard') }}"
-            aria-label="COMICenter, ir al dashboard"
-        >
-
+        <a class="comi-brand" href="{{ Route::has('dashboard') ? route('dashboard') : '#' }}" aria-label="COMICenter, ir al dashboard">
             <span class="comi-brand-mark">
-
-                <i
-                    data-lucide="headset"
-                    aria-hidden="true"
-                ></i>
-
+                <i data-lucide="headset" aria-hidden="true"></i>
             </span>
-
             <span class="comi-brand-name">
                 COMI<span>Center</span>
             </span>
-
         </a>
-
 
         <p class="comi-brand-sub">
             Gestión de interacciones y datos
         </p>
 
-
         {{-- Navegación --}}
-
         <nav aria-label="Secciones del CRM">
-
             <p class="comi-nav-label">
                 Espacio de trabajo
             </p>
 
-
             <ul class="comi-nav-list">
-
                 @foreach ($menuItems as $item)
-
                     @if ($item['visible'])
-
                         <li>
-
-                            <a
-                                class="comi-nav-link"
-                                href="{{ Route::has($item['ruta']) ? route($item['ruta']) : '#' }}"
-
-                                @if (request()->routeIs($item['patron']))
-                                    aria-current="page"
-                                @endif
-                            >
-
-                                <i
-                                    data-lucide="{{ $item['icono'] }}"
-                                    aria-hidden="true"
-                                ></i>
-
-                                <span>
-                                    {{ $item['texto'] }}
+                            @if (Route::has($item['ruta']))
+                                <a
+                                    class="comi-nav-link"
+                                    href="{{ route($item['ruta']) }}"
+                                    @if (request()->routeIs($item['patron'])) aria-current="page" @endif
+                                >
+                                    <i data-lucide="{{ $item['icono'] }}" aria-hidden="true"></i>
+                                    <span>{{ $item['texto'] }}</span>
+                                </a>
+                            @else
+                                <span class="comi-nav-link" aria-disabled="true">
+                                    <i data-lucide="{{ $item['icono'] }}" aria-hidden="true"></i>
+                                    <span>{{ $item['texto'] }}</span>
+                                    <span class="comi-nav-soon">No disponible</span>
                                 </span>
-
-                            </a>
-
+                            @endif
                         </li>
-
                     @endif
-
                 @endforeach
-
             </ul>
-
         </nav>
 
-
         {{-- Parte inferior del sidebar --}}
-
         <div class="comi-sidebar-bottom">
-
             <div class="comi-workspace">
-
-                <i
-                    data-lucide="layers"
-                    aria-hidden="true"
-                ></i>
-
+                <i data-lucide="layers" aria-hidden="true"></i>
                 <div>
-
-                    <strong>
-                        Tu espacio de gestión
-                    </strong>
-
-                    <p>
-                        Contactos e interacciones
-                    </p>
-
+                    <strong>Tu espacio de gestión</strong>
+                    <p>Contactos e interacciones</p>
                 </div>
-
             </div>
-
 
             <p class="comi-sidebar-caption">
                 Plataforma COMI
             </p>
-
         </div>
 
     </aside>
 
-
-    {{-- =========================================================
-         CONTENIDO PRINCIPAL
-    ========================================================== --}}
-
+    {{-- CONTENEDOR PRINCIPAL --}}
     <div class="comi-main-wrapper">
 
-
-        {{-- =====================================================
-             HEADER
-        ====================================================== --}}
-
+        {{-- HEADER --}}
         <header class="comi-top-header">
 
             <div class="comi-header-start">
-
                 {{-- Botón móvil --}}
-
                 <button
                     type="button"
                     class="comi-menu-button"
                     id="comi-menu-button"
-
                     aria-label="Abrir menú principal"
                     aria-controls="comi-sidebar"
                     aria-expanded="false"
                 >
-
-                    <i
-                        data-lucide="menu"
-                        aria-hidden="true"
-                    ></i>
-
+                    <i data-lucide="menu" aria-hidden="true"></i>
                 </button>
 
-
                 <div>
-
                     <p class="comi-header-eyebrow">
                         COMICenter / Panel de gestión
                     </p>
-
                     <h2 class="comi-header-title">
                         @yield('header-title', $tituloSeccion)
                     </h2>
-
                 </div>
-
             </div>
 
-
             {{-- Usuario --}}
-
             <div class="comi-user-profile">
-
                 <div class="comi-user-avatar">
-
-                    <i
-                        data-lucide="user"
-                        aria-hidden="true"
-                    ></i>
-
+                    <i data-lucide="user" aria-hidden="true"></i>
                 </div>
 
-
                 <div class="comi-user-info">
-
-                    <div
-                        class="comi-user-email"
-                        title="{{ $correoActual }}"
-                    >
+                    <div class="comi-user-email" title="{{ $correoActual }}">
                         {{ $correoActual }}
                     </div>
-
                     <p class="comi-user-role">
                         {{ $rolEtiqueta }}
                     </p>
-
                 </div>
 
-
                 {{-- Cerrar sesión --}}
-
                 @if (Route::has('logout'))
-
-                    <form
-                        action="{{ route('logout') }}"
-                        method="POST"
-                        class="comi-logout-form"
-                    >
-
+                    <form action="{{ route('logout') }}" method="POST" class="comi-logout-form">
                         @csrf
-
                         <button
                             type="submit"
                             class="comi-logout-button"
                             title="Cerrar sesión"
                             aria-label="Cerrar sesión"
                         >
-
-                            <i
-                                data-lucide="log-out"
-                                aria-hidden="true"
-                            ></i>
-
+                            <i data-lucide="log-out" aria-hidden="true"></i>
                         </button>
-
                     </form>
-
                 @endif
-
             </div>
 
         </header>
 
-
-        {{-- =====================================================
-             CONTENIDO DE LA PÁGINA
-        ====================================================== --}}
-
-        <main
-            class="comi-content"
-            id="contenido-principal"
-            tabindex="-1"
-        >
-
+        {{-- CONTENIDO DE LA PÁGINA --}}
+        <main class="comi-content" id="contenido-principal" tabindex="-1">
             @yield('content')
-
         </main>
 
-
-        {{-- =====================================================
-             FOOTER
-        ====================================================== --}}
-
+        {{-- FOOTER --}}
         <footer class="comi-page-footer">
-
-            <span>
-                © {{ date('Y') }} Plataforma COMI
-            </span>
-
-            <span>
-                Gestión de interacciones y datos
-            </span>
-
+            <span>© {{ date('Y') }} Plataforma COMI</span>
+            <span>Gestión de interacciones y datos</span>
         </footer>
 
     </div>
 
 </div>
 
-
-{{-- =============================================================
-     JAVASCRIPT DEL MENÚ
-============================================================= --}}
-
+{{-- JAVASCRIPT DEL MENÚ --}}
 <script>
-
     (() => {
+        const shell = document.getElementById('comi-shell');
+        const toggle = document.getElementById('comi-menu-button');
+        const sidebar = document.getElementById('comi-sidebar');
+        const mobile = window.matchMedia('(max-width: 760px)');
 
-        const shell =
-            document.getElementById('comi-shell');
+        if (shell && toggle && sidebar) {
+            shell.classList.add('comi-enhanced');
 
-        const toggle =
-            document.getElementById('comi-menu-button');
-
-        const sidebar =
-            document.getElementById('comi-sidebar');
-
-        const mobile =
-            window.matchMedia('(max-width: 760px)');
-
-
-        shell.classList.add('comi-enhanced');
-
-
-        function setMenu(open, moveFocus = false) {
-
-            shell.classList.toggle(
-                'comi-nav-open',
-                open
-            );
-
-
-            toggle.setAttribute(
-                'aria-expanded',
-                String(open)
-            );
-
-
-            toggle.setAttribute(
-                'aria-label',
-
-                open
-                    ? 'Cerrar menú principal'
-                    : 'Abrir menú principal'
-            );
-
-
-            if (open && moveFocus) {
-
-                sidebar
-                    .querySelector('a')
-                    ?.focus();
-
-            }
-
-        }
-
-
-        toggle.addEventListener(
-            'click',
-
-            () => {
-
-                setMenu(
-                    !shell.classList.contains('comi-nav-open'),
-                    true
+            function setMenu(open, moveFocus = false) {
+                shell.classList.toggle('comi-nav-open', open);
+                toggle.setAttribute('aria-expanded', String(open));
+                toggle.setAttribute(
+                    'aria-label',
+                    open ? 'Cerrar menú principal' : 'Abrir menú principal'
                 );
 
-            }
-        );
-
-
-        document.addEventListener(
-            'keydown',
-
-            (event) => {
-
-                if (
-                    event.key === 'Escape'
-                    && mobile.matches
-                    && shell.classList.contains('comi-nav-open')
-                ) {
-
-                    setMenu(false);
-
-                    toggle.focus();
-
+                if (open && moveFocus) {
+                    sidebar.querySelector('a')?.focus();
                 }
-
             }
-        );
 
+            toggle.addEventListener('click', () => {
+                setMenu(!shell.classList.contains('comi-nav-open'), true);
+            });
 
-        mobile.addEventListener(
-            'change',
+            document.addEventListener('keydown', (event) => {
+                if (
+                    event.key === 'Escape' &&
+                    mobile.matches &&
+                    shell.classList.contains('comi-nav-open')
+                ) {
+                    setMenu(false);
+                    toggle.focus();
+                }
+            });
 
-            () => {
-
-                const focusInSidebar =
-                    sidebar.contains(
-                        document.activeElement
-                    );
-
-
-                const focusOnToggle =
-                    document.activeElement === toggle;
-
+            mobile.addEventListener('change', () => {
+                const focusInSidebar = sidebar.contains(document.activeElement);
+                const focusOnToggle = document.activeElement === toggle;
 
                 setMenu(false);
 
-
-                if (
-                    mobile.matches
-                    && focusInSidebar
-                ) {
-
+                if (mobile.matches && focusInSidebar) {
                     toggle.focus();
-
                 }
 
-
-                if (
-                    !mobile.matches
-                    && focusOnToggle
-                ) {
-
-                    sidebar
-                        .querySelector('a')
-                        ?.focus();
-
+                if (!mobile.matches && focusOnToggle) {
+                    sidebar.querySelector('a')?.focus();
                 }
+            });
+        }
 
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                window.lucide.createIcons();
             }
-        );
-
-
-        window.addEventListener(
-            'DOMContentLoaded',
-
-            () => {
-
-                if (window.lucide) {
-
-                    window.lucide.createIcons();
-
-                }
-
-            }
-        );
-
+        });
     })();
-
 </script>
-
 
 @stack('scripts')
 

@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\CampanasController;
@@ -10,166 +9,99 @@ use App\Http\Controllers\RegistroSeleccionController;
 use App\Http\Controllers\RegistroOperadorController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OperarioController;
+use App\Http\Controllers\CitaController;
 use App\Http\Controllers\CalendarioController;
 
 /*
 |--------------------------------------------------------------------------
-| Calendario / Citas (Operario)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'rol:3'])->group(function () {
-    Route::get('/calendario', [CalendarioController::class, 'index'])->name('calendario.index');
-    Route::get('/calendario/crear', [CalendarioController::class, 'create'])->name('calendario.create');
-    Route::post('/calendario', [CalendarioController::class, 'store'])->name('calendario.store');
-    Route::get('/calendario/{id_cita}/editar', [CalendarioController::class, 'edit'])->name('calendario.edit');
-    Route::put('/calendario/{id_cita}', [CalendarioController::class, 'update'])->name('calendario.update');
-    Route::delete('/calendario/{id_cita}', [CalendarioController::class, 'destroy'])->name('calendario.destroy');
-});
-
-/*
-|--------------------------------------------------------------------------
-| Inicio de sesión
+| Autenticación y Registro Público
 |--------------------------------------------------------------------------
 */
 
-// Mostrar el formulario de inicio de sesión.
+// Mostrar el formulario de inicio de sesión
 Route::get('/', function () {
     return view('welcome');
 })->name('login');
 
-// Verificar las credenciales.
-Route::post('/login-verificar', [
-    AuthController::class, 'verificarAcceso',
-])->name('login.verificar');
+// Verificar credenciales
+Route::post('/login-verificar', [AuthController::class, 'verificarAcceso'])->name('login.verificar');
 
-// Cerrar sesión.
-Route::post('/logout', [
-    AuthController::class, 'logout',
-])->name('logout');
+// Cerrar sesión
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-/*
-|--------------------------------------------------------------------------
-| Registro
-|--------------------------------------------------------------------------
-*/
+// Selección y registro público
+Route::get('/registro_seleccion', [RegistroSeleccionController::class, 'registroseleccion'])->name('registro_seleccion');
+Route::get('/registro-operador', [RegistroOperadorController::class, 'create'])->name('seleccion.registro_operador');
 
-// Mostrar la selección de registro.
-Route::get('/registro_seleccion', [
-    RegistroSeleccionController::class, 'registroseleccion',
-])->name('registro_seleccion');
-
-// Mostrar el formulario de registro de operador.
-Route::get('/registro-operador', [
-    RegistroOperadorController::class, 'create',
-])->name('seleccion.registro_operador');
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard
+| Rutas Autenticadas General (`auth`)
 |--------------------------------------------------------------------------
 */
 
-Route::get('/dashboard', [
-    AuthController::class, 'mostrarExito',
-])->name('dashboard');
+Route::middleware(['auth'])->group(function () {
 
-/*
-|--------------------------------------------------------------------------
-| Clientes: acceso exclusivo para roles 1 y 2
-|--------------------------------------------------------------------------
-*/
+    // Dashboard
+    Route::get('/dashboard', [AuthController::class, 'mostrarExito'])->name('dashboard');
 
-Route::middleware(['rol:1,2'])->group(function () {
+    // Módulos Generales
+    Route::get('/campañas', [CampanasController::class, 'index'])->name('campanas.index');
+    Route::get('/llamadas', [LlamadasController::class, 'index'])->name('llamadas.index');
 
-    // Listar clientes.
-    Route::get('/clientes', [
-        ClienteController::class, 'index',
-    ])->name('clientes.index');
+    // Operarios (CRUD)
+    Route::resource('operarios', OperarioController::class);
+    Route::patch('/operarios/{operario}/estado', [OperarioController::class, 'toggleEstado'])->name('operarios.toggleEstado');
 
-    // Mostrar el formulario de creación.
-    Route::get('/clientes/crear', [
-        ClienteController::class, 'create',
-    ])->name('clientes.create');
+    /*
+    |--------------------------------------------------------------------------
+    | Super Admin (Rol 1)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['rol:1'])->group(function () {
+        Route::resource('empresas', EmpresaController::class)->except(['show']);
+    });
 
-    // Guardar un nuevo cliente.
-    Route::post('/clientes', [
-        ClienteController::class, 'store',
-    ])->name('clientes.store');
+    /*
+    |--------------------------------------------------------------------------
+    | Clientes (Roles 1 y 2)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['rol:1,2'])->group(function () {
+        Route::resource('clientes', ClienteController::class)->except(['show']);
+    });
 
-    // Mostrar el formulario de edición.
-    Route::get('/clientes/{id_cliente}/editar', [
-        ClienteController::class, 'edit',
-    ])->name('clientes.edit');
+    /*
+    |--------------------------------------------------------------------------
+    | Citas y Administración (Roles 2 y 3)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['rol:2,3'])->group(function () {
+        Route::get('/citas', [CitaController::class, 'index'])->name('citas.index');
+        Route::get('/citas/crear', [CitaController::class, 'create'])->name('citas.create');
+        Route::get('/citas/{id_cita}', [CitaController::class, 'show'])->name('citas.show');
+    });
 
-    // Actualizar un cliente.
-    Route::put('/clientes/{id_cliente}', [
-        ClienteController::class, 'update',
-    ])->name('clientes.update');
+    // Gestión exclusiva de citas por Admin Cliente (Rol 2)
+    Route::middleware(['rol:2'])->group(function () {
+        Route::post('/citas', [CitaController::class, 'store'])->name('citas.store');
+        Route::get('/citas/{id_cita}/editar', [CitaController::class, 'edit'])->name('citas.edit');
+        Route::put('/citas/{id_cita}', [CitaController::class, 'update'])->name('citas.update');
+        Route::delete('/citas/{id_cita}', [CitaController::class, 'destroy'])->name('citas.destroy');
+    });
 
-    // Eliminar un cliente.
-    Route::delete('/clientes/{id_cliente}', [
-        ClienteController::class, 'destroy',
-    ])->name('clientes.destroy');
+    /*
+    |--------------------------------------------------------------------------
+    | Calendario Operario (Exclusivo Rol 3)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['rol:3'])->group(function () {
+        Route::get('/calendario', [CalendarioController::class, 'index'])->name('calendario.index');
+        Route::get('/calendario/crear', [CalendarioController::class, 'create'])->name('calendario.create');
+        Route::post('/calendario', [CalendarioController::class, 'store'])->name('calendario.store');
+        Route::get('/calendario/{id_cita}/editar', [CalendarioController::class, 'edit'])->name('calendario.edit');
+        Route::put('/calendario/{id_cita}', [CalendarioController::class, 'update'])->name('calendario.update');
+        Route::delete('/calendario/{id_cita}', [CalendarioController::class, 'destroy'])->name('calendario.destroy');
+    });
 
-});
-
-/*
-|--------------------------------------------------------------------------
-| Campañas
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/campañas', [
-    CampanasController::class, 'index',
-])->name('campanas.index');
-
-/*
-|--------------------------------------------------------------------------
-| Llamadas
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/llamadas', [
-    LlamadasController::class, 'index',
-])->name('llamadas.index');
-
-/*
-|--------------------------------------------------------------------------
-| Empresas: Acceso EXCLUSIVO para Súper Admin (Rol 1)
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['rol:1'])->group(function () {
-    Route::get('/empresas', [EmpresaController::class, 'index'])->name('empresas.index');
-    Route::get('/empresas/crear', [EmpresaController::class, 'create'])->name('empresas.create');
-    Route::post('/empresas', [EmpresaController::class, 'store'])->name('empresas.store');
-    Route::get('/empresas/{id_empresa}/editar', [EmpresaController::class, 'edit'])->name('empresas.edit');
-    Route::put('/empresas/{id_empresa}', [EmpresaController::class, 'update'])->name('empresas.update');
-    Route::delete('/empresas/{id_empresa}', [EmpresaController::class, 'destroy'])->name('empresas.destroy');
-});
-
-Route::middleware('auth')->group(function () {
-
-    Route::get('/operarios', [OperarioController::class, 'index'])
-        ->name('operarios.index');
-
-    Route::get('/operarios/create', [OperarioController::class, 'create'])
-        ->name('operarios.create');
-
-    Route::post('/operarios', [OperarioController::class, 'store'])
-        ->name('operarios.store');
-
-    Route::get('/operarios/{operario}', [OperarioController::class, 'show'])
-        ->name('operarios.show');
-
-    Route::get('/operarios/{operario}/edit', [OperarioController::class, 'edit'])
-        ->name('operarios.edit');
-
-    Route::put('/operarios/{operario}', [OperarioController::class, 'update'])
-        ->name('operarios.update');
-
-    Route::patch('/operarios/{operario}/estado', [OperarioController::class, 'toggleEstado'])
-        ->name('operarios.toggleEstado');
-
-    Route::delete('/operarios/{operario}', [OperarioController::class, 'destroy'])
-        ->name('operarios.destroy');
 });

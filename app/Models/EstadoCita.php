@@ -19,7 +19,7 @@ class EstadoCita extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Campos que pueden asignarse masivamente
+    | Campos que pueden asignarse
     |--------------------------------------------------------------------------
     */
     protected $fillable = [

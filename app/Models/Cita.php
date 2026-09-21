@@ -19,7 +19,7 @@ class Cita extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Campos que pueden asignarse masivamente
+    | Campos que pueden asignarse
     |--------------------------------------------------------------------------
     */
     protected $fillable = [
@@ -45,13 +45,9 @@ class Cita extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Relaciones Eloquent
+    | Cliente relacionado con la cita
     |--------------------------------------------------------------------------
     */
-
-    /**
-     * Cliente relacionado con la cita.
-     */
     public function cliente()
     {
         return $this->belongsTo(
@@ -61,11 +57,11 @@ class Cita extends Model
         );
     }
 
-    /**
-     * Usuario / Operario responsable de la cita.
-     * Ajusta la clase (User::class o Usuario::class) y la clave primaria ('id' o 'id_usuario')
-     * según la estructura exacta de tu proyecto.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Usuario / Operario responsable de la cita
+    |--------------------------------------------------------------------------
+    */
     public function usuario()
     {
         return $this->belongsTo(
@@ -75,9 +71,11 @@ class Cita extends Model
         );
     }
 
-    /**
-     * Estado de la cita.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Estado de la cita
+    |--------------------------------------------------------------------------
+    */
     public function estadoCita()
     {
         return $this->belongsTo(
@@ -87,9 +85,11 @@ class Cita extends Model
         );
     }
 
-    /**
-     * Llamada relacionada con la cita.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Llamada relacionada con la cita
+    |--------------------------------------------------------------------------
+    */
     public function llamada()
     {
         return $this->belongsTo(

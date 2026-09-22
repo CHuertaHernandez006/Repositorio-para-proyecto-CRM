@@ -719,7 +719,7 @@
             'patron' => 'clientes.*',
             'texto' => 'Clientes',
             'icono' => 'users',
-            'visible' => Auth::check() && in_array($rolActual, [1, 2], true),
+            'visible' => Auth::check() && in_array($rolActual, [2], true),
         ],
         [
             'ruta' => 'empresas.index',
@@ -746,7 +746,7 @@
 
             'visible' =>
                 Auth::check()
-                && in_array($rolActual, [2], true),
+                && in_array($rolActual, [2,3], true),
         ],
         [
             'ruta' => 'llamadas.index',
@@ -756,7 +756,7 @@
 
             'visible' =>
                 Auth::check()
-                && in_array($rolActual, [2], true),
+                && in_array($rolActual, [2,3], true),
         ],
     ];
 @endphp

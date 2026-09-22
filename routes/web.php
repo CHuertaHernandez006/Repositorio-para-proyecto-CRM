@@ -10,6 +10,7 @@ use App\Http\Controllers\RegistroSeleccionController;
 use App\Http\Controllers\RegistroOperadorController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OperarioController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,19 +57,18 @@ Route::get('/registro-operador', [
 |--------------------------------------------------------------------------
 */
 
-Route::get('/dashboard', [
-    AuthController::class,
-    'mostrarExito',
-])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth'])
+    ->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------
 | Clientes
-| Acceso para roles 1 y 2
+| Acceso exclusivo para Admin Cliente
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['rol:1,2'])->group(function () {
+Route::middleware(['rol:2'])->group(function () {
 
     Route::get('/clientes', [
         ClienteController::class,
@@ -190,7 +190,7 @@ Route::middleware(['rol:1'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['rol:2,3'])->group(function () {
+Route::middleware(['rol:2'])->group(function () {
 
     Route::get('/operarios', [
         OperarioController::class,

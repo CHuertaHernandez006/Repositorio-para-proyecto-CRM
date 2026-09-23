@@ -11,6 +11,7 @@ use App\Http\Controllers\RegistroOperadorController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OperarioController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CalendarioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,7 +65,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 /*
 |--------------------------------------------------------------------------
 | Clientes
-| Acceso exclusivo para Admin Cliente
+| Acceso exclusivo para Admin Cliente (Rol 2)
 |--------------------------------------------------------------------------
 */
 
@@ -186,7 +187,7 @@ Route::middleware(['rol:1'])->group(function () {
 /*
 |--------------------------------------------------------------------------
 | Operarios
-| Requiere sesión iniciada
+| Acceso exclusivo para Admin Cliente (Rol 2)
 |--------------------------------------------------------------------------
 */
 
@@ -231,4 +232,44 @@ Route::middleware(['rol:2'])->group(function () {
         OperarioController::class,
         'destroy',
     ])->name('operarios.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Calendario
+| Acceso exclusivo para el usuario Operario (Rol 3)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'rol:3'])->group(function () {
+
+    Route::get('/calendario', [
+        CalendarioController::class,
+        'index',
+    ])->name('calendario.index');
+
+    Route::get('/calendario/crear', [
+        CalendarioController::class,
+        'create',
+    ])->name('calendario.create');
+
+    Route::post('/calendario', [
+        CalendarioController::class,
+        'store',
+    ])->name('calendario.store');
+
+    Route::get('/calendario/{id_cita}/editar', [
+        CalendarioController::class,
+        'edit',
+    ])->name('calendario.edit');
+
+    Route::put('/calendario/{id_cita}', [
+        CalendarioController::class,
+        'update',
+    ])->name('calendario.update');
+
+    Route::delete('/calendario/{id_cita}', [
+        CalendarioController::class,
+        'destroy',
+    ])->name('calendario.destroy');
 });

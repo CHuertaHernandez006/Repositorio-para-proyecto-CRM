@@ -688,12 +688,13 @@
     $tituloSeccion = 'Dashboard';
 
     foreach ([
-        'clientes' => 'Clientes',
-        'empresas' => 'Empresas',
-        'operarios' => 'Operarios',
-        'citas' => 'Citas',
-        'campanas' => 'Campañas',
-        'llamadas' => 'Llamadas',
+        'clientes'   => 'Clientes',
+        'empresas'   => 'Empresas',
+        'operarios'  => 'Operarios',
+        'calendario' => 'Calendario',
+        'citas'      => 'Citas',
+        'campanas'   => 'Campañas',
+        'llamadas'   => 'Llamadas',
     ] as $prefijo => $etiqueta) {
         if (request()->routeIs($prefijo . '.*')) {
             $tituloSeccion = $etiqueta;
@@ -715,6 +716,13 @@
             'visible' => true,
         ],
         [
+            'ruta' => 'calendario.index',
+            'patron' => 'calendario.*',
+            'texto' => 'Calendario',
+            'icono' => 'calendar',
+            'visible' => Auth::check() && $rolActual === 3,
+        ],
+        [
             'ruta' => 'clientes.index',
             'patron' => 'clientes.*',
             'texto' => 'Clientes',
@@ -733,30 +741,21 @@
             'patron' => 'operarios.*',
             'texto' => 'Operarios',
             'icono' => 'user-round',
-
-            'visible' =>
-                Auth::check()
-                && in_array($rolActual, [2], true),
+            'visible' => Auth::check() && in_array($rolActual, [2], true),
         ],
         [
             'ruta' => 'campanas.index',
             'patron' => 'campanas.*',
             'texto' => 'Campañas',
             'icono' => 'megaphone',
-
-            'visible' =>
-                Auth::check()
-                && in_array($rolActual, [2,3], true),
+            'visible' => Auth::check() && in_array($rolActual, [2,3], true),
         ],
         [
             'ruta' => 'llamadas.index',
             'patron' => 'llamadas.*',
             'texto' => 'Llamadas',
             'icono' => 'phone',
-
-            'visible' =>
-                Auth::check()
-                && in_array($rolActual, [2,3], true),
+            'visible' => Auth::check() && in_array($rolActual, [2,3], true),
         ],
     ];
 @endphp

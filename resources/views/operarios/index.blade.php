@@ -5,13 +5,17 @@
 @section('content')
 
 <style>
+
     .operarios-page {
         color: #e8eef7;
         max-width: 1400px;
         margin: 0 auto;
     }
 
-    /* HEADER */
+
+    /* =========================================================
+       HEADER
+    ========================================================== */
 
     .operarios-header {
         display: flex;
@@ -74,14 +78,22 @@
     }
 
     .btn-nuevo-operario:hover {
-        background: rgba(53,198,255,.15);
-        border-color: rgba(53,198,255,.4);
+        background: rgba(53,198,255,.18);
+        border-color: rgba(53,198,255,.48);
         color: #8dddff;
         transform: translateY(-1px);
+        box-shadow: 0 0 15px rgba(53,198,255,.10);
+    }
+
+    .btn-nuevo-operario svg {
+        width: 16px;
+        height: 16px;
     }
 
 
-    /* STATS */
+    /* =========================================================
+       STATS
+    ========================================================== */
 
     .operarios-stats {
         display: grid;
@@ -110,6 +122,7 @@
         bottom: -55px;
         border-radius: 50%;
         background: rgba(53,198,255,.04);
+        pointer-events: none;
     }
 
     .stat-top {
@@ -135,29 +148,74 @@
         font-weight: 750;
     }
 
+
+    /* =========================================================
+       ICONOS DE ESTADÍSTICAS
+    ========================================================== */
+
     .stat-icon {
         display: flex;
         align-items: center;
         justify-content: center;
         width: 39px;
         height: 39px;
+        border: 1px solid rgba(53,198,255,.28);
         border-radius: 10px;
-        background: rgba(53,198,255,.08);
+        background: rgba(53,198,255,.13);
         color: #35c6ff;
+        transition: .2s ease;
     }
 
+    .stat-icon svg {
+        width: 19px;
+        height: 19px;
+        stroke-width: 2.2;
+    }
+
+    .stat-icon:hover {
+        border-color: rgba(53,198,255,.55);
+        background: rgba(53,198,255,.22);
+        color: #72d9ff;
+        box-shadow: 0 0 14px rgba(53,198,255,.12);
+        transform: translateY(-1px);
+    }
+
+
+    /* ACTIVOS */
+
     .stat-icon.green {
-        background: rgba(52,211,153,.08);
+        border-color: rgba(52,211,153,.28);
+        background: rgba(52,211,153,.13);
         color: #34d399;
     }
 
-    .stat-icon.gray {
-        background: rgba(148,163,184,.07);
-        color: #94a3b8;
+    .stat-icon.green:hover {
+        border-color: rgba(52,211,153,.55);
+        background: rgba(52,211,153,.22);
+        color: #6ee7b7;
+        box-shadow: 0 0 14px rgba(52,211,153,.12);
     }
 
 
-    /* MAIN CARD */
+    /* INACTIVOS */
+
+    .stat-icon.gray {
+        border-color: rgba(148,163,184,.25);
+        background: rgba(148,163,184,.11);
+        color: #94a3b8;
+    }
+
+    .stat-icon.gray:hover {
+        border-color: rgba(148,163,184,.5);
+        background: rgba(148,163,184,.19);
+        color: #cbd5e1;
+        box-shadow: 0 0 14px rgba(148,163,184,.10);
+    }
+
+
+    /* =========================================================
+       MAIN CARD
+    ========================================================== */
 
     .operarios-card {
         overflow: hidden;
@@ -190,7 +248,9 @@
     }
 
 
-    /* SEARCH */
+    /* =========================================================
+       SEARCH
+    ========================================================== */
 
     .operario-search {
         position: relative;
@@ -232,7 +292,9 @@
     }
 
 
-    /* TABLE */
+    /* =========================================================
+       TABLE
+    ========================================================== */
 
     .operarios-table-wrapper {
         overflow-x: auto;
@@ -274,7 +336,9 @@
     }
 
 
-    /* USER */
+    /* =========================================================
+       USER
+    ========================================================== */
 
     .operario-user {
         display: flex;
@@ -324,7 +388,9 @@
     }
 
 
-    /* EMAIL */
+    /* =========================================================
+       EMAIL
+    ========================================================== */
 
     .operario-email {
         display: flex;
@@ -342,7 +408,9 @@
     }
 
 
-    /* EMPRESA */
+    /* =========================================================
+       EMPRESA
+    ========================================================== */
 
     .empresa-badge {
         display: inline-flex;
@@ -365,7 +433,9 @@
     }
 
 
-    /* STATUS */
+    /* =========================================================
+       STATUS
+    ========================================================== */
 
     .status-badge {
         display: inline-flex;
@@ -405,13 +475,15 @@
     }
 
 
-    /* ACTIONS */
+    /* =========================================================
+       ACTIONS
+    ========================================================== */
 
     .operario-actions {
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 3px;
+        gap: 5px;
     }
 
     .action-button {
@@ -420,38 +492,96 @@
         justify-content: center;
         width: 31px;
         height: 31px;
-        border: 1px solid transparent;
+        border: 1px solid rgba(148,163,184,.16);
         border-radius: 8px;
-        background: transparent;
-        color: #64738a;
+        background: rgba(148,163,184,.07);
+        color: #94a3b8;
         cursor: pointer;
-        transition: .15s ease;
+        transition: .18s ease;
         text-decoration: none;
     }
 
     .action-button svg {
         width: 14px;
         height: 14px;
+        stroke-width: 2.2;
     }
 
     .action-button:hover {
-        border-color: rgba(255,255,255,.05);
-        background: rgba(255,255,255,.04);
-        color: #ffffff;
+        border-color: rgba(203,213,225,.4);
+        background: rgba(203,213,225,.13);
+        color: #e2e8f0;
+        transform: translateY(-1px);
+    }
+
+
+    /* VER */
+
+    .action-button.view {
+        border-color: rgba(53,198,255,.18);
+        background: rgba(53,198,255,.08);
+        color: #35c6ff;
     }
 
     .action-button.view:hover {
-        color: #35c6ff;
-        background: rgba(53,198,255,.07);
+        border-color: rgba(53,198,255,.5);
+        background: rgba(53,198,255,.18);
+        color: #7bddff;
+        box-shadow: 0 0 12px rgba(53,198,255,.10);
+    }
+
+
+    /* EDITAR */
+
+    .action-button.edit {
+        border-color: rgba(251,191,36,.18);
+        background: rgba(251,191,36,.07);
+        color: #fbbf24;
+    }
+
+    .action-button.edit:hover {
+        border-color: rgba(251,191,36,.5);
+        background: rgba(251,191,36,.17);
+        color: #fde68a;
+        box-shadow: 0 0 12px rgba(251,191,36,.10);
+    }
+
+
+    /* ACTIVAR / DESACTIVAR */
+
+    .action-button.toggle {
+        border-color: rgba(52,211,153,.18);
+        background: rgba(52,211,153,.07);
+        color: #34d399;
+    }
+
+    .action-button.toggle:hover {
+        border-color: rgba(52,211,153,.5);
+        background: rgba(52,211,153,.17);
+        color: #6ee7b7;
+        box-shadow: 0 0 12px rgba(52,211,153,.10);
+    }
+
+
+    /* ELIMINAR */
+
+    .action-button.delete {
+        border-color: rgba(248,113,113,.18);
+        background: rgba(248,113,113,.07);
+        color: #f87171;
     }
 
     .action-button.delete:hover {
-        color: #f87171;
-        background: rgba(248,113,113,.07);
+        border-color: rgba(248,113,113,.5);
+        background: rgba(248,113,113,.17);
+        color: #fca5a5;
+        box-shadow: 0 0 12px rgba(248,113,113,.10);
     }
 
 
-    /* EMPTY */
+    /* =========================================================
+       EMPTY
+    ========================================================== */
 
     .operarios-empty {
         padding: 65px 25px;
@@ -509,10 +639,18 @@
     .empty-button:hover {
         background: #67d5ff;
         transform: translateY(-1px);
+        box-shadow: 0 0 16px rgba(53,198,255,.15);
+    }
+
+    .empty-button svg {
+        width: 15px;
+        height: 15px;
     }
 
 
-    /* NO RESULTS */
+    /* =========================================================
+       NO RESULTS
+    ========================================================== */
 
     .operarios-no-results {
         display: none;
@@ -523,7 +661,9 @@
     }
 
 
-    /* RESPONSIVE */
+    /* =========================================================
+       RESPONSIVE
+    ========================================================== */
 
     @media (max-width: 900px) {
 
@@ -567,10 +707,12 @@
             padding-right: 14px;
         }
     }
+
 </style>
 
 
 <div class="operarios-page">
+
 
     {{-- =========================================================
          HEADER
@@ -581,13 +723,18 @@
         <div>
 
             <div class="operarios-eyebrow">
+
                 <span class="operarios-eyebrow-dot"></span>
+
                 Gestión del equipo
+
             </div>
+
 
             <h1 class="operarios-title">
                 Operarios
             </h1>
+
 
             <p class="operarios-description">
                 Administra las cuentas de los operarios y consulta la información
@@ -601,15 +748,18 @@
             href="{{ route('operarios.create') }}"
             class="btn-nuevo-operario"
         >
+
             <i data-lucide="user-plus"></i>
+
             Nuevo operario
+
         </a>
 
     </div>
 
 
     {{-- =========================================================
-         MENSAJE
+         MENSAJE DE ÉXITO
     ========================================================== --}}
 
     @if(session('success'))
@@ -628,7 +778,10 @@
             font-weight:600;
         ">
 
-            <i data-lucide="circle-check"></i>
+            <i
+                data-lucide="circle-check"
+                style="width:16px;height:16px;"
+            ></i>
 
             {{ session('success') }}
 
@@ -643,11 +796,15 @@
 
     <div class="operarios-stats">
 
+
+        {{-- TOTAL --}}
+
         <div class="operario-stat">
 
             <div class="stat-top">
 
                 <div>
+
                     <div class="stat-label">
                         Total de operarios
                     </div>
@@ -655,10 +812,14 @@
                     <div class="stat-number">
                         {{ $operarios->count() }}
                     </div>
+
                 </div>
 
+
                 <div class="stat-icon">
+
                     <i data-lucide="users-round"></i>
+
                 </div>
 
             </div>
@@ -666,11 +827,14 @@
         </div>
 
 
+        {{-- ACTIVOS --}}
+
         <div class="operario-stat">
 
             <div class="stat-top">
 
                 <div>
+
                     <div class="stat-label">
                         Operarios activos
                     </div>
@@ -678,10 +842,14 @@
                     <div class="stat-number">
                         {{ $operarios->where('estado', true)->count() }}
                     </div>
+
                 </div>
 
+
                 <div class="stat-icon green">
+
                     <i data-lucide="user-round-check"></i>
+
                 </div>
 
             </div>
@@ -689,11 +857,14 @@
         </div>
 
 
+        {{-- INACTIVOS --}}
+
         <div class="operario-stat">
 
             <div class="stat-top">
 
                 <div>
+
                     <div class="stat-label">
                         Operarios inactivos
                     </div>
@@ -701,10 +872,14 @@
                     <div class="stat-number">
                         {{ $operarios->where('estado', false)->count() }}
                     </div>
+
                 </div>
 
+
                 <div class="stat-icon gray">
+
                     <i data-lucide="user-round-x"></i>
+
                 </div>
 
             </div>
@@ -719,6 +894,7 @@
     ========================================================== --}}
 
     <div class="operarios-card">
+
 
         <div class="operarios-card-header">
 
@@ -752,6 +928,7 @@
 
 
         @if($operarios->count() > 0)
+
 
             <div class="operarios-table-wrapper">
 
@@ -788,17 +965,25 @@
 
                     <tbody id="tablaOperarios">
 
+
                         @foreach($operarios as $operario)
 
                             @php
+
                                 $activo = $operario->estado ?? true;
-                                $inicial = strtoupper(substr($operario->name, 0, 1));
+
+                                $inicial = strtoupper(
+                                    substr($operario->name, 0, 1)
+                                );
+
                             @endphp
+
 
                             <tr
                                 class="operario-row"
                                 data-search="{{ strtolower($operario->name . ' ' . $operario->email . ' ' . ($operario->empresa->nombre ?? '')) }}"
                             >
+
 
                                 {{-- OPERARIO --}}
 
@@ -810,8 +995,11 @@
 
                                             {{ $inicial }}
 
+
                                             @if($activo)
+
                                                 <span class="operario-online"></span>
+
                                             @endif
 
                                         </div>
@@ -865,7 +1053,10 @@
 
                                     @else
 
-                                        <span style="color:#59687f;font-size:11px;">
+                                        <span style="
+                                            color:#59687f;
+                                            font-size:11px;
+                                        ">
                                             Sin empresa
                                         </span>
 
@@ -909,6 +1100,9 @@
 
                                     <div class="operario-actions">
 
+
+                                        {{-- VER --}}
+
                                         @if(Route::has('operarios.show'))
 
                                             <a
@@ -916,24 +1110,32 @@
                                                 class="action-button view"
                                                 title="Ver operario"
                                             >
+
                                                 <i data-lucide="eye"></i>
+
                                             </a>
 
                                         @endif
 
+
+                                        {{-- EDITAR --}}
 
                                         @if(Route::has('operarios.edit'))
 
                                             <a
                                                 href="{{ route('operarios.edit', $operario) }}"
-                                                class="action-button"
+                                                class="action-button edit"
                                                 title="Editar operario"
                                             >
+
                                                 <i data-lucide="pencil"></i>
+
                                             </a>
 
                                         @endif
 
+
+                                        {{-- CAMBIAR ESTADO --}}
 
                                         @if(Route::has('operarios.toggleEstado'))
 
@@ -944,11 +1146,13 @@
                                             >
 
                                                 @csrf
+
                                                 @method('PATCH')
+
 
                                                 <button
                                                     type="submit"
-                                                    class="action-button"
+                                                    class="action-button toggle"
                                                     title="{{ $activo ? 'Desactivar' : 'Activar' }}"
                                                 >
 
@@ -963,6 +1167,8 @@
                                         @endif
 
 
+                                        {{-- ELIMINAR --}}
+
                                         @if(Route::has('operarios.destroy'))
 
                                             <form
@@ -973,19 +1179,24 @@
                                             >
 
                                                 @csrf
+
                                                 @method('DELETE')
+
 
                                                 <button
                                                     type="submit"
                                                     class="action-button delete"
                                                     title="Eliminar"
                                                 >
+
                                                     <i data-lucide="trash-2"></i>
+
                                                 </button>
 
                                             </form>
 
                                         @endif
+
 
                                     </div>
 
@@ -995,6 +1206,7 @@
 
                         @endforeach
 
+
                     </tbody>
 
                 </table>
@@ -1002,14 +1214,20 @@
             </div>
 
 
+            {{-- SIN RESULTADOS DE BÚSQUEDA --}}
+
             <div
                 id="sinResultados"
                 class="operarios-no-results"
             >
+
                 No encontramos operarios que coincidan con tu búsqueda.
+
             </div>
 
+
         @else
+
 
             {{-- =================================================
                  EMPTY STATE
@@ -1017,19 +1235,24 @@
 
             <div class="operarios-empty">
 
+
                 <div class="empty-icon">
 
                     <i data-lucide="users-round"></i>
 
                 </div>
 
+
                 <h3 class="empty-title">
                     Aún no hay operarios
                 </h3>
 
+
                 <p class="empty-description">
+
                     Crea el primer operario para comenzar a administrar
                     tu equipo dentro del CRM.
+
                 </p>
 
 
@@ -1044,9 +1267,12 @@
 
                 </a>
 
+
             </div>
 
+
         @endif
+
 
     </div>
 
@@ -1057,29 +1283,57 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    const buscador = document.getElementById('buscarOperario');
-    const filas = document.querySelectorAll('.operario-row');
-    const sinResultados = document.getElementById('sinResultados');
 
-    if (!buscador) {
-        return;
+    /* =========================================================
+       INICIALIZAR LUCIDE
+    ========================================================== */
+
+    if (typeof lucide !== 'undefined') {
+
+        lucide.createIcons();
+
     }
 
+
+    /* =========================================================
+       BUSCADOR DE OPERARIOS
+    ========================================================== */
+
+    const buscador = document.getElementById('buscarOperario');
+
+    const filas = document.querySelectorAll('.operario-row');
+
+    const sinResultados = document.getElementById('sinResultados');
+
+
+    if (!buscador) {
+
+        return;
+
+    }
+
+
     buscador.addEventListener('input', function () {
+
 
         const texto = this.value
             .toLowerCase()
             .trim();
 
+
         let encontrados = 0;
+
 
         filas.forEach(function (fila) {
 
+
             const contenido = fila.dataset.search || '';
+
 
             if (contenido.includes(texto)) {
 
                 fila.style.display = '';
+
                 encontrados++;
 
             } else {
@@ -1088,19 +1342,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
             }
 
+
         });
+
 
         if (sinResultados) {
 
+
             if (encontrados === 0 && texto !== '') {
+
                 sinResultados.style.display = 'block';
+
             } else {
+
                 sinResultados.style.display = 'none';
+
             }
+
 
         }
 
+
     });
+
 
 });
 

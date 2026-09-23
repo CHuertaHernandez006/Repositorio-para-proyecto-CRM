@@ -4,6 +4,11 @@
 
 @section('content')
 
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/css/intlTelInput.css">
+
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/intlTelInput.min.js"></script>
+
 <style>
     .cliente-edit-page {
         max-width: 1180px;
@@ -210,10 +215,18 @@
         background: #111a2a;
     }
 
+    .cliente-input[aria-invalid="true"] {
+        border-color: #f87171;
+    }
+
     .cliente-error {
         margin-top: 6px;
         color: #f87171;
         font-size: 11px;
+    }
+
+    .cliente-error[hidden] {
+        display: none;
     }
 
     .cliente-alert {
@@ -345,6 +358,76 @@
             flex: 1;
         }
     }
+
+    /* ==========================================================
+       Teléfono / intl-tel-input (v25.x) — mismo tratamiento que
+       en la vista de creación, adaptado a la paleta de "editar".
+       ========================================================== */
+    .cliente-phone-wrapper { width: 100%; }
+    .cliente-phone-wrapper .iti { width: 100%; }
+
+    .cliente-phone-wrapper .iti input.iti__tel-input {
+        width: 100%;
+        min-height: 45px;
+        padding: 0 13px;
+        border: 1px solid #34445c;
+        border-radius: 10px;
+        background: #0f1829;
+        color: #e5edf7;
+        font-family: inherit;
+        font-size: 13px;
+        transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+
+    .cliente-phone-wrapper .iti input.iti__tel-input:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        background: #111d30;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.11);
+    }
+
+    .cliente-phone-wrapper .iti input.iti__tel-input[aria-invalid="true"] {
+        border-color: #f87171;
+    }
+
+    .cliente-phone-wrapper .iti__selected-country-primary {
+        height: 43px;
+        padding: 0 10px;
+        background: #17233a;
+        border-radius: 10px 0 0 10px;
+    }
+
+    .cliente-phone-wrapper .iti__selected-dial-code { color: #e5edf7; }
+    .cliente-phone-wrapper .iti__arrow { border-top-color: #94a3b8; }
+    .cliente-phone-wrapper .iti__arrow--up { border-bottom-color: #0ea5e9; }
+
+    .cliente-phone-wrapper .iti__country-selector,
+    .cliente-phone-wrapper .iti__dropdown-content {
+        background: #172236;
+        border: 1px solid #34445c;
+        border-radius: 10px;
+        color: #e5edf7;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+    }
+
+    .cliente-phone-wrapper .iti__country-list {
+        background: #172236;
+        max-height: 280px;
+    }
+
+    .cliente-phone-wrapper .iti__search-input {
+        background: #0f1829;
+        color: #e5edf7;
+        border-bottom: 1px solid #34445c;
+    }
+
+    .cliente-phone-wrapper .iti__country:hover,
+    .cliente-phone-wrapper .iti__country.iti__highlight {
+        background: #293a52;
+    }
+
+    .cliente-phone-wrapper .iti__country-name { color: #e5edf7; }
+    .cliente-phone-wrapper .iti__dial-code { color: #8ea1ba; }
 </style>
 
 <div class="cliente-edit-page">
@@ -397,6 +480,7 @@
             <form
                 action="{{ route('clientes.update', $cliente->id_cliente) }}"
                 method="POST"
+                id="cliente-form"
             >
 
                 @csrf
@@ -501,10 +585,14 @@
                             <input
                                 type="email"
                                 name="correo"
+                                id="correo"
                                 value="{{ old('correo', $cliente->correo) }}"
                                 class="cliente-input"
                                 placeholder="correo@ejemplo.com"
+                                autocomplete="email"
+                                aria-describedby="correo-error"
                             >
+                            <p class="cliente-error" id="correo-error" role="alert" hidden></p>
                         </div>
 
                         <div class="cliente-field">
@@ -512,26 +600,38 @@
                                 Teléfono principal <span class="required">*</span>
                             </label>
 
-                            <input
-                                type="text"
-                                name="telefono_principal"
-                                value="{{ old('telefono_principal', $cliente->telefono_principal) }}"
-                                required
-                                class="cliente-input"
-                                placeholder="5512345678"
-                            >
+                            <div class="cliente-phone-wrapper">
+                                <input
+                                    type="tel"
+                                    name="telefono_principal"
+                                    id="telefono_principal"
+                                    value="{{ old('telefono_principal', $cliente->telefono_principal) }}"
+                                    required
+                                    class="cliente-input"
+                                    placeholder="5512345678"
+                                    autocomplete="tel"
+                                    aria-describedby="telefono_principal-error"
+                                >
+                            </div>
+                            <p class="cliente-error" id="telefono_principal-error" role="alert" hidden></p>
                         </div>
 
                         <div class="cliente-field">
                             <label>Teléfono secundario</label>
 
-                            <input
-                                type="text"
-                                name="telefono_secundario"
-                                value="{{ old('telefono_secundario', $cliente->telefono_secundario) }}"
-                                class="cliente-input"
-                                placeholder="Teléfono alternativo"
-                            >
+                            <div class="cliente-phone-wrapper">
+                                <input
+                                    type="tel"
+                                    name="telefono_secundario"
+                                    id="telefono_secundario"
+                                    value="{{ old('telefono_secundario', $cliente->telefono_secundario) }}"
+                                    class="cliente-input"
+                                    placeholder="Teléfono alternativo"
+                                    autocomplete="tel"
+                                    aria-describedby="telefono_secundario-error"
+                                >
+                            </div>
+                            <p class="cliente-error" id="telefono_secundario-error" role="alert" hidden></p>
                         </div>
 
                     </div>
@@ -728,6 +828,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
+    /* ==========================================================
+       1. Selects encadenados: País → Estado → Ciudad
+       ========================================================== */
     const selectPais = document.getElementById('select-pais');
     const selectEstado = document.getElementById('select-estado');
     const selectCiudad = document.getElementById('select-ciudad');
@@ -736,119 +839,40 @@ document.addEventListener('DOMContentLoaded', function () {
     const estadoActual = @json(old('estado', $cliente->estado));
     const ciudadActual = @json(old('ciudad', $cliente->ciudad));
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cargar países
-    |--------------------------------------------------------------------------
-    */
+    if (selectPais && selectEstado && selectCiudad) {
 
-    fetch('https://countriesnow.space/api/v0.1/countries')
-        .then(response => response.json())
-        .then(data => {
+        fetch('https://countriesnow.space/api/v0.1/countries')
+            .then(response => response.json())
+            .then(data => {
 
-            data.data.forEach(pais => {
+                (data.data || []).forEach(pais => {
 
-                const option = document.createElement('option');
+                    const option = document.createElement('option');
 
-                option.value = pais.country;
-                option.textContent = pais.country;
+                    option.value = pais.country;
+                    option.textContent = pais.country;
 
-                if (pais.country === paisActual) {
-                    option.selected = true;
+                    if (pais.country === paisActual) {
+                        option.selected = true;
+                    }
+
+                    selectPais.appendChild(option);
+                });
+
+                if (paisActual) {
+                    cargarEstados(paisActual);
                 }
 
-                selectPais.appendChild(option);
-            });
-
-            if (paisActual) {
-                cargarEstados(paisActual);
-            }
-
-        })
-        .catch(error => {
-            console.error('Error cargando países:', error);
-        });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cargar estados
-    |--------------------------------------------------------------------------
-    */
-
-    function cargarEstados(pais) {
-
-        selectEstado.innerHTML =
-            '<option value="">Cargando estados...</option>';
-
-        selectCiudad.innerHTML =
-            '<option value="">Primero elige un estado</option>';
-
-        selectEstado.disabled = true;
-        selectCiudad.disabled = true;
-
-        fetch('https://countriesnow.space/api/v0.1/countries/states', {
-
-            method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/json'
-            },
-
-            body: JSON.stringify({
-                country: pais
             })
-
-        })
-        .then(response => response.json())
-        .then(data => {
-
-            selectEstado.innerHTML =
-                '<option value="">Selecciona un estado...</option>';
-
-            data.data.states.forEach(estado => {
-
-                const option = document.createElement('option');
-
-                option.value = estado.name;
-                option.textContent = estado.name;
-
-                if (estado.name === estadoActual) {
-                    option.selected = true;
-                }
-
-                selectEstado.appendChild(option);
+            .catch(error => {
+                console.error('Error cargando países:', error);
+                selectPais.innerHTML = '<option value="">No se pudieron cargar los países</option>';
             });
 
-            selectEstado.disabled = false;
-
-            if (estadoActual) {
-                cargarCiudades(pais, estadoActual);
-            }
-
-        })
-        .catch(error => {
-
-            console.error('Error cargando estados:', error);
+        function cargarEstados(pais) {
 
             selectEstado.innerHTML =
-                '<option value="">No se pudieron cargar los estados</option>';
-        });
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cambio de país
-    |--------------------------------------------------------------------------
-    */
-
-    selectPais.addEventListener('change', function () {
-
-        if (!this.value) {
-
-            selectEstado.innerHTML =
-                '<option value="">Primero elige un país</option>';
+                '<option value="">Cargando estados...</option>';
 
             selectCiudad.innerHTML =
                 '<option value="">Primero elige un estado</option>';
@@ -856,93 +880,278 @@ document.addEventListener('DOMContentLoaded', function () {
             selectEstado.disabled = true;
             selectCiudad.disabled = true;
 
-            return;
-        }
-
-        cargarEstados(this.value);
-    });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cargar ciudades
-    |--------------------------------------------------------------------------
-    */
-
-    function cargarCiudades(pais, estado) {
-
-        selectCiudad.innerHTML =
-            '<option value="">Cargando ciudades...</option>';
-
-        selectCiudad.disabled = true;
-
-        fetch('https://countriesnow.space/api/v0.1/countries/state/cities', {
-
-            method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/json'
-            },
-
-            body: JSON.stringify({
-                country: pais,
-                state: estado
+            fetch('https://countriesnow.space/api/v0.1/countries/states', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country: pais })
             })
+            .then(response => response.json())
+            .then(data => {
 
-        })
-        .then(response => response.json())
-        .then(data => {
+                selectEstado.innerHTML =
+                    '<option value="">Selecciona un estado...</option>';
 
-            selectCiudad.innerHTML =
-                '<option value="">Selecciona una ciudad...</option>';
+                const estados = (data.data && data.data.states) || [];
 
-            data.data.forEach(ciudad => {
+                estados.forEach(estado => {
 
-                const option = document.createElement('option');
+                    const option = document.createElement('option');
 
-                option.value = ciudad;
-                option.textContent = ciudad;
+                    option.value = estado.name;
+                    option.textContent = estado.name;
 
-                if (ciudad === ciudadActual) {
-                    option.selected = true;
+                    if (estado.name === estadoActual) {
+                        option.selected = true;
+                    }
+
+                    selectEstado.appendChild(option);
+                });
+
+                selectEstado.disabled = false;
+
+                if (estadoActual) {
+                    cargarCiudades(pais, estadoActual);
                 }
 
-                selectCiudad.appendChild(option);
+            })
+            .catch(error => {
+                console.error('Error cargando estados:', error);
+                selectEstado.innerHTML =
+                    '<option value="">No se pudieron cargar los estados</option>';
             });
+        }
 
-            selectCiudad.disabled = false;
+        selectPais.addEventListener('change', function () {
 
-        })
-        .catch(error => {
+            if (!this.value) {
 
-            console.error('Error cargando ciudades:', error);
+                selectEstado.innerHTML =
+                    '<option value="">Primero elige un país</option>';
 
-            selectCiudad.innerHTML =
-                '<option value="">No se pudieron cargar las ciudades</option>';
+                selectCiudad.innerHTML =
+                    '<option value="">Primero elige un estado</option>';
+
+                selectEstado.disabled = true;
+                selectCiudad.disabled = true;
+
+                return;
+            }
+
+            cargarEstados(this.value);
         });
-    }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cambio de estado
-    |--------------------------------------------------------------------------
-    */
-
-    selectEstado.addEventListener('change', function () {
-
-        if (!this.value) {
+        function cargarCiudades(pais, estado) {
 
             selectCiudad.innerHTML =
-                '<option value="">Primero elige un estado</option>';
+                '<option value="">Cargando ciudades...</option>';
 
             selectCiudad.disabled = true;
 
-            return;
+            fetch('https://countriesnow.space/api/v0.1/countries/state/cities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country: pais, state: estado })
+            })
+            .then(response => response.json())
+            .then(data => {
+
+                selectCiudad.innerHTML =
+                    '<option value="">Selecciona una ciudad...</option>';
+
+                (data.data || []).forEach(ciudad => {
+
+                    const option = document.createElement('option');
+
+                    option.value = ciudad;
+                    option.textContent = ciudad;
+
+                    if (ciudad === ciudadActual) {
+                        option.selected = true;
+                    }
+
+                    selectCiudad.appendChild(option);
+                });
+
+                selectCiudad.disabled = false;
+
+            })
+            .catch(error => {
+                console.error('Error cargando ciudades:', error);
+                selectCiudad.innerHTML =
+                    '<option value="">No se pudieron cargar las ciudades</option>';
+            });
         }
 
-        cargarCiudades(selectPais.value, this.value);
-    });
+        selectEstado.addEventListener('change', function () {
+
+            if (!this.value) {
+
+                selectCiudad.innerHTML =
+                    '<option value="">Primero elige un estado</option>';
+
+                selectCiudad.disabled = true;
+
+                return;
+            }
+
+            cargarCiudades(selectPais.value, this.value);
+        });
+    }
+
+    /* ==========================================================
+       2. Validación de correo electrónico
+       ========================================================== */
+    const correoInput = document.getElementById('correo');
+    const correoError = document.getElementById('correo-error');
+    // Regex práctica (no 100% RFC 5322, pero cubre los casos reales).
+    // La validación definitiva debe repetirse en el backend
+    // (ej. regla 'email:rfc,dns' de Laravel) — esto es solo UX.
+    const CORREO_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+
+    function mostrarError(input, elError, mensaje) {
+        input.setAttribute('aria-invalid', 'true');
+        if (elError) {
+            elError.textContent = mensaje;
+            elError.hidden = false;
+        }
+    }
+
+    function limpiarError(input, elError) {
+        input.setAttribute('aria-invalid', 'false');
+        if (elError) {
+            elError.textContent = '';
+            elError.hidden = true;
+        }
+    }
+
+    function validarCorreo() {
+        if (!correoInput) return true;
+        const valor = correoInput.value.trim();
+
+        if (valor === '') {
+            // Campo opcional: vacío es válido.
+            limpiarError(correoInput, correoError);
+            return true;
+        }
+
+        if (!CORREO_REGEX.test(valor)) {
+            mostrarError(correoInput, correoError, 'Ingresa un correo electrónico válido, ej. nombre@dominio.com');
+            return false;
+        }
+
+        limpiarError(correoInput, correoError);
+        return true;
+    }
+
+    if (correoInput) {
+        correoInput.addEventListener('blur', validarCorreo);
+        correoInput.addEventListener('input', function () {
+            if (correoInput.getAttribute('aria-invalid') === 'true') {
+                validarCorreo();
+            }
+        });
+    }
+
+    /* ==========================================================
+       3. intl-tel-input v25.x — teléfono con validación por país
+       API actual: loadUtils (import dinámico) en vez de utilsScript,
+       countryOrder en vez de preferredCountries (removida en v25).
+       Los métodos de validación requieren esperar iti.promise
+       (los utils de libphonenumber cargan de forma asíncrona).
+       Si el número ya viene guardado en formato E.164 (+52...),
+       intl-tel-input detecta el país automáticamente al inicializar.
+       ========================================================== */
+    const form = document.getElementById('cliente-form');
+    const telInputIds = ['telefono_principal', 'telefono_secundario'];
+    const telInputs = telInputIds.map(id => document.getElementById(id)).filter(Boolean);
+    const itiInstances = {};
+    const itiDisponible = typeof window.intlTelInput === 'function';
+
+    const MENSAJES_ERROR_TEL = {
+        0: 'Número inválido para el país seleccionado.',
+        1: 'Código de país inválido. Verifica la bandera seleccionada.',
+        2: 'El número es demasiado corto para el país seleccionado.',
+        3: 'El número es demasiado largo para el país seleccionado.',
+        4: 'Número inválido para el país seleccionado.'
+    };
+
+    function elErrorDe(input) {
+        return document.getElementById(input.id + '-error');
+    }
+
+    async function validarTelefono(input) {
+        const iti = itiInstances[input.id];
+        const elError = elErrorDe(input);
+        const valor = input.value.trim();
+        const esOpcional = !input.hasAttribute('required');
+
+        if (valor === '') {
+            if (esOpcional) {
+                limpiarError(input, elError);
+                return true;
+            }
+            mostrarError(input, elError, 'Este campo es obligatorio.');
+            return false;
+        }
+
+        if (!iti) {
+            // La librería no cargó: no podemos validar formato por país,
+            // dejamos pasar el valor tal cual lo escribió el usuario.
+            return true;
+        }
+
+        await iti.promise; // espera a que carguen los utils de libphonenumber
+
+        if (!iti.isValidNumber()) {
+            const codigo = iti.getValidationError();
+            mostrarError(input, elError, MENSAJES_ERROR_TEL[codigo] || 'Número de teléfono inválido.');
+            return false;
+        }
+
+        limpiarError(input, elError);
+        input.value = iti.getNumber(); // normaliza a E.164, ej. +5215512345678
+        return true;
+    }
+
+    if (itiDisponible) {
+        telInputs.forEach(input => {
+            itiInstances[input.id] = window.intlTelInput(input, {
+                initialCountry: 'mx',
+                countryOrder: ['mx', 'us'],
+                separateDialCode: true,
+                loadUtils: () => import('https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/js/utils.js')
+            });
+
+            input.addEventListener('blur', () => validarTelefono(input));
+            input.addEventListener('countrychange', () => {
+                if (input.value.trim() !== '') validarTelefono(input);
+            });
+        });
+    }
+
+    /* ==========================================================
+       4. Envío del formulario: espera validaciones async y
+       enfoca el primer campo inválido si algo falla.
+       ========================================================== */
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const correoOk = validarCorreo();
+
+            Promise.all(telInputs.map(input => validarTelefono(input))).then(resultadosTel => {
+                const telOk = resultadosTel.every(Boolean);
+
+                if (correoOk && telOk) {
+                    form.submit(); // envío nativo, no vuelve a disparar 'submit'
+                    return;
+                }
+
+                const primerInvalido = form.querySelector('[aria-invalid="true"]');
+                if (primerInvalido) primerInvalido.focus();
+            });
+        });
+    }
 
 });
 </script>

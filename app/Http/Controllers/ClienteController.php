@@ -64,9 +64,23 @@ class ClienteController extends Controller
             'apellido_paterno' => 'required|string|max:100',
             'apellido_materno' => 'nullable|string|max:100',
             'empresa' => 'nullable|string|max:150',
-            'telefono_principal' => 'required|string|max:20',
-            'telefono_secundario' => 'nullable|string|max:20',
-            'correo' => 'nullable|email|max:150',
+           'telefono_principal' => [
+            'required',
+            'string',
+            'regex:/^\+[1-9]\d{7,14}$/',
+                ],
+
+        'telefono_secundario' => [
+            'nullable',
+            'string',
+            'regex:/^\+[1-9]\d{7,14}$/',
+                ],
+
+        'correo' => [
+            'nullable',
+            'email:rfc,dns',
+            'max:150',
+                ],
             'pais' => 'nullable|string|max:100',
             'estado' => 'nullable|string|max:100',
             'ciudad' => 'nullable|string|max:100',

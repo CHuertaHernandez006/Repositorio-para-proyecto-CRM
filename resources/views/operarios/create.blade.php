@@ -578,7 +578,112 @@
         flex: 0 0 16px;
         color: #f87171;
     }
+/* =========================================================
+   VALIDACIONES EN CAMPOS
+========================================================= */
 
+.form-input.field-invalid {
+    border-color: #f87171 !important;
+    box-shadow: 0 0 0 3px rgba(248,113,113,.05);
+}
+
+.form-input.field-valid {
+    border-color: #34d399 !important;
+}
+
+.validation-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 7px;
+    color: #f87171;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.validation-message svg {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    margin-top: 1px;
+}
+
+/* =========================================================
+   REGLAS DE CONTRASEÑA
+========================================================= */
+
+.password-rules {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,.045);
+    border-radius: 9px;
+    background: rgba(255,255,255,.018);
+}
+
+.password-rules-title {
+    margin: 0 0 9px;
+    color: #718098;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.password-rule {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 6px;
+    color: #59677c;
+    font-size: 10px;
+    transition: .2s ease;
+}
+
+.password-rule:last-child {
+    margin-bottom: 0;
+}
+
+.password-rule .rule-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    color: #59677c;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.password-rule.rule-valid {
+    color: #34d399;
+}
+
+.password-rule.rule-valid .rule-icon {
+    color: #34d399;
+}
+
+.password-rule.rule-invalid {
+    color: #f87171;
+}
+
+.password-rule.rule-invalid .rule-icon {
+    color: #f87171;
+}
+
+.password-match {
+    display: none;
+    margin-top: 7px;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.password-match.valid {
+    display: block;
+    color: #34d399;
+}
+
+.password-match.invalid {
+    display: block;
+    color: #f87171;
+}
 
     /* =========================================================
        RESPONSIVE
@@ -836,51 +941,51 @@
                     </div>
 
 
-                    {{-- CORREO --}}
 
-                    <div class="form-field full">
+                   {{-- CORREO --}}
+<div class="form-field full">
+    <label
+        for="email"
+        class="form-label"
+    >
+        Correo electrónico
+        <span class="required">*</span>
+    </label>
 
-                        <label
-                            for="email"
-                            class="form-label"
-                        >
-                            Correo electrónico
-                            <span class="required">*</span>
-                        </label>
+    <div class="input-wrapper">
+        <i
+            data-lucide="mail"
+            class="input-icon"
+        ></i>
 
-                        <div class="input-wrapper">
+        <input
+            type="email"
+            id="email"
+            name="email"
+            value="{{ old('email') }}"
+            required
+            autocomplete="email"
+            placeholder="operario@empresa.com"
+            class="form-input"
+        >
+    </div>
 
-                            <i
-                                data-lucide="mail"
-                                class="input-icon"
-                            ></i>
+    <p
+        id="email-validation"
+        class="validation-message"
+        style="display:none;"
+    >
+        <i data-lucide="circle-alert"></i>
+        <span></span>
+    </p>
 
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value="{{ old('email') }}"
-                                required
-                                autocomplete="email"
-                                placeholder="operario@empresa.com"
-                                class="form-input"
-                            >
-
-                        </div>
-
-                        @error('email')
-
-                            <p class="field-error">
-
-                                <i data-lucide="circle-alert"></i>
-
-                                {{ $message }}
-
-                            </p>
-
-                        @enderror
-
-                    </div>
+    @error('email')
+        <p class="field-error">
+            <i data-lucide="circle-alert"></i>
+            {{ $message }}
+        </p>
+    @enderror
+</div>
 
                 </div>
 
@@ -917,90 +1022,131 @@
                 </div>
 
 
-                <div class="form-grid">
+                {{-- CONTRASEÑA --}}
+<div class="form-field">
+    <label
+        for="password"
+        class="form-label"
+    >
+        Contraseña
+        <span class="required">*</span>
+    </label>
 
-                    {{-- CONTRASEÑA --}}
+    <div class="input-wrapper">
+        <i
+            data-lucide="key-round"
+            class="input-icon"
+        ></i>
 
-                    <div class="form-field">
+        <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="Crea una contraseña segura"
+            class="form-input"
+        >
+    </div>
 
-                        <label
-                            for="password"
-                            class="form-label"
-                        >
-                            Contraseña
-                            <span class="required">*</span>
-                        </label>
+    {{-- REGLAS --}}
+    <div class="password-rules">
+        <p class="password-rules-title">
+            La contraseña debe contener:
+        </p>
 
-                        <div class="input-wrapper">
+        <div
+            class="password-rule"
+            data-rule="length"
+        >
+            <span class="rule-icon">○</span>
+            Mínimo 8 caracteres
+        </div>
 
-                            <i
-                                data-lucide="key-round"
-                                class="input-icon"
-                            ></i>
+        <div
+            class="password-rule"
+            data-rule="uppercase"
+        >
+            <span class="rule-icon">○</span>
+            Al menos una letra mayúscula
+        </div>
 
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                required
-                                minlength="8"
-                                autocomplete="new-password"
-                                placeholder="Mínimo 8 caracteres"
-                                class="form-input"
-                            >
+        <div
+            class="password-rule"
+            data-rule="lowercase"
+        >
+            <span class="rule-icon">○</span>
+            Al menos una letra minúscula
+        </div>
 
-                        </div>
+        <div
+            class="password-rule"
+            data-rule="number"
+        >
+            <span class="rule-icon">○</span>
+            Al menos un número
+        </div>
 
-                        @error('password')
+        <div
+            class="password-rule"
+            data-rule="special"
+        >
+            <span class="rule-icon">○</span>
+            Al menos un carácter especial
+        </div>
 
-                            <p class="field-error">
+        <div
+            class="password-rule"
+            data-rule="spaces"
+        >
+            <span class="rule-icon">○</span>
+            No debe contener espacios
+        </div>
+    </div>
 
-                                <i data-lucide="circle-alert"></i>
-
-                                {{ $message }}
-
-                            </p>
-
-                        @enderror
-
-                    </div>
+    @error('password')
+        <p class="field-error">
+            <i data-lucide="circle-alert"></i>
+            {{ $message }}
+        </p>
+    @enderror
+</div>
 
 
-                    {{-- CONFIRMAR --}}
+{{-- CONFIRMAR --}}
+<div class="form-field">
+    <label
+        for="password_confirmation"
+        class="form-label"
+    >
+        Confirmar contraseña
+        <span class="required">*</span>
+    </label>
 
-                    <div class="form-field">
+    <div class="input-wrapper">
+        <i
+            data-lucide="key-round"
+            class="input-icon"
+        ></i>
 
-                        <label
-                            for="password_confirmation"
-                            class="form-label"
-                        >
-                            Confirmar contraseña
-                            <span class="required">*</span>
-                        </label>
+        <input
+            type="password"
+            id="password_confirmation"
+            name="password_confirmation"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="Repite la contraseña"
+            class="form-input"
+        >
+    </div>
 
-                        <div class="input-wrapper">
-
-                            <i
-                                data-lucide="key-round"
-                                class="input-icon"
-                            ></i>
-
-                            <input
-                                type="password"
-                                id="password_confirmation"
-                                name="password_confirmation"
-                                required
-                                minlength="8"
-                                autocomplete="new-password"
-                                placeholder="Repite la contraseña"
-                                class="form-input"
-                            >
-
-                        </div>
-
-                    </div>
-
-                </div>
+    <p
+        id="password-match"
+        class="password-match"
+    ></p>
+</div>
 
 
                 <div class="password-info">
@@ -1202,5 +1348,394 @@
     </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
+    const formulario = document.querySelector('.crear-form');
+
+    const email = document.getElementById('email');
+    const emailValidation = document.getElementById('email-validation');
+
+    const password = document.getElementById('password');
+    const passwordConfirmation = document.getElementById('password_confirmation');
+    const passwordMatch = document.getElementById('password-match');
+
+
+    /* =========================================================
+       VALIDACIÓN DE CORREO
+    ========================================================= */
+
+    function validarEmail() {
+
+        if (!email) return true;
+
+        const valor = email.value.trim();
+
+        if (valor === '') {
+            email.classList.remove('field-valid', 'field-invalid');
+
+            if (emailValidation) {
+                emailValidation.style.display = 'none';
+            }
+
+            email.setCustomValidity('');
+
+            return false;
+        }
+
+        /*
+         * Formato:
+         * usuario@dominio.extensión
+         */
+        const formatoValido =
+            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor);
+
+        if (formatoValido) {
+
+            email.classList.remove('field-invalid');
+            email.classList.add('field-valid');
+
+            if (emailValidation) {
+                emailValidation.style.display = 'none';
+            }
+
+            email.setCustomValidity('');
+
+            return true;
+
+        } else {
+
+            email.classList.remove('field-valid');
+            email.classList.add('field-invalid');
+
+            if (emailValidation) {
+                emailValidation.style.display = 'flex';
+                emailValidation.querySelector('span').textContent =
+                    'Ingresa un correo electrónico válido.';
+            }
+
+            email.setCustomValidity(
+                'Ingresa un correo electrónico válido.'
+            );
+
+            return false;
+        }
+    }
+
+
+    if (email) {
+        email.addEventListener('input', validarEmail);
+        email.addEventListener('blur', validarEmail);
+    }
+
+
+    /* =========================================================
+       VALIDACIÓN DE CONTRASEÑA
+    ========================================================= */
+
+    function actualizarRegla(nombre, cumple) {
+
+        const regla = document.querySelector(
+            `.password-rule[data-rule="${nombre}"]`
+        );
+
+        if (!regla) return;
+
+        const icono = regla.querySelector('.rule-icon');
+
+        regla.classList.remove(
+            'rule-valid',
+            'rule-invalid'
+        );
+
+        if (cumple) {
+
+            regla.classList.add('rule-valid');
+            icono.textContent = '✓';
+
+        } else {
+
+            icono.textContent = '○';
+        }
+    }
+
+
+    function validarPassword() {
+
+        if (!password) return false;
+
+        const valor = password.value;
+
+        const reglas = {
+
+            length:
+                valor.length >= 8,
+
+            uppercase:
+                /[A-ZÁÉÍÓÚÑ]/.test(valor),
+
+            lowercase:
+                /[a-záéíóúñ]/.test(valor),
+
+            number:
+                /[0-9]/.test(valor),
+
+            special:
+                /[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]/.test(valor),
+
+            spaces:
+                !/\s/.test(valor)
+        };
+
+
+        actualizarRegla(
+            'length',
+            reglas.length
+        );
+
+        actualizarRegla(
+            'uppercase',
+            reglas.uppercase
+        );
+
+        actualizarRegla(
+            'lowercase',
+            reglas.lowercase
+        );
+
+        actualizarRegla(
+            'number',
+            reglas.number
+        );
+
+        actualizarRegla(
+            'special',
+            reglas.special
+        );
+
+        actualizarRegla(
+            'spaces',
+            reglas.spaces
+        );
+
+
+        const todasCumplen =
+            reglas.length &&
+            reglas.uppercase &&
+            reglas.lowercase &&
+            reglas.number &&
+            reglas.special &&
+            reglas.spaces;
+
+
+        if (valor === '') {
+
+            password.classList.remove(
+                'field-valid',
+                'field-invalid'
+            );
+
+        } else if (todasCumplen) {
+
+            password.classList.remove('field-invalid');
+            password.classList.add('field-valid');
+
+        } else {
+
+            password.classList.remove('field-valid');
+            password.classList.add('field-invalid');
+        }
+
+
+        validarCoincidencia();
+
+        return todasCumplen;
+    }
+
+
+    /* =========================================================
+       CONFIRMACIÓN DE CONTRASEÑA
+    ========================================================= */
+
+    function validarCoincidencia() {
+
+        if (!password || !passwordConfirmation) {
+            return false;
+        }
+
+        const nueva = password.value;
+        const confirmacion = passwordConfirmation.value;
+
+
+        if (confirmacion === '') {
+
+            passwordConfirmation.classList.remove(
+                'field-valid',
+                'field-invalid'
+            );
+
+            if (passwordMatch) {
+                passwordMatch.className = 'password-match';
+                passwordMatch.textContent = '';
+            }
+
+            passwordConfirmation.setCustomValidity('');
+
+            return false;
+        }
+
+
+        if (nueva === confirmacion) {
+
+            passwordConfirmation.classList.remove(
+                'field-invalid'
+            );
+
+            passwordConfirmation.classList.add(
+                'field-valid'
+            );
+
+            if (passwordMatch) {
+
+                passwordMatch.className =
+                    'password-match valid';
+
+                passwordMatch.textContent =
+                    '✓ Las contraseñas coinciden.';
+            }
+
+            passwordConfirmation.setCustomValidity('');
+
+            return true;
+
+        } else {
+
+            passwordConfirmation.classList.remove(
+                'field-valid'
+            );
+
+            passwordConfirmation.classList.add(
+                'field-invalid'
+            );
+
+            if (passwordMatch) {
+
+                passwordMatch.className =
+                    'password-match invalid';
+
+                passwordMatch.textContent =
+                    'Las contraseñas no coinciden.';
+            }
+
+            passwordConfirmation.setCustomValidity(
+                'Las contraseñas no coinciden.'
+            );
+
+            return false;
+        }
+    }
+
+
+    if (password) {
+        password.addEventListener(
+            'input',
+            validarPassword
+        );
+    }
+
+
+    if (passwordConfirmation) {
+        passwordConfirmation.addEventListener(
+            'input',
+            validarCoincidencia
+        );
+    }
+
+
+    /* =========================================================
+       VALIDACIÓN AL ENVIAR
+    ========================================================= */
+
+    if (formulario) {
+
+        formulario.addEventListener(
+            'submit',
+            function (e) {
+
+                const emailValido =
+                    validarEmail();
+
+                const passwordValida =
+                    validarPassword();
+
+                const passwordCoincide =
+                    validarCoincidencia();
+
+
+                if (!emailValido) {
+
+                    e.preventDefault();
+
+                    alert(
+                        'Ingresa un correo electrónico válido.'
+                    );
+
+                    email.focus();
+
+                    return;
+                }
+
+
+                if (!passwordValida) {
+
+                    e.preventDefault();
+
+                    alert(
+                        'La contraseña no cumple con todos los requisitos de seguridad.'
+                    );
+
+                    password.focus();
+
+                    return;
+                }
+
+
+                if (!passwordCoincide) {
+
+                    e.preventDefault();
+
+                    alert(
+                        'Las contraseñas no coinciden.'
+                    );
+
+                    passwordConfirmation.focus();
+
+                    return;
+                }
+            }
+        );
+    }
+
+
+    /* =========================================================
+       VALIDACIÓN INICIAL
+    ========================================================= */
+
+    if (email && email.value !== '') {
+        validarEmail();
+    }
+
+    if (password && password.value !== '') {
+        validarPassword();
+    }
+
+    if (
+        passwordConfirmation &&
+        passwordConfirmation.value !== ''
+    ) {
+        validarCoincidencia();
+    }
+
+});
+</script>
 @endsection

@@ -94,7 +94,22 @@ class OperarioController extends Controller
         | Validación
         |--------------------------------------------------------------------------
         */
-
+$datos = $request->validate([
+    'name' => ['required', 'string', 'max:255'],
+    'email' => ['required', 'email', 'unique:users,email'],
+    'password' => [
+        'required',
+        'string',
+        'min:8',
+        'confirmed',
+        'regex:/[A-Z]/',
+        'regex:/[a-z]/',
+        'regex:/[0-9]/',
+        'regex:/[^A-Za-z0-9]/',
+        'not_regex:/\s/',
+    ],
+    'id_empresa' => ['nullable', 'integer', 'exists:empresas,id_empresa'],
+]);
         $datos = $request->validate([
             'name' => [
                 'required',
@@ -288,118 +303,181 @@ class OperarioController extends Controller
     /**
      * Actualizar un operario.
      */
-    public function update(Request $request, User $operario)
-    {
-        $usuarioActual = auth()->user();
+    /**
+ * Actualizar un operario.
+ */
+public function update(Request $request, User $operario)
+{
+    $usuarioActual = auth()->user();
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para actualizar operarios.');
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Verificar que sea operario
-        |--------------------------------------------------------------------------
-        */
-
-        if ((int) $operario->id_rol !== 3) {
-            abort(404);
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Restricción por empresa
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            (int) $usuarioActual->id_rol === 2
-            && $operario->id_empresa !== $usuarioActual->id_empresa
-        ) {
-            abort(403, 'No puedes modificar un operario de otra empresa.');
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validación
-        |--------------------------------------------------------------------------
-        */
-
-        $datos = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                'unique:users,email,' . $operario->id,
-            ],
-
-            'password' => [
-                'nullable',
-                'string',
-                'min:8',
-                'confirmed',
-            ],
-        ]);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Actualizar información
-        |--------------------------------------------------------------------------
-        */
-
-        $operario->name = $datos['name'];
-        $operario->email = $datos['email'];
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Cambiar contraseña únicamente si se proporcionó
-        |--------------------------------------------------------------------------
-        */
-
-        if (!empty($datos['password'])) {
-            $operario->password = $datos['password'];
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Asegurar que siga siendo Operario
-        |--------------------------------------------------------------------------
-        */
-
-        $operario->id_rol = 3;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | El Administrador Cliente no puede cambiar la empresa
-        |--------------------------------------------------------------------------
-        */
-
-        if ((int) $usuarioActual->id_rol === 2) {
-            $operario->id_empresa = $usuarioActual->id_empresa;
-        }
-
-
-        $operario->save();
-
-
-        return redirect()
-            ->route('operarios.index')
-            ->with('success', 'Operario actualizado correctamente.');
+    // Solo Super Admin y Administrador Cliente
+    if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
+        abort(403, 'No tienes permiso para actualizar operarios.');
     }
+
+
+    // ==========================================================
+    // Verificar que sea operario
+    // ==========================================================
+
+    if ((int) $operario->id_rol !== 3) {
+        abort(404);
+    }
+
+
+    // ==========================================================
+    // Restricción por empresa
+    // ==========================================================
+
+    if (
+        (int) $usuarioActual->id_rol === 2
+        && $operario->id_empresa !== $usuarioActual->id_empresa
+    ) {
+        abort(403, 'No puedes modificar un operario de otra empresa.');
+    }
+
+
+    // ==========================================================
+    // Validación de datos generales
+    // ==========================================================
+
+    $datos = $request->validate([
+
+        'name' => [
+            'required',
+            'string',
+            'max:255',
+        ],
+
+        'email' => [
+            'required',
+            'email',
+            'max:255',
+            'unique:users,email,' . $operario->id,
+        ],
+
+        // Contraseña actual:
+        // solo es obligatoria si se quiere cambiar la contraseña.
+        'current_password' => [
+            'nullable',
+            'string',
+        ],
+
+        // Nueva contraseña
+        'password' => [
+            'nullable',
+            'string',
+            'min:8',
+            'confirmed',
+            'regex:/[A-Z]/',
+            'regex:/[a-z]/',
+            'regex:/[0-9]/',
+            'regex:/[^A-Za-z0-9]/',
+            'not_regex:/\s/',
+        ],
+    ], [
+
+        'password.min' =>
+            'La nueva contraseña debe tener al menos 8 caracteres.',
+
+        'password.regex' =>
+            'La nueva contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial.',
+
+        'password.confirmed' =>
+            'La confirmación de la nueva contraseña no coincide.',
+
+        'password.not_regex' =>
+            'La nueva contraseña no debe contener espacios.',
+    ]);
+
+
+    // ==========================================================
+    // Actualizar información básica
+    // ==========================================================
+
+    $operario->name = $datos['name'];
+    $operario->email = $datos['email'];
+
+
+    // ==========================================================
+    // CAMBIO DE CONTRASEÑA
+    // ==========================================================
+
+    if (!empty($datos['password'])) {
+
+        // ------------------------------------------------------
+        // La contraseña actual es obligatoria
+        // ------------------------------------------------------
+
+        if (empty($datos['current_password'])) {
+
+            return back()
+                ->withErrors([
+                    'current_password' =>
+                        'Debes ingresar la contraseña actual para poder cambiarla.',
+                ])
+                ->withInput();
+
+        }
+
+
+        // ------------------------------------------------------
+        // Comprobar contraseña actual
+        // ------------------------------------------------------
+
+        if (!Hash::check(
+            $datos['current_password'],
+            $operario->password
+        )) {
+
+            return back()
+                ->withErrors([
+                    'current_password' =>
+                        'La contraseña actual es incorrecta.',
+                ])
+                ->withInput();
+
+        }
+
+
+        // ------------------------------------------------------
+        // Guardar nueva contraseña
+        // ------------------------------------------------------
+
+        $operario->password = Hash::make($datos['password']);
+    }
+
+
+    // ==========================================================
+    // Asegurar que siga siendo Operario
+    // ==========================================================
+
+    $operario->id_rol = 3;
+
+
+    // ==========================================================
+    // El Administrador Cliente no puede cambiar la empresa
+    // ==========================================================
+
+    if ((int) $usuarioActual->id_rol === 2) {
+        $operario->id_empresa = $usuarioActual->id_empresa;
+    }
+
+
+    // ==========================================================
+    // Guardar cambios
+    // ==========================================================
+
+    $operario->save();
+
+
+    return redirect()
+        ->route('operarios.index')
+        ->with(
+            'success',
+            'Operario actualizado correctamente.'
+        );
+}
 
 
     /**

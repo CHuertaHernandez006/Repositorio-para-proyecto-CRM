@@ -3,14 +3,13 @@
 @section('content')
 
 <style>
-
     .citas-page {
         padding: 32px 26px;
     }
 
     /* =========================================================
        ENCABEZADO
-       ========================================================= */
+    ========================================================= */
 
     .citas-header {
         display: flex;
@@ -76,10 +75,15 @@
         box-shadow: 0 8px 24px rgba(56, 189, 248, .18);
     }
 
+    .btn-nueva-cita svg {
+        width: 17px;
+        height: 17px;
+    }
+
 
     /* =========================================================
        RESUMEN
-       ========================================================= */
+    ========================================================= */
 
     .citas-summary {
         display: grid;
@@ -137,8 +141,12 @@
         justify-content: center;
         color: #38bdf8;
         background: rgba(56, 189, 248, .10);
-        font-size: 20px;
         z-index: 2;
+    }
+
+    .summary-icon svg {
+        width: 21px;
+        height: 21px;
     }
 
     .summary-card.green .summary-icon {
@@ -149,7 +157,7 @@
 
     /* =========================================================
        ALERTAS
-       ========================================================= */
+    ========================================================= */
 
     .citas-alert {
         border-radius: 12px;
@@ -170,10 +178,16 @@
         color: #fca5a5;
     }
 
+    .citas-alert svg {
+        width: 16px;
+        height: 16px;
+        vertical-align: middle;
+    }
+
 
     /* =========================================================
        FILTROS
-       ========================================================= */
+    ========================================================= */
 
     .citas-card {
         background: #111c30;
@@ -196,6 +210,14 @@
         font-size: 16px;
         font-weight: 700;
         margin: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .card-heading-title svg {
+        width: 17px;
+        height: 17px;
+        color: #38bdf8;
     }
 
     .card-heading-subtitle {
@@ -221,6 +243,7 @@
     .filter-control {
         width: 100%;
         height: 43px;
+        box-sizing: border-box;
         border-radius: 10px;
         border: 1px solid #334155;
         background: #0b1424;
@@ -239,6 +262,11 @@
         color: #52627a;
     }
 
+    .filter-control option {
+        background: #0b1424;
+        color: #f8fafc;
+    }
+
     .btn-filter {
         height: 43px;
         border: 0;
@@ -247,10 +275,18 @@
         background: #38bdf8;
         color: #07111f;
         font-weight: 800;
+        cursor: pointer;
+        transition: .2s ease;
     }
 
     .btn-filter:hover {
         background: #67cef9;
+    }
+
+    .btn-filter svg {
+        width: 15px;
+        height: 15px;
+        vertical-align: middle;
     }
 
     .btn-clear {
@@ -264,6 +300,7 @@
         color: #94a3b8;
         text-decoration: none;
         font-weight: 600;
+        transition: .2s ease;
     }
 
     .btn-clear:hover {
@@ -272,10 +309,15 @@
         background: rgba(148, 163, 184, .06);
     }
 
+    .btn-clear svg {
+        width: 15px;
+        height: 15px;
+    }
+
 
     /* =========================================================
        TABLA
-       ========================================================= */
+    ========================================================= */
 
     .table-header {
         padding: 20px 22px;
@@ -346,9 +388,22 @@
         margin-top: 3px;
     }
 
+    .cliente-company svg {
+        width: 13px;
+        height: 13px;
+        vertical-align: -2px;
+    }
+
     .operario-name {
         color: #cbd5e1;
         font-weight: 600;
+    }
+
+    .operario-name svg {
+        width: 14px;
+        height: 14px;
+        color: #38bdf8;
+        vertical-align: -2px;
     }
 
     .date-main {
@@ -367,6 +422,11 @@
         border-radius: 8px;
         font-weight: 700;
         font-size: 12px;
+    }
+
+    .time-badge svg {
+        width: 13px;
+        height: 13px;
     }
 
     .status-badge {
@@ -411,6 +471,13 @@
         background: transparent;
         border: 1px solid #334155;
         transition: .18s ease;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .action-btn svg {
+        width: 15px;
+        height: 15px;
     }
 
     .action-view {
@@ -455,8 +522,12 @@
         background: rgba(56, 189, 248, .07);
         border: 1px solid rgba(56, 189, 248, .12);
         color: #38bdf8;
-        font-size: 27px;
         margin-bottom: 16px;
+    }
+
+    .empty-icon svg {
+        width: 27px;
+        height: 27px;
     }
 
     .empty-title {
@@ -480,7 +551,7 @@
 
     /* =========================================================
        RESPONSIVE
-       ========================================================= */
+    ========================================================= */
 
     @media (max-width: 1100px) {
 
@@ -520,7 +591,6 @@
             min-width: 950px;
         }
     }
-
 </style>
 
 
@@ -528,7 +598,7 @@
 
     {{-- =========================================================
          ENCABEZADO
-         ========================================================= --}}
+    ========================================================== --}}
 
     <div class="citas-header">
 
@@ -549,11 +619,12 @@
 
         </div>
 
+
         <a
             href="{{ route('citas.create') }}"
             class="btn-nueva-cita"
         >
-            <i class="bi bi-calendar-plus"></i>
+            <i data-lucide="calendar-plus"></i>
             Nueva cita
         </a>
 
@@ -562,13 +633,16 @@
 
     {{-- =========================================================
          MENSAJES
-         ========================================================= --}}
+    ========================================================== --}}
 
     @if(session('exito'))
 
         <div class="citas-alert citas-alert-success">
-            <i class="bi bi-check-circle me-2"></i>
+
+            <i data-lucide="circle-check"></i>
+
             {{ session('exito') }}
+
         </div>
 
     @endif
@@ -579,8 +653,11 @@
         <div class="citas-alert citas-alert-danger">
 
             <div class="fw-bold mb-1">
-                <i class="bi bi-exclamation-triangle me-2"></i>
+
+                <i data-lucide="triangle-alert"></i>
+
                 Revisa los siguientes datos:
+
             </div>
 
             <ul class="mb-0 ps-4">
@@ -602,7 +679,7 @@
 
     {{-- =========================================================
          RESUMEN
-         ========================================================= --}}
+    ========================================================== --}}
 
     <div class="citas-summary">
 
@@ -619,7 +696,7 @@
             </div>
 
             <div class="summary-icon">
-                <i class="bi bi-calendar3"></i>
+                <i data-lucide="calendar-days"></i>
             </div>
 
         </div>
@@ -638,7 +715,7 @@
             </div>
 
             <div class="summary-icon">
-                <i class="bi bi-people"></i>
+                <i data-lucide="users"></i>
             </div>
 
         </div>
@@ -648,15 +725,20 @@
 
     {{-- =========================================================
          FILTROS
-         ========================================================= --}}
+    ========================================================== --}}
 
     <div class="citas-card filters-card">
 
         <div class="card-heading">
 
             <h2 class="card-heading-title">
-                <i class="bi bi-funnel me-2 text-info"></i>
-                Filtrar citas
+
+                <i data-lucide="funnel"></i>
+
+                <span style="margin-left:8px;">
+                    Filtrar citas
+                </span>
+
             </h2>
 
             <p class="card-heading-subtitle">
@@ -806,16 +888,25 @@
                                 type="submit"
                                 class="btn-filter"
                             >
-                                <i class="bi bi-search me-1"></i>
-                                Filtrar
+
+                                <i data-lucide="search"></i>
+
+                                <span style="margin-left:5px;">
+                                    Filtrar
+                                </span>
+
                             </button>
+
 
                             <a
                                 href="{{ route('citas.index') }}"
                                 class="btn-clear"
                             >
-                                <i class="bi bi-arrow-counterclockwise"></i>
+
+                                <i data-lucide="rotate-ccw"></i>
+
                                 Limpiar
+
                             </a>
 
                         </div>
@@ -833,7 +924,7 @@
 
     {{-- =========================================================
          TABLA
-         ========================================================= --}}
+    ========================================================== --}}
 
     <div class="citas-card">
 
@@ -846,8 +937,11 @@
                 </h2>
 
                 <span class="table-count">
+
                     {{ $citas->total() }}
+
                     {{ $citas->total() == 1 ? 'cita encontrada' : 'citas encontradas' }}
+
                 </span>
 
             </div>
@@ -916,11 +1010,12 @@
 
                                     </div>
 
+
                                     @if($cita->cliente->empresa)
 
                                         <div class="cliente-company">
 
-                                            <i class="bi bi-building me-1"></i>
+                                            <i data-lucide="building-2"></i>
 
                                             {{ $cita->cliente->empresa }}
 
@@ -947,7 +1042,7 @@
 
                                     <span class="operario-name">
 
-                                        <i class="bi bi-person me-1 text-info"></i>
+                                        <i data-lucide="user"></i>
 
                                         {{ $cita->usuario->name }}
 
@@ -969,7 +1064,9 @@
                             <td>
 
                                 <span class="date-main">
+
                                     {{ $cita->fecha_hora_inicio->format('d/m/Y') }}
+
                                 </span>
 
                             </td>
@@ -981,13 +1078,14 @@
 
                                 <span class="time-badge">
 
-                                    <i class="bi bi-clock"></i>
+                                    <i data-lucide="clock-3"></i>
 
                                     {{ $cita->fecha_hora_inicio->format('H:i') }}
 
                                     @if($cita->fecha_hora_fin)
 
                                         -
+
                                         {{ $cita->fecha_hora_fin->format('H:i') }}
 
                                     @endif
@@ -1030,7 +1128,9 @@
                                     class="motivo"
                                     title="{{ $cita->motivo }}"
                                 >
+
                                     {{ $cita->motivo ?: 'Sin motivo' }}
+
                                 </span>
 
                             </td>
@@ -1042,23 +1142,33 @@
 
                                 <div class="actions">
 
+                                    {{-- VER --}}
+
                                     <a
                                         href="{{ route('citas.show', $cita->id_cita) }}"
                                         class="action-btn action-view"
                                         title="Ver cita"
                                     >
-                                        <i class="bi bi-eye"></i>
+
+                                        <i data-lucide="eye"></i>
+
                                     </a>
 
+
+                                    {{-- EDITAR --}}
 
                                     <a
                                         href="{{ route('citas.edit', $cita->id_cita) }}"
                                         class="action-btn action-edit"
                                         title="Editar cita"
                                     >
-                                        <i class="bi bi-pencil"></i>
+
+                                        <i data-lucide="pencil"></i>
+
                                     </a>
 
+
+                                    {{-- ELIMINAR --}}
 
                                     <form
                                         action="{{ route('citas.destroy', $cita->id_cita) }}"
@@ -1074,7 +1184,9 @@
                                             class="action-btn action-delete"
                                             title="Eliminar cita"
                                         >
-                                            <i class="bi bi-trash"></i>
+
+                                            <i data-lucide="trash-2"></i>
+
                                         </button>
 
                                     </form>
@@ -1084,6 +1196,7 @@
                             </td>
 
                         </tr>
+
 
                     @empty
 
@@ -1097,7 +1210,9 @@
                                 <div class="empty-state">
 
                                     <div class="empty-icon">
-                                        <i class="bi bi-calendar-x"></i>
+
+                                        <i data-lucide="calendar-x-2"></i>
+
                                     </div>
 
                                     <div class="empty-title">
@@ -1128,7 +1243,9 @@
         @if($citas->hasPages())
 
             <div class="pagination-wrapper">
+
                 {{ $citas->links() }}
+
             </div>
 
         @endif
@@ -1136,5 +1253,20 @@
     </div>
 
 </div>
+
+
+{{-- =========================================================
+     INICIALIZAR ICONOS LUCIDE
+========================================================= --}}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+    });
+</script>
 
 @endsection

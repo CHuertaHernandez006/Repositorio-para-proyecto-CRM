@@ -385,130 +385,286 @@
                     </div>
 
 
-                    {{-- CONTRASEÑA --}}
-                    <div style="
-                        margin-bottom:22px;
-                        padding-top:3px;
-                    ">
+                  {{-- CONTRASEÑA --}}
+<div style="
+    margin-bottom:22px;
+    padding-top:3px;
+">
 
-                        <div style="
-                            margin-bottom:15px;
-                            padding-bottom:12px;
-                            border-bottom:1px solid #27364b;
-                        ">
+    <div style="
+        margin-bottom:15px;
+        padding-bottom:12px;
+        border-bottom:1px solid #27364b;
+    ">
 
-                            <h3 style="
-                                margin:0;
-                                color:white;
-                                font-size:15px;
-                                font-weight:700;
-                            ">
-                                Cambiar contraseña
-                            </h3>
+        <h3 style="
+            margin:0;
+            color:white;
+            font-size:15px;
+            font-weight:700;
+        ">
+            Cambiar contraseña
+        </h3>
 
-                            <p style="
-                                margin:5px 0 0;
-                                color:#8190a7;
-                                font-size:12px;
-                            ">
-                                Déjala vacía si no deseas modificarla.
-                            </p>
+        <p style="
+            margin:5px 0 0;
+            color:#8190a7;
+            font-size:12px;
+        ">
+            Confirma tu contraseña actual para establecer una nueva.
+        </p>
 
-                        </div>
-
-
-                        {{-- NUEVA CONTRASEÑA --}}
-                        <div style="
-                            margin-bottom:18px;
-                        ">
-
-                            <label
-                                for="password"
-                                style="
-                                    display:block;
-                                    margin-bottom:8px;
-                                    color:#cbd5e1;
-                                    font-size:13px;
-                                    font-weight:600;
-                                "
-                            >
-                                Nueva contraseña
-                            </label>
-
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                minlength="8"
-                                autocomplete="new-password"
-                                style="
-                                    width:100%;
-                                    box-sizing:border-box;
-                                    padding:13px 15px;
-                                    border:1px solid #334155;
-                                    border-radius:11px;
-                                    outline:none;
-                                    background:#0c1628;
-                                    color:white;
-                                    font-size:14px;
-                                "
-                            >
-
-                            @error('password')
-
-                                <p style="
-                                    margin:7px 0 0;
-                                    color:#fb7185;
-                                    font-size:12px;
-                                ">
-                                    {{ $message }}
-                                </p>
-
-                            @enderror
-
-                        </div>
+    </div>
 
 
-                        {{-- CONFIRMAR CONTRASEÑA --}}
-                        <div>
+    {{-- CONTRASEÑA ACTUAL --}}
+    <div style="
+        margin-bottom:18px;
+    ">
 
-                            <label
-                                for="password_confirmation"
-                                style="
-                                    display:block;
-                                    margin-bottom:8px;
-                                    color:#cbd5e1;
-                                    font-size:13px;
-                                    font-weight:600;
-                                "
-                            >
-                                Confirmar contraseña
-                            </label>
+        <label
+            for="current_password"
+            style="
+                display:block;
+                margin-bottom:8px;
+                color:#cbd5e1;
+                font-size:13px;
+                font-weight:600;
+            "
+        >
+            Contraseña actual
+        </label>
 
-                            <input
-                                id="password_confirmation"
-                                name="password_confirmation"
-                                type="password"
-                                minlength="8"
-                                autocomplete="new-password"
-                                style="
-                                    width:100%;
-                                    box-sizing:border-box;
-                                    padding:13px 15px;
-                                    border:1px solid #334155;
-                                    border-radius:11px;
-                                    outline:none;
-                                    background:#0c1628;
-                                    color:white;
-                                    font-size:14px;
-                                "
-                            >
+        <input
+            id="current_password"
+            name="current_password"
+            type="password"
+            autocomplete="current-password"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:13px 15px;
+                border:1px solid #334155;
+                border-radius:11px;
+                outline:none;
+                background:#0c1628;
+                color:white;
+                font-size:14px;
+            "
+        >
 
-                        </div>
+        @error('current_password')
 
-                    </div>
+            <p style="
+                margin:7px 0 0;
+                color:#fb7185;
+                font-size:12px;
+            ">
+                {{ $message }}
+            </p>
+
+        @enderror
+
+    </div>
 
 
+    {{-- NUEVA CONTRASEÑA --}}
+    <div style="
+        margin-bottom:18px;
+    ">
+
+        <label
+            for="password"
+            style="
+                display:block;
+                margin-bottom:8px;
+                color:#cbd5e1;
+                font-size:13px;
+                font-weight:600;
+            "
+        >
+            Nueva contraseña
+        </label>
+
+        <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:13px 15px;
+                border:1px solid #334155;
+                border-radius:11px;
+                outline:none;
+                background:#0c1628;
+                color:white;
+                font-size:14px;
+            "
+        >
+
+        {{-- REGLAS DE CONTRASEÑA --}}
+        <div
+            id="password-rules"
+            style="
+                margin-top:10px;
+                padding:12px 14px;
+                border:1px solid #27364b;
+                border-radius:10px;
+                background:#0c1628;
+            "
+        >
+
+            <p style="
+                margin:0 0 8px;
+                color:#94a3b8;
+                font-size:12px;
+                font-weight:600;
+            ">
+                La contraseña debe contener:
+            </p>
+
+            <div
+                class="password-rule"
+                data-rule="length"
+                style="
+                    margin-bottom:5px;
+                    color:#64748b;
+                    font-size:12px;
+                "
+            >
+                <span class="rule-icon">○</span>
+                Mínimo 8 caracteres
+            </div>
+
+            <div
+                class="password-rule"
+                data-rule="uppercase"
+                style="
+                    margin-bottom:5px;
+                    color:#64748b;
+                    font-size:12px;
+                "
+            >
+                <span class="rule-icon">○</span>
+                Al menos una letra mayúscula
+            </div>
+
+            <div
+                class="password-rule"
+                data-rule="lowercase"
+                style="
+                    margin-bottom:5px;
+                    color:#64748b;
+                    font-size:12px;
+                "
+            >
+                <span class="rule-icon">○</span>
+                Al menos una letra minúscula
+            </div>
+
+            <div
+                class="password-rule"
+                data-rule="number"
+                style="
+                    margin-bottom:5px;
+                    color:#64748b;
+                    font-size:12px;
+                "
+            >
+                <span class="rule-icon">○</span>
+                Al menos un número
+            </div>
+
+            <div
+                class="password-rule"
+                data-rule="special"
+                style="
+                    margin-bottom:5px;
+                    color:#64748b;
+                    font-size:12px;
+                "
+            >
+                <span class="rule-icon">○</span>
+                Al menos un carácter especial
+            </div>
+
+            <div
+                class="password-rule"
+                data-rule="spaces"
+                style="
+                    color:#64748b;
+                    font-size:12px;
+                "
+            >
+                <span class="rule-icon">○</span>
+                No debe contener espacios
+            </div>
+
+        </div>
+
+        @error('password')
+
+            <p style="
+                margin:7px 0 0;
+                color:#fb7185;
+                font-size:12px;
+            ">
+                {{ $message }}
+            </p>
+
+        @enderror
+
+    </div>
+
+
+    {{-- CONFIRMAR NUEVA CONTRASEÑA --}}
+    <div>
+
+        <label
+            for="password_confirmation"
+            style="
+                display:block;
+                margin-bottom:8px;
+                color:#cbd5e1;
+                font-size:13px;
+                font-weight:600;
+            "
+        >
+            Confirmar nueva contraseña
+        </label>
+
+        <input
+            id="password_confirmation"
+            name="password_confirmation"
+            type="password"
+            autocomplete="new-password"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:13px 15px;
+                border:1px solid #334155;
+                border-radius:11px;
+                outline:none;
+                background:#0c1628;
+                color:white;
+                font-size:14px;
+            "
+        >
+
+        <p
+            id="password-match"
+            style="
+                display:none;
+                margin:7px 0 0;
+                font-size:12px;
+            "
+        ></p>
+
+    </div>
+
+</div>
                     {{-- BOTONES --}}
                     <div style="
                         padding-top:5px;
@@ -780,5 +936,205 @@
 }
 
 </style>
+<script>
+// ==========================================================
+// VALIDACIÓN DE CONTRASEÑA SEGURA
+// ==========================================================
 
-@endsection
+const password = document.getElementById('password');
+const passwordConfirmation = document.getElementById('password_confirmation');
+const passwordMatch = document.getElementById('password-match');
+
+if (password) {
+
+    function actualizarRegla(rule, cumple) {
+
+        const elemento = document.querySelector(
+            `.password-rule[data-rule="${rule}"]`
+        );
+
+        if (!elemento) return;
+
+        const icono = elemento.querySelector('.rule-icon');
+
+        if (cumple) {
+
+            elemento.style.color = '#34d399';
+            icono.textContent = '✓';
+
+        } else {
+
+            elemento.style.color = '#64748b';
+            icono.textContent = '○';
+
+        }
+    }
+
+
+    function validarPassword() {
+
+        const valor = password.value;
+
+        const reglas = {
+            length: valor.length >= 8,
+            uppercase: /[A-ZÁÉÍÓÚÑ]/.test(valor),
+            lowercase: /[a-záéíóúñ]/.test(valor),
+            number: /[0-9]/.test(valor),
+            special: /[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]/.test(valor),
+            spaces: !/\s/.test(valor)
+        };
+
+        actualizarRegla('length', reglas.length);
+        actualizarRegla('uppercase', reglas.uppercase);
+        actualizarRegla('lowercase', reglas.lowercase);
+        actualizarRegla('number', reglas.number);
+        actualizarRegla('special', reglas.special);
+        actualizarRegla('spaces', reglas.spaces);
+
+        const todasCumplen =
+            reglas.length &&
+            reglas.uppercase &&
+            reglas.lowercase &&
+            reglas.number &&
+            reglas.special &&
+            reglas.spaces;
+
+        if (valor.length === 0) {
+
+            password.style.borderColor = '#334155';
+
+        } else if (todasCumplen) {
+
+            password.style.borderColor = '#34d399';
+
+        } else {
+
+            password.style.borderColor = '#fb7185';
+        }
+
+        validarCoincidencia();
+
+        return todasCumplen;
+    }
+
+
+    function validarCoincidencia() {
+
+        if (!passwordConfirmation || !passwordMatch) return true;
+
+        const nueva = password.value;
+        const confirmacion = passwordConfirmation.value;
+
+        // Si todavía no ha escrito confirmación
+        if (confirmacion === '') {
+
+            passwordConfirmation.style.borderColor = '#334155';
+            passwordMatch.style.display = 'none';
+
+            return false;
+        }
+
+        if (nueva === confirmacion) {
+
+            passwordConfirmation.style.borderColor = '#34d399';
+
+            passwordMatch.style.display = 'block';
+            passwordMatch.style.color = '#34d399';
+            passwordMatch.textContent =
+                '✓ Las contraseñas coinciden.';
+
+            return true;
+
+        } else {
+
+            passwordConfirmation.style.borderColor = '#fb7185';
+
+            passwordMatch.style.display = 'block';
+            passwordMatch.style.color = '#fb7185';
+            passwordMatch.textContent =
+                'Las contraseñas no coinciden.';
+
+            return false;
+        }
+    }
+
+
+    password.addEventListener('input', validarPassword);
+
+    if (passwordConfirmation) {
+        passwordConfirmation.addEventListener(
+            'input',
+            validarCoincidencia
+        );
+    }
+
+
+    // ======================================================
+    // VALIDAR ANTES DE ENVIAR
+    // ======================================================
+
+    const formulario = password.closest('form');
+
+    if (formulario) {
+
+        formulario.addEventListener('submit', function (e) {
+
+            const nueva = password.value.trim();
+            const actual =
+                document.getElementById('current_password')?.value.trim() || '';
+
+            // Si no quiere cambiar contraseña,
+            // no validamos esta sección.
+            if (nueva === '' && actual === '') {
+                return;
+            }
+
+            // Si quiere cambiarla debe poner contraseña actual
+            if (actual === '') {
+
+                e.preventDefault();
+
+                alert(
+                    'Debes ingresar tu contraseña actual para poder cambiarla.'
+                );
+
+                document.getElementById('current_password').focus();
+
+                return;
+            }
+
+            // Validar contraseña nueva
+            const passwordValida = validarPassword();
+
+            if (!passwordValida) {
+
+                e.preventDefault();
+
+                alert(
+                    'La nueva contraseña no cumple con todos los requisitos de seguridad.'
+                );
+
+                password.focus();
+
+                return;
+            }
+
+            // Validar confirmación
+            if (!validarCoincidencia()) {
+
+                e.preventDefault();
+
+                alert(
+                    'Las contraseñas nuevas no coinciden.'
+                );
+
+                passwordConfirmation.focus();
+
+                return;
+            }
+
+        });
+    }
+}
+</script>
+@endsection 

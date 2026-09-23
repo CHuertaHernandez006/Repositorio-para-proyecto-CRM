@@ -178,21 +178,11 @@
                         </div>
                     </div>
 
-                    <div class="cf-grid">
-                        <div>
-                            <label for="fecha_hora_inicio" class="cf-label">Fecha y hora inicio <span class="cf-required" aria-hidden="true">*</span></label>
-                            <div class="cf-field cf-field-single">
-                                <i class="bi bi-clock" aria-hidden="true"></i>
-                                <input type="datetime-local" name="fecha_hora_inicio" id="fecha_hora_inicio" class="cf-input" value="{{ old('fecha_hora_inicio') }}" required>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="fecha_hora_fin" class="cf-label">Fecha y hora fin (Opcional)</label>
-                            <div class="cf-field cf-field-single">
-                                <i class="bi bi-clock-history" aria-hidden="true"></i>
-                                <input type="datetime-local" name="fecha_hora_fin" id="fecha_hora_fin" class="cf-input" value="{{ old('fecha_hora_fin') }}">
-                            </div>
+                    <div>
+                        <label for="fecha_hora_inicio" class="cf-label">Fecha y hora inicio <span class="cf-required" aria-hidden="true">*</span></label>
+                        <div class="cf-field cf-field-single">
+                            <i class="bi bi-clock" aria-hidden="true"></i>
+                            <input type="datetime-local" name="fecha_hora_inicio" id="fecha_hora_inicio" class="cf-input" value="{{ old('fecha_hora_inicio') }}" required>
                         </div>
                     </div>
                 </fieldset>

@@ -707,57 +707,71 @@
     | Menú principal (Roles: 1 = Super Admin, 2 = Admin Cliente, 3 = Operario)
     |--------------------------------------------------------------------------
     */
-    $menuItems = [
-        [
-            'ruta' => 'dashboard',
-            'patron' => 'dashboard',
-            'texto' => 'Dashboard',
-            'icono' => 'layout-dashboard',
-            'visible' => true,
-        ],
-        [
-            'ruta' => 'calendario.index',
-            'patron' => 'calendario.*',
-            'texto' => 'Calendario',
-            'icono' => 'calendar',
-            'visible' => Auth::check() && $rolActual === 3,
-        ],
-        [
-            'ruta' => 'clientes.index',
-            'patron' => 'clientes.*',
-            'texto' => 'Clientes',
-            'icono' => 'users',
-            'visible' => Auth::check() && in_array($rolActual, [2], true),
-        ],
-        [
-            'ruta' => 'empresas.index',
-            'patron' => 'empresas.*',
-            'texto' => 'Empresas',
-            'icono' => 'building-2',
-            'visible' => Auth::check() && $rolActual === 1,
-        ],
-        [
-            'ruta' => 'operarios.index',
-            'patron' => 'operarios.*',
-            'texto' => 'Operarios',
-            'icono' => 'user-round',
-            'visible' => Auth::check() && in_array($rolActual, [2], true),
-        ],
-        [
-            'ruta' => 'campanas.index',
-            'patron' => 'campanas.*',
-            'texto' => 'Campañas',
-            'icono' => 'megaphone',
-            'visible' => Auth::check() && in_array($rolActual, [2,3], true),
-        ],
-        [
-            'ruta' => 'llamadas.index',
-            'patron' => 'llamadas.*',
-            'texto' => 'Llamadas',
-            'icono' => 'phone',
-            'visible' => Auth::check() && in_array($rolActual, [2,3], true),
-        ],
-    ];
+   $menuItems = [
+    [
+        'ruta' => 'dashboard',
+        'patron' => 'dashboard',
+        'texto' => 'Dashboard',
+        'icono' => 'layout-dashboard',
+        'visible' => true,
+    ],
+
+    [
+        'ruta' => 'calendario.index',
+        'patron' => 'calendario.*',
+        'texto' => 'Calendario',
+        'icono' => 'calendar',
+        'visible' => Auth::check() && $rolActual === 3,
+    ],
+
+    [
+        'ruta' => 'clientes.index',
+        'patron' => 'clientes.*',
+        'texto' => 'Clientes',
+        'icono' => 'users',
+        'visible' => Auth::check() && $rolActual === 2,
+    ],
+
+    [
+        'ruta' => 'empresas.index',
+        'patron' => 'empresas.*',
+        'texto' => 'Empresas',
+        'icono' => 'building-2',
+        'visible' => Auth::check() && $rolActual === 1,
+    ],
+
+    [
+        'ruta' => 'operarios.index',
+        'patron' => 'operarios.*',
+        'texto' => 'Operarios',
+        'icono' => 'user-round',
+        'visible' => Auth::check() && $rolActual === 2,
+    ],
+
+    [
+        'ruta' => 'citas.index',
+        'patron' => 'citas.*',
+        'texto' => 'Citas',
+        'icono' => 'calendar-days',
+        'visible' => Auth::check() && $rolActual === 2,
+    ],
+
+    [
+        'ruta' => 'campanas.index',
+        'patron' => 'campanas.*',
+        'texto' => 'Campañas',
+        'icono' => 'megaphone',
+        'visible' => Auth::check() && in_array($rolActual, [2, 3], true),
+    ],
+
+    [
+        'ruta' => 'llamadas.index',
+        'patron' => 'llamadas.*',
+        'texto' => 'Llamadas',
+        'icono' => 'phone',
+        'visible' => Auth::check() && in_array($rolActual, [2, 3], true),
+    ],
+];
 @endphp
 
 <a class="comi-skip" href="#contenido-principal">

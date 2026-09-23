@@ -12,7 +12,7 @@ use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OperarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CalendarioController;
-
+use App\Http\Controllers\CitaController;
 /*
 |--------------------------------------------------------------------------
 | Autenticación
@@ -272,4 +272,48 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
         CalendarioController::class,
         'destroy',
     ])->name('calendario.destroy');
+});
+/*
+|--------------------------------------------------------------------------
+| Citas
+| Acceso exclusivo para Admin Cliente (Rol 2)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['rol:2'])->group(function () {
+
+    Route::get('/citas', [
+        CitaController::class,
+        'index',
+    ])->name('citas.index');
+
+    Route::get('/citas/crear', [
+        CitaController::class,
+        'create',
+    ])->name('citas.create');
+
+    Route::post('/citas', [
+        CitaController::class,
+        'store',
+    ])->name('citas.store');
+
+    Route::get('/citas/{id_cita}', [
+        CitaController::class,
+        'show',
+    ])->name('citas.show');
+
+    Route::get('/citas/{id_cita}/editar', [
+        CitaController::class,
+        'edit',
+    ])->name('citas.edit');
+
+    Route::put('/citas/{id_cita}', [
+        CitaController::class,
+        'update',
+    ])->name('citas.update');
+
+    Route::delete('/citas/{id_cita}', [
+        CitaController::class,
+        'destroy',
+    ])->name('citas.destroy');
 });

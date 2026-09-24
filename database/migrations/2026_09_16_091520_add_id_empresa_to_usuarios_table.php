@@ -6,31 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            // Agregamos la columna permitiendo nulos
-            $table->unsignedBigInteger('id_empresa')->nullable()->after('id_rol');
-        
-            // Creamos la relación (llave foránea)
-            $table->foreign('id_empresa')
-                ->references('id_empresa')
-                ->on('empresas')
-                ->onDelete('cascade');
-        });
+        if (!Schema::hasColumn('users', 'id_empresa')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->unsignedBigInteger('id_empresa')
+                    ->nullable()
+                    ->after('id_rol');
+            });
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['id_empresa']);
-            $table->dropColumn('id_empresa');
-        });
+        if (Schema::hasColumn('users', 'id_empresa')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('id_empresa');
+            });
+        }
     }
 };

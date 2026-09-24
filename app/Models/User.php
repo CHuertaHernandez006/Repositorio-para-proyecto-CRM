@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -52,4 +53,12 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Empresa::class, 'id_empresa', 'id_empresa');
     }
+    public function objetivos(): HasMany
+{
+    return $this->hasMany(
+        ObjetivoOperario::class,
+        'id_usuario',
+        'id'
+    );
+}
 }

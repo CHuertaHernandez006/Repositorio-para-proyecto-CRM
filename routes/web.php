@@ -317,3 +317,9 @@ Route::middleware(['rol:2'])->group(function () {
         'destroy',
     ])->name('citas.destroy');
 });
+Route::middleware(['rol:1,2'])->group(function () {
+    Route::post(
+        '/operarios/{operario}/objetivo',
+        [OperarioController::class, 'asignarObjetivo']
+    )->name('operarios.asignarObjetivo');
+});

@@ -2,115 +2,130 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ObjetivoOperario;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class OperarioController extends Controller
 {
-    /**
-     * Mostrar la lista de operarios.
-     */
-    public function index()
+    /*
+    |--------------------------------------------------------------------------
+    | LISTADO DE OPERARIOS
+    |--------------------------------------------------------------------------
+    */
+
+    public function index(Request $request)
     {
-        $usuarioActual = auth()->user();
+        $usuario = auth()->user();
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para acceder a este módulo.');
+        $consulta = User::query()
+            ->with('empresa')
+            ->where('id_rol', 3);
+
+        /*
+         * Admin Cliente:
+         * solamente puede ver operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Super Admin
-        |--------------------------------------------------------------------------
-        |
-        | Puede consultar todos los operarios.
-        |
-        */
+         * Búsqueda
+         */
+        if ($request->filled('buscar')) {
 
-        if ((int) $usuarioActual->id_rol === 1) {
+            $buscar = trim($request->buscar);
 
-            $operarios = User::where('id_rol', 3)
-                ->with('empresa')
-                ->orderBy('name')
-                ->get();
+            $consulta->where(function ($query) use ($buscar) {
 
+                $query->where(
+                    'name',
+                    'like',
+                    '%' . $buscar . '%'
+                )
+                ->orWhere(
+                    'email',
+                    'like',
+                    '%' . $buscar . '%'
+                );
+
+            });
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Administrador Cliente
-        |--------------------------------------------------------------------------
-        |
-        | Solo puede consultar los operarios pertenecientes
-        | a su propia empresa.
-        |
-        */
+         * Filtro por estado
+         */
+        if ($request->filled('estado')) {
 
-        else {
+            if ($request->estado === 'activo') {
 
-            $operarios = User::where('id_rol', 3)
-                ->where('id_empresa', $usuarioActual->id_empresa)
-                ->with('empresa')
-                ->orderBy('name')
-                ->get();
+                $consulta->where(
+                    'estado',
+                    true
+                );
+            }
+
+            if ($request->estado === 'inactivo') {
+
+                $consulta->where(
+                    'estado',
+                    false
+                );
+            }
         }
 
-        return view('operarios.index', compact('operarios'));
+        $operarios = $consulta
+            ->orderBy('name')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view(
+            'operarios.index',
+            compact('operarios')
+        );
     }
 
 
-    /**
-     * Mostrar formulario para crear un operario.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | FORMULARIO CREAR
+    |--------------------------------------------------------------------------
+    */
+
     public function create()
     {
-        $usuarioActual = auth()->user();
+        $usuario = auth()->user();
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para crear operarios.');
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
         }
 
         return view('operarios.create');
     }
 
 
-    /**
-     * Guardar un nuevo operario.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR OPERARIO
+    |--------------------------------------------------------------------------
+    */
+
     public function store(Request $request)
     {
-        $usuarioActual = auth()->user();
+        $usuario = auth()->user();
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para crear operarios.');
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Validación
-        |--------------------------------------------------------------------------
-        */
-$datos = $request->validate([
-    'name' => ['required', 'string', 'max:255'],
-    'email' => ['required', 'email', 'unique:users,email'],
-    'password' => [
-        'required',
-        'string',
-        'min:8',
-        'confirmed',
-        'regex:/[A-Z]/',
-        'regex:/[a-z]/',
-        'regex:/[0-9]/',
-        'regex:/[^A-Za-z0-9]/',
-        'not_regex:/\s/',
-    ],
-    'id_empresa' => ['nullable', 'integer', 'exists:empresas,id_empresa'],
-]);
         $datos = $request->validate([
+
             'name' => [
                 'required',
                 'string',
@@ -120,7 +135,6 @@ $datos = $request->validate([
             'email' => [
                 'required',
                 'email',
-                'max:255',
                 'unique:users,email',
             ],
 
@@ -129,169 +143,352 @@ $datos = $request->validate([
                 'string',
                 'min:8',
                 'confirmed',
+                'regex:/[A-Z]/',
+                'regex:/[a-z]/',
+                'regex:/[0-9]/',
+                'regex:/[^A-Za-z0-9]/',
+                'not_regex:/\s/',
             ],
+
+            'id_empresa' => [
+                'nullable',
+                'integer',
+                'exists:empresas,id_empresa',
+            ],
+
         ]);
 
-
         /*
-        |--------------------------------------------------------------------------
-        | Empresa
-        |--------------------------------------------------------------------------
-        |
-        | El Administrador Cliente NO puede elegir libremente una empresa.
-        | El operario se asigna automáticamente a la empresa del administrador.
-        |
-        */
+         * Si es Admin Cliente, el operario pertenece
+         * automáticamente a su empresa.
+         */
+        if ($usuario->id_rol == 2) {
 
-        if ((int) $usuarioActual->id_rol === 2) {
-
-            if (!$usuarioActual->id_empresa) {
-                abort(
-                    403,
-                    'El administrador no tiene una empresa asignada.'
-                );
-            }
-
-            $idEmpresa = $usuarioActual->id_empresa;
-
+            $datos['id_empresa'] =
+                $usuario->id_empresa;
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Super Admin
-        |--------------------------------------------------------------------------
-        |
-        | Si posteriormente queremos que el Super Admin pueda seleccionar
-        | una empresa desde el formulario, aquí podremos modificarlo.
-        |
-        | Por ahora utilizamos el id_empresa enviado por el formulario.
-        |
-        */
-
-        else {
-
-            $request->validate([
-                'id_empresa' => [
-                    'required',
-                    'integer',
-                    'exists:empresas,id_empresa',
-                ],
-            ]);
-
-            $idEmpresa = $request->id_empresa;
-        }
-
+         * El usuario creado será operario.
+         */
+        $datos['id_rol'] = 3;
 
         /*
-        |--------------------------------------------------------------------------
-        | Crear operario
-        |--------------------------------------------------------------------------
-        */
+         * Operario activo por defecto.
+         */
+        $datos['estado'] = true;
 
-        User::create([
-            'name' => $datos['name'],
-            'email' => $datos['email'],
-            'password' => $datos['password'],
+        /*
+         * Encriptar contraseña.
+         */
+        $datos['password'] = Hash::make(
+            $datos['password']
+        );
 
-            // 3 = Operario
-            'id_rol' => 3,
-
-            // Empresa correspondiente
-            'id_empresa' => $idEmpresa,
-        ]);
-
+        User::create($datos);
 
         return redirect()
             ->route('operarios.index')
-            ->with('success', 'Operario creado correctamente.');
+            ->with(
+                'success',
+                'Operario registrado correctamente.'
+            );
     }
 
 
-    /**
-     * Mostrar información de un operario.
-     */
-    public function show(User $operario)
-    {
-        $usuarioActual = auth()->user();
+    /*
+    |--------------------------------------------------------------------------
+    | INFORMACIÓN DEL OPERARIO
+    |--------------------------------------------------------------------------
+    */
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para consultar operarios.');
+    public function show($id)
+    {
+        $usuario = auth()->user();
+
+        /*
+         * Buscar operario.
+         */
+        $consulta = User::query()
+            ->with('empresa')
+            ->where('id_rol', 3);
+
+        /*
+         * Admin Cliente solamente puede consultar
+         * operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
+
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
         }
+
+        $operario = $consulta->findOrFail($id);
+
 
         /*
         |--------------------------------------------------------------------------
-        | Verificar que el operario realmente sea un operario
+        | VENCIMIENTO AUTOMÁTICO DE OBJETIVOS
+        |--------------------------------------------------------------------------
+        |
+        | Si la fecha final ya pasó y el objetivo todavía estaba
+        | pendiente o en progreso, se marca automáticamente
+        | como vencido.
+        |
+        */
+
+        ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id
+            )
+            ->whereIn('estado', [
+                'pendiente',
+                'en_progreso',
+            ])
+            ->whereDate(
+                'fecha_fin',
+                '<',
+                now()->toDateString()
+            )
+            ->update([
+                'estado' => 'vencido',
+            ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LLAMADAS REALIZADAS
+        |--------------------------------------------------------------------------
+        |
+        | Por ahora permanece en 0.
+        |
+        | Después podemos conectarlo directamente con la tabla
+        | llamadas para que muestre el número real.
+        |
+        */
+
+        $llamadasRealizadas = 0;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | OBJETIVO ACTUAL
+        |--------------------------------------------------------------------------
+        |
+        | Buscamos solamente objetivos cuyo periodo
+        | actualmente esté vigente.
+        |
+        */
+
+        $objetivoActual = ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id
+            )
+            ->whereIn('estado', [
+                'pendiente',
+                'en_progreso',
+            ])
+            ->whereDate(
+                'fecha_inicio',
+                '<=',
+                now()->toDateString()
+            )
+            ->whereDate(
+                'fecha_fin',
+                '>=',
+                now()->toDateString()
+            )
+            ->latest('id_objetivo')
+            ->first();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SITUACIÓN DEL OBJETIVO
         |--------------------------------------------------------------------------
         */
 
-        if ((int) $operario->id_rol !== 3) {
-            abort(404);
+        $situacionObjetivo = null;
+
+
+        if ($objetivoActual) {
+
+            $objetivo =
+                (int) $objetivoActual->objetivo_llamadas;
+
+
+            /*
+             * Si alcanzó el objetivo.
+             */
+            if ($llamadasRealizadas >= $objetivo) {
+
+                $situacionObjetivo = 'cumplido';
+
+                /*
+                 * Guardamos el estado como cumplido.
+                 */
+                if (
+                    $objetivoActual->estado !== 'cumplido'
+                ) {
+
+                    $objetivoActual->update([
+                        'estado' => 'cumplido',
+                    ]);
+                }
+
+            } else {
+
+                /*
+                 * Calcular días restantes.
+                 */
+                $hoy = now()->startOfDay();
+
+                $fechaFin = \Carbon\Carbon::parse(
+                    $objetivoActual->fecha_fin
+                )->startOfDay();
+
+                $diasRestantes = $hoy->diffInDays(
+                    $fechaFin,
+                    false
+                );
+
+
+                /*
+                 * Si faltan dos días o menos,
+                 * mostrar aviso de próximo vencimiento.
+                 */
+                if ($diasRestantes <= 2) {
+
+                    $situacionObjetivo =
+                        'proximo_vencer';
+
+                } else {
+
+                    $situacionObjetivo =
+                        'en_progreso';
+                }
+            }
         }
 
 
         /*
         |--------------------------------------------------------------------------
-        | Administrador Cliente
+        | COMPROBAR SI EXISTE UN OBJETIVO VENCIDO
         |--------------------------------------------------------------------------
         |
-        | No puede consultar operarios de otra empresa.
+        | Como los objetivos vencidos ya no aparecen en
+        | $objetivoActual, buscamos el último objetivo vencido
+        | para poder mostrar la alerta.
+        |
+        */
+
+        $objetivoVencido = ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id
+            )
+            ->where(
+                'estado',
+                'vencido'
+            )
+            ->whereDate(
+                'fecha_fin',
+                '<',
+                now()->toDateString()
+            )
+            ->latest('fecha_fin')
+            ->first();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SITUACIÓN CUANDO EL ÚLTIMO OBJETIVO VENCIÓ
+        |--------------------------------------------------------------------------
+        |
+        | Si no existe un objetivo actual pero sí existe
+        | uno vencido, la vista recibirá "vencido".
         |
         */
 
         if (
-            (int) $usuarioActual->id_rol === 2
-            && $operario->id_empresa !== $usuarioActual->id_empresa
+            !$objetivoActual &&
+            $objetivoVencido
         ) {
-            abort(403, 'No puedes consultar un operario de otra empresa.');
+
+            $situacionObjetivo = 'vencido';
         }
 
 
-        $operario->load('empresa');
+        /*
+        |--------------------------------------------------------------------------
+        | HISTORIAL DE OBJETIVOS
+        |--------------------------------------------------------------------------
+        */
+
+        $objetivos = ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id
+            )
+            ->orderByDesc('fecha_inicio')
+            ->orderByDesc('id_objetivo')
+            ->get();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ENVIAR INFORMACIÓN A LA VISTA
+        |--------------------------------------------------------------------------
+        */
 
         return view(
             'operarios.show',
-            compact('operario')
+            compact(
+                'operario',
+                'objetivoActual',
+                'objetivoVencido',
+                'objetivos',
+                'llamadasRealizadas',
+                'situacionObjetivo'
+            )
         );
     }
 
 
-    /**
-     * Mostrar formulario para editar un operario.
-     */
-    public function edit(User $operario)
+    /*
+    |--------------------------------------------------------------------------
+    | FORMULARIO EDITAR
+    |--------------------------------------------------------------------------
+    */
+
+    public function edit($id)
     {
-        $usuarioActual = auth()->user();
+        $usuario = auth()->user();
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para editar operarios.');
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
         }
+
+        $consulta = User::query()
+            ->where('id_rol', 3);
 
         /*
-        |--------------------------------------------------------------------------
-        | Verificar que sea operario
-        |--------------------------------------------------------------------------
-        */
+         * Admin Cliente solamente puede editar
+         * operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
 
-        if ((int) $operario->id_rol !== 3) {
-            abort(404);
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Restricción por empresa
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            (int) $usuarioActual->id_rol === 2
-            && $operario->id_empresa !== $usuarioActual->id_empresa
-        ) {
-            abort(403, 'No puedes editar un operario de otra empresa.');
-        }
-
+        $operario = $consulta->findOrFail($id);
 
         return view(
             'operarios.edit',
@@ -300,240 +497,378 @@ $datos = $request->validate([
     }
 
 
-    /**
-     * Actualizar un operario.
-     */
-    /**
- * Actualizar un operario.
- */
-public function update(Request $request, User $operario)
-{
-    $usuarioActual = auth()->user();
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZAR OPERARIO
+    |--------------------------------------------------------------------------
+    */
 
-    // Solo Super Admin y Administrador Cliente
-    if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-        abort(403, 'No tienes permiso para actualizar operarios.');
-    }
-
-
-    // ==========================================================
-    // Verificar que sea operario
-    // ==========================================================
-
-    if ((int) $operario->id_rol !== 3) {
-        abort(404);
-    }
-
-
-    // ==========================================================
-    // Restricción por empresa
-    // ==========================================================
-
-    if (
-        (int) $usuarioActual->id_rol === 2
-        && $operario->id_empresa !== $usuarioActual->id_empresa
+    public function update(
+        Request $request,
+        $id
     ) {
-        abort(403, 'No puedes modificar un operario de otra empresa.');
-    }
+        $usuario = auth()->user();
 
-
-    // ==========================================================
-    // Validación de datos generales
-    // ==========================================================
-
-    $datos = $request->validate([
-
-        'name' => [
-            'required',
-            'string',
-            'max:255',
-        ],
-
-        'email' => [
-            'required',
-            'email',
-            'max:255',
-            'unique:users,email,' . $operario->id,
-        ],
-
-        // Contraseña actual:
-        // solo es obligatoria si se quiere cambiar la contraseña.
-        'current_password' => [
-            'nullable',
-            'string',
-        ],
-
-        // Nueva contraseña
-        'password' => [
-            'nullable',
-            'string',
-            'min:8',
-            'confirmed',
-            'regex:/[A-Z]/',
-            'regex:/[a-z]/',
-            'regex:/[0-9]/',
-            'regex:/[^A-Za-z0-9]/',
-            'not_regex:/\s/',
-        ],
-    ], [
-
-        'password.min' =>
-            'La nueva contraseña debe tener al menos 8 caracteres.',
-
-        'password.regex' =>
-            'La nueva contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial.',
-
-        'password.confirmed' =>
-            'La confirmación de la nueva contraseña no coincide.',
-
-        'password.not_regex' =>
-            'La nueva contraseña no debe contener espacios.',
-    ]);
-
-
-    // ==========================================================
-    // Actualizar información básica
-    // ==========================================================
-
-    $operario->name = $datos['name'];
-    $operario->email = $datos['email'];
-
-
-    // ==========================================================
-    // CAMBIO DE CONTRASEÑA
-    // ==========================================================
-
-    if (!empty($datos['password'])) {
-
-        // ------------------------------------------------------
-        // La contraseña actual es obligatoria
-        // ------------------------------------------------------
-
-        if (empty($datos['current_password'])) {
-
-            return back()
-                ->withErrors([
-                    'current_password' =>
-                        'Debes ingresar la contraseña actual para poder cambiarla.',
-                ])
-                ->withInput();
-
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
         }
 
+        $consulta = User::query()
+            ->where('id_rol', 3);
 
-        // ------------------------------------------------------
-        // Comprobar contraseña actual
-        // ------------------------------------------------------
+        /*
+         * Admin Cliente solamente puede actualizar
+         * operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
 
-        if (!Hash::check(
-            $datos['current_password'],
-            $operario->password
-        )) {
-
-            return back()
-                ->withErrors([
-                    'current_password' =>
-                        'La contraseña actual es incorrecta.',
-                ])
-                ->withInput();
-
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
         }
 
-
-        // ------------------------------------------------------
-        // Guardar nueva contraseña
-        // ------------------------------------------------------
-
-        $operario->password = Hash::make($datos['password']);
-    }
-
-
-    // ==========================================================
-    // Asegurar que siga siendo Operario
-    // ==========================================================
-
-    $operario->id_rol = 3;
-
-
-    // ==========================================================
-    // El Administrador Cliente no puede cambiar la empresa
-    // ==========================================================
-
-    if ((int) $usuarioActual->id_rol === 2) {
-        $operario->id_empresa = $usuarioActual->id_empresa;
-    }
-
-
-    // ==========================================================
-    // Guardar cambios
-    // ==========================================================
-
-    $operario->save();
-
-
-    return redirect()
-        ->route('operarios.index')
-        ->with(
-            'success',
-            'Operario actualizado correctamente.'
-        );
-}
-
-
-    /**
-     * Activar o desactivar un operario.
-     */
-    public function toggleEstado(User $operario)
-    {
-        $usuarioActual = auth()->user();
-
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para cambiar el estado de operarios.');
-        }
+        $operario = $consulta->findOrFail($id);
 
 
         /*
-        |--------------------------------------------------------------------------
-        | Verificar que sea operario
-        |--------------------------------------------------------------------------
-        */
+         * Validación.
+         */
+        $datos = $request->validate([
 
-        if ((int) $operario->id_rol !== 3) {
-            abort(404);
-        }
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'email' => [
+                'required',
+                'email',
+                Rule::unique(
+                    'users',
+                    'email'
+                )->ignore($operario->id),
+            ],
+
+            'current_password' => [
+                'nullable',
+                'string',
+            ],
+
+            'password' => [
+                'nullable',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[A-Z]/',
+                'regex:/[a-z]/',
+                'regex:/[0-9]/',
+                'regex:/[^A-Za-z0-9]/',
+                'not_regex:/\s/',
+            ],
+
+        ]);
 
 
         /*
-        |--------------------------------------------------------------------------
-        | Restricción por empresa
-        |--------------------------------------------------------------------------
-        */
+         * Actualizar nombre y correo.
+         */
+        $operario->name =
+            $datos['name'];
 
-        if (
-            (int) $usuarioActual->id_rol === 2
-            && $operario->id_empresa !== $usuarioActual->id_empresa
-        ) {
-            abort(403, 'No puedes modificar un operario de otra empresa.');
-        }
+        $operario->email =
+            $datos['email'];
 
 
         /*
-        |--------------------------------------------------------------------------
-        | Cambiar estado
-        |--------------------------------------------------------------------------
-        |
-        | En tu tabla users utilizamos el campo "estado" si existe.
-        |
-        */
+         * Cambiar contraseña solamente si
+         * se escribió una nueva.
+         */
+        if (!empty($datos['password'])) {
 
-        $operario->estado = !$operario->estado;
+            /*
+             * Se requiere contraseña actual.
+             */
+            if (
+                empty(
+                    $datos['current_password']
+                )
+            ) {
+
+                return back()
+                    ->withErrors([
+                        'current_password' =>
+                            'Debes ingresar tu contraseña actual para cambiarla.',
+                    ])
+                    ->withInput();
+            }
+
+
+            /*
+             * Comprobar contraseña actual.
+             */
+            if (
+                !Hash::check(
+                    $datos['current_password'],
+                    $operario->password
+                )
+            ) {
+
+                return back()
+                    ->withErrors([
+                        'current_password' =>
+                            'La contraseña actual es incorrecta.',
+                    ])
+                    ->withInput();
+            }
+
+
+            /*
+             * Guardar nueva contraseña.
+             */
+            $operario->password =
+                Hash::make(
+                    $datos['password']
+                );
+        }
+
 
         $operario->save();
 
 
         return redirect()
-            ->route('operarios.index')
+            ->route(
+                'operarios.show',
+                $operario
+            )
+            ->with(
+                'success',
+                'Operario actualizado correctamente.'
+            );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ASIGNAR OBJETIVO
+    |--------------------------------------------------------------------------
+    */
+
+    public function asignarObjetivo(
+        Request $request,
+        $id
+    ) {
+        $usuario = auth()->user();
+
+        /*
+         * Solo Super Administrador y Admin Cliente.
+         */
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
+        }
+
+
+        /*
+         * Validación.
+         */
+        $datos = $request->validate([
+
+            'objetivo_llamadas' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:100000',
+            ],
+
+            'periodo' => [
+                'required',
+                Rule::in([
+                    'semanal',
+                    'mensual',
+                    'personalizado',
+                ]),
+            ],
+
+            'fecha_inicio' => [
+                'required',
+                'date',
+            ],
+
+            'fecha_fin' => [
+                'required',
+                'date',
+                'after_or_equal:fecha_inicio',
+            ],
+
+        ]);
+
+
+        /*
+         * Buscar operario.
+         */
+        $consulta = User::query()
+            ->where(
+                'id',
+                $id
+            )
+            ->where(
+                'id_rol',
+                3
+            );
+
+
+        /*
+         * Admin Cliente solamente puede asignar
+         * objetivos a operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
+
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
+        }
+
+        $operario =
+            $consulta->firstOrFail();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CERRAR OBJETIVO ANTERIOR
+        |--------------------------------------------------------------------------
+        |
+        | Si ya existe un objetivo pendiente o en progreso,
+        | se marca como vencido.
+        |
+        | No se elimina.
+        |
+        | De esta forma se conserva el historial.
+        |
+        */
+
+        ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id
+            )
+            ->whereIn('estado', [
+                'pendiente',
+                'en_progreso',
+            ])
+            ->update([
+                'estado' => 'vencido',
+            ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CREAR NUEVO OBJETIVO
+        |--------------------------------------------------------------------------
+        |
+        | La migración acepta únicamente:
+        |
+        | pendiente
+        | en_progreso
+        | cumplido
+        | vencido
+        |
+        | Por eso utilizamos "en_progreso" como estado
+        | activo del objetivo.
+        |
+        */
+
+        ObjetivoOperario::create([
+
+            'id_usuario' =>
+                $operario->id,
+
+            'objetivo_llamadas' =>
+                $datos['objetivo_llamadas'],
+
+            'periodo' =>
+                $datos['periodo'],
+
+            'fecha_inicio' =>
+                $datos['fecha_inicio'],
+
+            'fecha_fin' =>
+                $datos['fecha_fin'],
+
+            'estado' =>
+                'en_progreso',
+
+        ]);
+
+
+        /*
+         * Regresar a la información del operario.
+         */
+        return redirect()
+            ->route(
+                'operarios.show',
+                $operario
+            )
+            ->with(
+                'success',
+                'Objetivo de llamadas asignado correctamente.'
+            );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTIVAR / DESACTIVAR OPERARIO
+    |--------------------------------------------------------------------------
+    */
+
+    public function toggleEstado($id)
+    {
+        $usuario = auth()->user();
+
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
+        }
+
+        $consulta = User::query()
+            ->where(
+                'id',
+                $id
+            )
+            ->where(
+                'id_rol',
+                3
+            );
+
+
+        /*
+         * Admin Cliente solamente puede modificar
+         * operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
+
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
+        }
+
+        $operario =
+            $consulta->firstOrFail();
+
+
+        /*
+         * Cambiar estado.
+         */
+        $operario->estado =
+            !$operario->estado;
+
+        $operario->save();
+
+
+        return redirect()
+            ->back()
             ->with(
                 'success',
                 $operario->estado
@@ -543,49 +878,63 @@ public function update(Request $request, User $operario)
     }
 
 
-    /**
-     * Eliminar un operario.
-     */
-    public function destroy(User $operario)
+    /*
+    |--------------------------------------------------------------------------
+    | ELIMINAR OPERARIO
+    |--------------------------------------------------------------------------
+    */
+
+    public function destroy($id)
     {
-        $usuarioActual = auth()->user();
+        $usuario = auth()->user();
 
-        // Solo Super Admin y Administrador Cliente
-        if (!in_array((int) $usuarioActual->id_rol, [1, 2], true)) {
-            abort(403, 'No tienes permiso para eliminar operarios.');
+        if (!in_array($usuario->id_rol, [1, 2])) {
+            abort(403);
         }
+
+        $consulta = User::query()
+            ->where(
+                'id',
+                $id
+            )
+            ->where(
+                'id_rol',
+                3
+            );
 
 
         /*
-        |--------------------------------------------------------------------------
-        | Verificar que sea operario
-        |--------------------------------------------------------------------------
-        */
+         * Admin Cliente solamente puede eliminar
+         * operarios de su empresa.
+         */
+        if ($usuario->id_rol == 2) {
 
-        if ((int) $operario->id_rol !== 3) {
-            abort(404);
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
         }
+
+        $operario =
+            $consulta->firstOrFail();
 
 
         /*
-        |--------------------------------------------------------------------------
-        | Restricción por empresa
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            (int) $usuarioActual->id_rol === 2
-            && $operario->id_empresa !== $usuarioActual->id_empresa
-        ) {
-            abort(403, 'No puedes eliminar un operario de otra empresa.');
-        }
-
-
+         * Eliminar operario.
+         *
+         * Los objetivos relacionados se eliminan
+         * automáticamente por cascadeOnDelete().
+         */
         $operario->delete();
 
 
         return redirect()
-            ->route('operarios.index')
-            ->with('success', 'Operario eliminado correctamente.');
+            ->route(
+                'operarios.index'
+            )
+            ->with(
+                'success',
+                'Operario eliminado correctamente.'
+            );
     }
 }

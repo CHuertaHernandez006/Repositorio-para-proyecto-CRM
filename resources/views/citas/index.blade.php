@@ -3,13 +3,14 @@
 @section('content')
 
 <style>
+
     .citas-page {
         padding: 32px 26px;
     }
 
     /* =========================================================
        ENCABEZADO
-    ========================================================= */
+    ========================================================== */
 
     .citas-header {
         display: flex;
@@ -83,7 +84,7 @@
 
     /* =========================================================
        RESUMEN
-    ========================================================= */
+    ========================================================== */
 
     .citas-summary {
         display: grid;
@@ -157,7 +158,7 @@
 
     /* =========================================================
        ALERTAS
-    ========================================================= */
+    ========================================================== */
 
     .citas-alert {
         border-radius: 12px;
@@ -187,7 +188,7 @@
 
     /* =========================================================
        FILTROS
-    ========================================================= */
+    ========================================================== */
 
     .citas-card {
         background: #111c30;
@@ -317,7 +318,7 @@
 
     /* =========================================================
        TABLA
-    ========================================================= */
+    ========================================================== */
 
     .table-header {
         padding: 20px 22px;
@@ -376,6 +377,11 @@
         vertical-align: middle;
     }
 
+
+    /* =========================================================
+       CLIENTE
+    ========================================================== */
+
     .cliente-name {
         color: #f8fafc;
         font-weight: 700;
@@ -394,6 +400,11 @@
         vertical-align: -2px;
     }
 
+
+    /* =========================================================
+       OPERARIO
+    ========================================================== */
+
     .operario-name {
         color: #cbd5e1;
         font-weight: 600;
@@ -406,10 +417,20 @@
         vertical-align: -2px;
     }
 
+
+    /* =========================================================
+       FECHA
+    ========================================================== */
+
     .date-main {
         color: #f8fafc;
         font-weight: 650;
     }
+
+
+    /* =========================================================
+       HORARIO
+    ========================================================== */
 
     .time-badge {
         display: inline-flex;
@@ -428,6 +449,11 @@
         width: 13px;
         height: 13px;
     }
+
+
+    /* =========================================================
+       ESTADO
+    ========================================================== */
 
     .status-badge {
         display: inline-flex;
@@ -449,10 +475,52 @@
         background: currentColor;
     }
 
-    .motivo {
-        color: #94a3b8;
-        max-width: 180px;
+
+    /* =========================================================
+       DESCRIPCIÓN
+    ========================================================== */
+
+    .descripcion-main {
+        color: #f8fafc;
+        font-weight: 650;
+        font-size: 13px;
+        max-width: 240px;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
+
+    .descripcion-secondary {
+        color: #71829a;
+        font-size: 11px;
+        margin-top: 4px;
+        max-width: 240px;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .descripcion-label {
+        color: #52627a;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-right: 4px;
+    }
+
+    .sin-descripcion {
+        color: #64748b;
+        font-weight: 500;
+        font-style: italic;
+    }
+
+
+    /* =========================================================
+       ACCIONES
+    ========================================================== */
 
     .actions {
         display: flex;
@@ -507,6 +575,11 @@
         border-color: rgba(251, 113, 133, .4);
     }
 
+
+    /* =========================================================
+       VACÍO
+    ========================================================== */
+
     .empty-state {
         padding: 60px 20px;
         text-align: center;
@@ -551,7 +624,7 @@
 
     /* =========================================================
        RESPONSIVE
-    ========================================================= */
+    ========================================================== */
 
     @media (max-width: 1100px) {
 
@@ -591,6 +664,7 @@
             min-width: 950px;
         }
     }
+
 </style>
 
 
@@ -683,8 +757,6 @@
 
     <div class="citas-summary">
 
-        {{-- CITAS MOSTRADAS --}}
-
         <div class="summary-card">
 
             <div class="summary-label">
@@ -701,8 +773,6 @@
 
         </div>
 
-
-        {{-- OPERARIOS DISPONIBLES --}}
 
         <div class="summary-card green">
 
@@ -940,7 +1010,10 @@
 
                     {{ $citas->total() }}
 
-                    {{ $citas->total() == 1 ? 'cita encontrada' : 'citas encontradas' }}
+                    {{ $citas->total() == 1
+                        ? 'cita encontrada'
+                        : 'citas encontradas'
+                    }}
 
                 </span>
 
@@ -978,7 +1051,7 @@
                         </th>
 
                         <th>
-                            Motivo
+                            Descripción
                         </th>
 
                         <th class="text-end">
@@ -1120,18 +1193,48 @@
                             </td>
 
 
-                            {{-- MOTIVO --}}
+                            {{-- DESCRIPCIÓN: MOTIVO + OBSERVACIONES --}}
 
                             <td>
 
-                                <span
-                                    class="motivo"
-                                    title="{{ $cita->motivo }}"
-                                >
+                                @if($cita->motivo)
 
-                                    {{ $cita->motivo ?: 'Sin motivo' }}
+                                    <div
+                                        class="descripcion-main"
+                                        title="{{ $cita->motivo }}"
+                                    >
+                                        <span class="descripcion-label">
+                                            Motivo:
+                                        </span>
 
-                                </span>
+                                        {{ $cita->motivo }}
+                                    </div>
+
+                                @else
+
+                                    <div class="descripcion-main sin-descripcion">
+
+                                        Sin motivo
+
+                                    </div>
+
+                                @endif
+
+
+                                @if($cita->observaciones)
+
+                                    <div
+                                        class="descripcion-secondary"
+                                        title="{{ $cita->observaciones }}"
+                                    >
+                                        <span class="descripcion-label">
+                                            Nota:
+                                        </span>
+
+                                        {{ $cita->observaciones }}
+                                    </div>
+
+                                @endif
 
                             </td>
 
@@ -1149,9 +1252,7 @@
                                         class="action-btn action-view"
                                         title="Ver cita"
                                     >
-
                                         <i data-lucide="eye"></i>
-
                                     </a>
 
 
@@ -1162,9 +1263,7 @@
                                         class="action-btn action-edit"
                                         title="Editar cita"
                                     >
-
                                         <i data-lucide="pencil"></i>
-
                                     </a>
 
 
@@ -1184,9 +1283,7 @@
                                             class="action-btn action-delete"
                                             title="Eliminar cita"
                                         >
-
                                             <i data-lucide="trash-2"></i>
-
                                         </button>
 
                                     </form>
@@ -1255,11 +1352,8 @@
 </div>
 
 
-{{-- =========================================================
-     INICIALIZAR ICONOS LUCIDE
-========================================================= --}}
-
 <script>
+
     document.addEventListener('DOMContentLoaded', function () {
 
         if (typeof lucide !== 'undefined') {
@@ -1267,6 +1361,7 @@
         }
 
     });
+
 </script>
 
 @endsection

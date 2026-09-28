@@ -17,18 +17,73 @@ class CalendarioController extends Controller
      * Muestra la lista de citas del operador autenticado.
      */
     public function index(Request $request)
-    {
-        $usuario = Auth::user();
-        $idUsuario = $usuario->id ?? $usuario->id_usuario;
+{
+    $usuario = Auth::user();
 
-        $citas = Calendario::with(['cliente', 'estadoCita', 'usuario'])
-            ->where('id_usuario', $idUsuario)
-            ->orderBy('fecha_hora_inicio', 'asc')
-            ->paginate(10);
-
-        return view('calendario.index', compact('citas'));
+    if (!$usuario) {
+        return redirect()->route('login');
     }
 
+    $idUsuario = $usuario->id ?? $usuario->id_usuario;
+
+    abort_if($idUsuario === null, 403);
+
+    $datos = $request->validate([
+        'buscar' => 'nullable|string|max:100',
+    ]);
+
+    $buscar = trim($datos['buscar'] ?? '');
+
+    $consulta = Calendario::with(['cliente', 'estadoCita', 'usuario'])
+        ->where('id_usuario', $idUsuario);
+
+    if ($buscar !== '') {
+        // Permite buscar varias palabras, por ejemplo: Omar Martínez.
+        $palabras = preg_split('/\s+/u', $buscar, -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach ($palabras as $palabra) {
+            // Escapar comodines para buscar el texto literalmente.
+            $texto = str_replace(
+                ['!', '%', '_'],
+                ['!!', '!%', '!_'],
+                mb_strtolower($palabra, 'UTF-8')
+            );
+
+            $termino = '%' . $texto . '%';
+
+            // Agrupamos los OR para conservar el filtro del operador.
+            $consulta->where(function ($q) use ($termino) {
+                $q->whereRaw(
+                    "LOWER(motivo) LIKE ? ESCAPE '!'",
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    "LOWER(observaciones) LIKE ? ESCAPE '!'",
+                    [$termino]
+                )
+                ->orWhereHas('cliente', function ($cliente) use ($termino) {
+                    $cliente->where(function ($nombre) use ($termino) {
+                        $nombre->whereRaw(
+                            "LOWER(nombre) LIKE ? ESCAPE '!'",
+                            [$termino]
+                        )
+                        ->orWhereRaw(
+                            "LOWER(apellido_paterno) LIKE ? ESCAPE '!'",
+                            [$termino]
+                        );
+                    });
+                });
+            });
+        }
+    }
+
+    // Carga todas las coincidencias del operador para el calendario.
+    $citas = $consulta
+        ->orderBy('fecha_hora_inicio', 'asc')
+        ->get();
+
+    return view('calendario.index', compact('citas', 'buscar'));
+}
     /**
      * Formulario para agendar una nueva cita.
      */

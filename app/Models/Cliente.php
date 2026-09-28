@@ -3,13 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Cliente extends Model
 {
     protected $table = 'clientes';
+
     protected $primaryKey = 'id_cliente';
 
-    // Nombres de las columnas de fechas en tu base de datos.
+    /*
+    |--------------------------------------------------------------------------
+    | FECHAS
+    |--------------------------------------------------------------------------
+    */
+
     const CREATED_AT = 'fecha_registro';
     const UPDATED_AT = 'fecha_actualizacion';
 
@@ -19,6 +26,12 @@ class Cliente extends Model
         'fecha_registro' => 'date',
         'fecha_actualizacion' => 'date',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAMPOS ASIGNABLES
+    |--------------------------------------------------------------------------
+    */
 
     protected $fillable = [
         'nombre',
@@ -37,11 +50,44 @@ class Cliente extends Model
         'id_empresa',
     ];
 
-    /**
-     * Accesor para obtener el nombre completo del cliente.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | NOMBRE COMPLETO
+    |--------------------------------------------------------------------------
+    */
+
     public function getNombreCompletoAttribute()
     {
-        return trim("{$this->nombre} {$this->apellido_paterno} {$this->apellido_materno}");
+        return trim(
+            "{$this->nombre} {$this->apellido_paterno} {$this->apellido_materno}"
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAMPAÑAS
+    |--------------------------------------------------------------------------
+    |
+    | Un cliente puede pertenecer a una o varias campañas.
+    |
+    */
+
+    public function campanas(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Campana::class,
+            'campana_cliente',
+            'id_cliente',
+            'id_campana',
+            'id_cliente',
+            'id_campana'
+        )
+        ->withPivot([
+            'id_campana_cliente',
+            'fecha_asignacion',
+            'estado',
+            'intentos',
+        ])
+        ->withTimestamps();
     }
 }

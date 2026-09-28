@@ -2,157 +2,154 @@
 
 @section('content')
 
-<style>
+@php
+    $buscarActual = $buscar ?? request('buscar');
 
-    .citas-page {
-        padding: 32px 26px;
+    $operarioSeleccionado = null;
+    $estadoSeleccionado = null;
+
+    if (request()->filled('operario')) {
+        $operarioSeleccionado = $operarios
+            ->firstWhere('id', request('operario'));
     }
 
+    if (request()->filled('estado')) {
+        $estadoSeleccionado = $estados
+            ->firstWhere(
+                'id_estado_cita',
+                request('estado')
+            );
+    }
+
+    $hayFiltrosAvanzados =
+        request()->filled('fecha_desde') ||
+        request()->filled('fecha_hasta');
+
+    $hayFiltros =
+        request()->filled('buscar') ||
+        request()->filled('operario') ||
+        request()->filled('estado') ||
+        request()->filled('fecha_desde') ||
+        request()->filled('fecha_hasta');
+@endphp
+
+
+<style>
+    .citas-page {
+        max-width: 1450px;
+        margin: 0 auto;
+        padding: 28px 26px;
+        color: #e8eef7;
+    }
+
+
     /* =========================================================
-       ENCABEZADO
+       HEADER
     ========================================================== */
 
     .citas-header {
         display: flex;
+        align-items: flex-end;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 20px;
-        margin-bottom: 28px;
+        gap: 22px;
+        margin-bottom: 22px;
     }
 
-    .citas-kicker {
+    .citas-eyebrow {
         display: flex;
         align-items: center;
-        gap: 9px;
+        gap: 8px;
+        margin-bottom: 8px;
+
         color: #38bdf8;
-        font-size: 13px;
-        font-weight: 700;
-        letter-spacing: 2px;
+
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .14em;
         text-transform: uppercase;
-        margin-bottom: 10px;
     }
 
-    .citas-kicker-dot {
-        width: 8px;
-        height: 8px;
+    .citas-eyebrow-dot {
+        width: 6px;
+        height: 6px;
+
         border-radius: 50%;
+
         background: #38bdf8;
-        box-shadow: 0 0 12px rgba(56, 189, 248, .7);
+
+        box-shadow:
+            0 0 10px
+            rgba(56, 189, 248, .65);
     }
 
     .citas-title {
-        color: #f8fafc;
-        font-size: 34px;
-        font-weight: 800;
         margin: 0;
-        letter-spacing: -.5px;
+
+        color: #f8fafc;
+
+        font-size: 30px;
+        line-height: 1.15;
+
+        font-weight: 800;
+
+        letter-spacing: -.03em;
     }
 
     .citas-subtitle {
-        color: #94a3b8;
+        max-width: 650px;
+
         margin: 7px 0 0;
-        font-size: 15px;
+
+        color: #718198;
+
+        font-size: 12px;
+        line-height: 1.6;
     }
 
     .btn-nueva-cita {
         display: inline-flex;
         align-items: center;
-        gap: 9px;
-        padding: 12px 20px;
-        border-radius: 12px;
-        border: 1px solid rgba(56, 189, 248, .35);
-        background: rgba(56, 189, 248, .10);
-        color: #38bdf8;
-        font-weight: 700;
+        justify-content: center;
+
+        gap: 7px;
+
+        height: 39px;
+
+        padding: 0 15px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .28);
+
+        border-radius: 9px;
+
+        background: #1596ce;
+
+        color: #ffffff;
+
+        font-size: 10px;
+        font-weight: 800;
+
         text-decoration: none;
+
         transition: .2s ease;
+
         white-space: nowrap;
     }
 
     .btn-nueva-cita:hover {
-        background: #38bdf8;
-        color: #0f172a;
+        background: #27a7df;
+
         transform: translateY(-1px);
-        box-shadow: 0 8px 24px rgba(56, 189, 248, .18);
+
+        box-shadow:
+            0 10px 25px
+            rgba(56, 189, 248, .13);
     }
 
     .btn-nueva-cita svg {
-        width: 17px;
-        height: 17px;
-    }
-
-
-    /* =========================================================
-       RESUMEN
-    ========================================================== */
-
-    .citas-summary {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 18px;
-        margin-bottom: 24px;
-    }
-
-    .summary-card {
-        position: relative;
-        overflow: hidden;
-        background: #111c30;
-        border: 1px solid #24344c;
-        border-radius: 16px;
-        padding: 21px 22px;
-        min-height: 125px;
-    }
-
-    .summary-card::after {
-        content: "";
-        position: absolute;
-        right: -35px;
-        bottom: -55px;
-        width: 130px;
-        height: 130px;
-        border-radius: 50%;
-        background: rgba(56, 189, 248, .045);
-    }
-
-    .summary-label {
-        color: #7f91aa;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 1.4px;
-        text-transform: uppercase;
-        margin-bottom: 9px;
-    }
-
-    .summary-number {
-        color: #f8fafc;
-        font-size: 30px;
-        line-height: 1;
-        font-weight: 800;
-    }
-
-    .summary-icon {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #38bdf8;
-        background: rgba(56, 189, 248, .10);
-        z-index: 2;
-    }
-
-    .summary-icon svg {
-        width: 21px;
-        height: 21px;
-    }
-
-    .summary-card.green .summary-icon {
-        color: #34d399;
-        background: rgba(52, 211, 153, .10);
+        width: 14px;
+        height: 14px;
     }
 
 
@@ -161,158 +158,560 @@
     ========================================================== */
 
     .citas-alert {
-        border-radius: 12px;
-        border: 1px solid;
-        padding: 13px 17px;
-        margin-bottom: 20px;
-    }
+        display: flex;
+        align-items: flex-start;
 
-    .citas-alert-success {
-        background: rgba(34, 197, 94, .08);
-        border-color: rgba(34, 197, 94, .25);
-        color: #86efac;
-    }
+        gap: 9px;
 
-    .citas-alert-danger {
-        background: rgba(239, 68, 68, .08);
-        border-color: rgba(239, 68, 68, .25);
-        color: #fca5a5;
+        margin-bottom: 16px;
+
+        padding: 11px 13px;
+
+        border-radius: 9px;
+
+        font-size: 11px;
+        line-height: 1.55;
     }
 
     .citas-alert svg {
-        width: 16px;
-        height: 16px;
-        vertical-align: middle;
+        width: 15px;
+        height: 15px;
+
+        flex-shrink: 0;
+
+        margin-top: 1px;
+    }
+
+    .citas-alert-success {
+        border:
+            1px solid
+            rgba(52, 211, 153, .18);
+
+        background:
+            rgba(52, 211, 153, .07);
+
+        color: #6ee7b7;
+    }
+
+    .citas-alert-danger {
+        border:
+            1px solid
+            rgba(248, 113, 113, .18);
+
+        background:
+            rgba(248, 113, 113, .06);
+
+        color: #fca5a5;
+    }
+
+    .citas-alert ul {
+        margin: 5px 0 0;
+
+        padding-left: 17px;
     }
 
 
     /* =========================================================
-       FILTROS
+       RESUMEN GRANDE
     ========================================================== */
 
-    .citas-card {
-        background: #111c30;
-        border: 1px solid #24344c;
-        border-radius: 16px;
-        overflow: hidden;
+    .citas-stats {
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 14px;
+
+        margin-bottom: 20px;
     }
 
-    .filters-card {
-        margin-bottom: 22px;
-    }
+    .stat-card {
+        position: relative;
 
-    .card-heading {
-        padding: 19px 22px;
-        border-bottom: 1px solid #24344c;
-    }
-
-    .card-heading-title {
-        color: #f8fafc;
-        font-size: 16px;
-        font-weight: 700;
-        margin: 0;
         display: flex;
+
         align-items: center;
+
+        justify-content:
+            space-between;
+
+        min-height: 118px;
+
+        padding: 20px 22px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, .06);
+
+        border-radius: 14px;
+
+        background: #111c30;
+
+        overflow: hidden;
+
+        box-shadow:
+            0 14px 35px
+            rgba(0, 0, 0, .07);
+
+        transition: .2s ease;
     }
 
-    .card-heading-title svg {
-        width: 17px;
-        height: 17px;
+    .stat-card:hover {
+        border-color:
+            rgba(56, 189, 248, .16);
+
+        transform:
+            translateY(-1px);
+    }
+
+    .stat-card::after {
+        content: "";
+
+        position: absolute;
+
+        right: -45px;
+        bottom: -62px;
+
+        width: 150px;
+        height: 150px;
+
+        border-radius: 50%;
+
+        background:
+            rgba(56, 189, 248, .035);
+
+        pointer-events: none;
+    }
+
+    .stat-card.green::after {
+        background:
+            rgba(52, 211, 153, .03);
+    }
+
+    .stat-content {
+        position: relative;
+
+        z-index: 2;
+    }
+
+    .stat-label {
+        color: #718198;
+
+        font-size: 9px;
+
+        font-weight: 800;
+
+        letter-spacing: .10em;
+
+        text-transform: uppercase;
+    }
+
+    .stat-number {
+        margin-top: 7px;
+
+        color: #ffffff;
+
+        font-size: 32px;
+
+        line-height: 1;
+
+        font-weight: 850;
+
+        letter-spacing: -.04em;
+    }
+
+    .stat-description {
+        margin-top: 8px;
+
+        color: #56667d;
+
+        font-size: 9px;
+
+        line-height: 1.5;
+    }
+
+    .stat-icon {
+        position: relative;
+
+        z-index: 2;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        width: 48px;
+        height: 48px;
+
+        flex: 0 0 48px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .18);
+
+        border-radius: 12px;
+
+        background:
+            rgba(56, 189, 248, .09);
+
         color: #38bdf8;
     }
 
-    .card-heading-subtitle {
-        color: #71829a;
-        font-size: 13px;
-        margin: 4px 0 0;
+    .stat-icon.green {
+        border-color:
+            rgba(52, 211, 153, .18);
+
+        background:
+            rgba(52, 211, 153, .08);
+
+        color: #34d399;
     }
 
-    .filters-body {
-        padding: 20px 22px;
+    .stat-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+
+    /* =========================================================
+       FILTROS COMPACTOS
+    ========================================================== */
+
+    .filters-shell {
+        margin-bottom: 18px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, .055);
+
+        border-radius: 12px;
+
+        background: #111c30;
+    }
+
+    .filters-main {
+        display: grid;
+
+        grid-template-columns:
+            minmax(250px, 1.6fr)
+            minmax(145px, .65fr)
+            minmax(140px, .6fr)
+            auto;
+
+        gap: 9px;
+
+        align-items: end;
+
+        padding: 13px;
+    }
+
+    .filter-group {
+        min-width: 0;
     }
 
     .filter-label {
         display: block;
-        color: #94a3b8;
-        font-size: 12px;
-        font-weight: 700;
+
+        margin-bottom: 5px;
+
+        color: #617188;
+
+        font-size: 8px;
+
+        font-weight: 800;
+
+        letter-spacing: .08em;
+
         text-transform: uppercase;
-        letter-spacing: .8px;
-        margin-bottom: 8px;
+    }
+
+    .search-control-wrapper {
+        position: relative;
+    }
+
+    .search-control-wrapper svg {
+        position: absolute;
+
+        top: 50%;
+        left: 11px;
+
+        width: 13px;
+        height: 13px;
+
+        color: #53637a;
+
+        transform:
+            translateY(-50%);
+
+        pointer-events: none;
     }
 
     .filter-control {
         width: 100%;
-        height: 43px;
-        box-sizing: border-box;
-        border-radius: 10px;
-        border: 1px solid #334155;
-        background: #0b1424;
-        color: #f8fafc;
-        padding: 0 13px;
+        height: 36px;
+
+        padding: 0 10px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, .075);
+
+        border-radius: 8px;
+
         outline: none;
+
+        background: #0a1527;
+
+        color: #dbe5f1;
+
+        font-size: 10px;
+
+        box-sizing: border-box;
+
+        color-scheme: dark;
+
         transition: .2s ease;
     }
 
-    .filter-control:focus {
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, .08);
+    .search-control-wrapper .filter-control {
+        padding-left: 33px;
     }
 
     .filter-control::placeholder {
-        color: #52627a;
+        color: #4f6078;
+    }
+
+    .filter-control:focus {
+        border-color:
+            rgba(56, 189, 248, .35);
+
+        box-shadow:
+            0 0 0 3px
+            rgba(56, 189, 248, .04);
     }
 
     .filter-control option {
-        background: #0b1424;
-        color: #f8fafc;
+        background: #0a1527;
+
+        color: #dbe5f1;
+    }
+
+    .filter-buttons {
+        display: flex;
+
+        align-items: center;
+
+        gap: 6px;
     }
 
     .btn-filter {
-        height: 43px;
-        border: 0;
-        border-radius: 10px;
-        padding: 0 17px;
-        background: #38bdf8;
-        color: #07111f;
+        display: inline-flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        gap: 6px;
+
+        height: 36px;
+
+        padding: 0 12px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .24);
+
+        border-radius: 8px;
+
+        background:
+            rgba(56, 189, 248, .10);
+
+        color: #68d4ff;
+
+        font-size: 9px;
+
         font-weight: 800;
+
         cursor: pointer;
+
         transition: .2s ease;
+
+        white-space: nowrap;
     }
 
     .btn-filter:hover {
-        background: #67cef9;
+        background:
+            rgba(56, 189, 248, .17);
     }
 
     .btn-filter svg {
-        width: 15px;
-        height: 15px;
-        vertical-align: middle;
+        width: 12px;
+        height: 12px;
     }
 
     .btn-clear {
-        height: 43px;
         display: inline-flex;
+
         align-items: center;
-        gap: 7px;
-        padding: 0 15px;
-        border-radius: 10px;
-        border: 1px solid #334155;
-        color: #94a3b8;
+
+        justify-content: center;
+
+        width: 36px;
+        height: 36px;
+
+        padding: 0;
+
+        border:
+            1px solid
+            rgba(148, 163, 184, .12);
+
+        border-radius: 8px;
+
+        background:
+            rgba(148, 163, 184, .04);
+
+        color: #8391a4;
+
         text-decoration: none;
-        font-weight: 600;
+
         transition: .2s ease;
     }
 
     .btn-clear:hover {
-        color: #f8fafc;
-        border-color: #64748b;
-        background: rgba(148, 163, 184, .06);
+        background:
+            rgba(148, 163, 184, .09);
+
+        color: #cbd5e1;
     }
 
     .btn-clear svg {
-        width: 15px;
-        height: 15px;
+        width: 13px;
+        height: 13px;
+    }
+
+
+    /* =========================================================
+       FILTROS AVANZADOS
+    ========================================================== */
+
+    .advanced-filters {
+        border-top:
+            1px solid
+            rgba(255, 255, 255, .045);
+    }
+
+    .advanced-filters summary {
+        display: flex;
+
+        align-items: center;
+
+        gap: 7px;
+
+        width: fit-content;
+
+        padding: 9px 13px;
+
+        color: #718198;
+
+        font-size: 9px;
+
+        font-weight: 700;
+
+        cursor: pointer;
+
+        list-style: none;
+
+        user-select: none;
+    }
+
+    .advanced-filters summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .advanced-filters summary:hover {
+        color: #9acbe0;
+    }
+
+    .advanced-filters summary svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .advanced-content {
+        display: grid;
+
+        grid-template-columns:
+            minmax(150px, 220px)
+            minmax(150px, 220px);
+
+        gap: 9px;
+
+        padding:
+            0 13px 13px;
+    }
+
+
+    /* =========================================================
+       FILTROS ACTIVOS
+    ========================================================== */
+
+    .active-filters {
+        display: flex;
+
+        align-items: center;
+
+        flex-wrap: wrap;
+
+        gap: 6px;
+
+        margin-top: -6px;
+        margin-bottom: 18px;
+    }
+
+    .active-filter-label {
+        color: #53637a;
+
+        font-size: 8px;
+
+        font-weight: 800;
+
+        text-transform: uppercase;
+
+        letter-spacing: .07em;
+    }
+
+    .filter-chip {
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 5px;
+
+        min-height: 23px;
+
+        padding: 0 8px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .11);
+
+        border-radius: 999px;
+
+        background:
+            rgba(56, 189, 248, .045);
+
+        color: #78d5f8;
+
+        font-size: 8px;
+
+        font-weight: 700;
+    }
+
+    .filter-chip svg {
+        width: 10px;
+        height: 10px;
     }
 
 
@@ -320,45 +719,128 @@
        TABLA
     ========================================================== */
 
+    .table-card {
+        overflow: hidden;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, .055);
+
+        border-radius: 13px;
+
+        background: #111c30;
+    }
+
     .table-header {
-        padding: 20px 22px;
-        border-bottom: 1px solid #24344c;
         display: flex;
-        justify-content: space-between;
+
         align-items: center;
+
+        justify-content:
+            space-between;
+
+        gap: 15px;
+
+        padding: 14px 16px;
+
+        border-bottom:
+            1px solid
+            rgba(255, 255, 255, .05);
     }
 
     .table-title {
-        color: #f8fafc;
-        font-size: 17px;
-        font-weight: 750;
         margin: 0;
+
+        color: #f8fafc;
+
+        font-size: 14px;
+
+        font-weight: 750;
+    }
+
+    .table-subtitle {
+        margin-top: 3px;
+
+        color: #607087;
+
+        font-size: 9px;
     }
 
     .table-count {
-        color: #64748b;
-        font-size: 13px;
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: 6px;
+
+        padding: 6px 9px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .10);
+
+        border-radius: 7px;
+
+        background:
+            rgba(56, 189, 248, .04);
+
+        color: #69d2fa;
+
+        font-size: 9px;
+
+        font-weight: 750;
+    }
+
+    .table-count svg {
+        width: 11px;
+        height: 11px;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
     }
 
     .citas-table {
         width: 100%;
+
         border-collapse: collapse;
+
+        min-width: 1000px;
     }
 
     .citas-table thead th {
+        position: sticky;
+
+        top: 0;
+
+        z-index: 2;
+
+        padding: 10px 13px;
+
+        border-bottom:
+            1px solid
+            rgba(255, 255, 255, .05);
+
         background: #0d1728;
-        color: #71829a;
-        font-size: 11px;
+
+        color: #607087;
+
+        font-size: 8px;
+
         font-weight: 800;
-        letter-spacing: 1.1px;
+
+        letter-spacing: .08em;
+
         text-transform: uppercase;
-        padding: 14px 18px;
-        border-bottom: 1px solid #24344c;
+
         white-space: nowrap;
     }
 
     .citas-table tbody tr {
-        border-bottom: 1px solid rgba(51, 65, 85, .55);
+        border-bottom:
+            1px solid
+            rgba(255, 255, 255, .035);
+
         transition: .15s ease;
     }
 
@@ -367,13 +849,17 @@
     }
 
     .citas-table tbody tr:hover {
-        background: rgba(56, 189, 248, .025);
+        background:
+            rgba(56, 189, 248, .025);
     }
 
     .citas-table tbody td {
-        padding: 17px 18px;
+        padding: 12px 13px;
+
         color: #cbd5e1;
-        font-size: 13px;
+
+        font-size: 10px;
+
         vertical-align: middle;
     }
 
@@ -382,22 +868,69 @@
        CLIENTE
     ========================================================== */
 
+    .cliente-wrap {
+        display: flex;
+
+        align-items: center;
+
+        gap: 9px;
+
+        min-width: 180px;
+    }
+
+    .cliente-avatar {
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        width: 30px;
+        height: 30px;
+
+        flex: 0 0 30px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .13);
+
+        border-radius: 8px;
+
+        background:
+            rgba(56, 189, 248, .06);
+
+        color: #61d2ff;
+
+        font-size: 9px;
+
+        font-weight: 800;
+    }
+
     .cliente-name {
-        color: #f8fafc;
+        color: #f1f5f9;
+
+        font-size: 10px;
+
         font-weight: 700;
-        font-size: 14px;
     }
 
     .cliente-company {
-        color: #71829a;
-        font-size: 12px;
+        display: flex;
+
+        align-items: center;
+
+        gap: 4px;
+
         margin-top: 3px;
+
+        color: #64748b;
+
+        font-size: 8px;
     }
 
     .cliente-company svg {
-        width: 13px;
-        height: 13px;
-        vertical-align: -2px;
+        width: 9px;
+        height: 9px;
     }
 
 
@@ -406,48 +939,71 @@
     ========================================================== */
 
     .operario-name {
-        color: #cbd5e1;
-        font-weight: 600;
-    }
+        display: inline-flex;
 
-    .operario-name svg {
-        width: 14px;
-        height: 14px;
-        color: #38bdf8;
-        vertical-align: -2px;
-    }
+        align-items: center;
 
+        gap: 5px;
 
-    /* =========================================================
-       FECHA
-    ========================================================== */
+        color: #b8c5d5;
 
-    .date-main {
-        color: #f8fafc;
+        font-size: 9px;
+
         font-weight: 650;
     }
 
+    .operario-name svg {
+        width: 11px;
+        height: 11px;
+
+        color: #38bdf8;
+    }
+
 
     /* =========================================================
-       HORARIO
+       FECHA / HORA
     ========================================================== */
+
+    .date-main {
+        color: #dce5f0;
+
+        font-size: 9px;
+
+        font-weight: 700;
+
+        white-space: nowrap;
+    }
 
     .time-badge {
         display: inline-flex;
+
         align-items: center;
-        gap: 6px;
-        color: #38bdf8;
-        background: rgba(56, 189, 248, .08);
-        border: 1px solid rgba(56, 189, 248, .15);
-        padding: 6px 9px;
-        border-radius: 8px;
+
+        gap: 5px;
+
+        padding: 5px 7px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .11);
+
+        border-radius: 7px;
+
+        background:
+            rgba(56, 189, 248, .055);
+
+        color: #72d6fb;
+
+        font-size: 9px;
+
         font-weight: 700;
-        font-size: 12px;
+
+        white-space: nowrap;
     }
 
     .time-badge svg {
-        width: 13px;
-        height: 13px;
+        width: 10px;
+        height: 10px;
     }
 
 
@@ -457,21 +1013,37 @@
 
     .status-badge {
         display: inline-flex;
+
         align-items: center;
-        gap: 7px;
-        padding: 6px 10px;
+
+        gap: 6px;
+
+        padding: 5px 8px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .13);
+
         border-radius: 999px;
-        background: rgba(56, 189, 248, .09);
-        border: 1px solid rgba(56, 189, 248, .16);
+
+        background:
+            rgba(56, 189, 248, .055);
+
         color: #7dd3fc;
-        font-size: 11px;
+
+        font-size: 8px;
+
         font-weight: 750;
+
+        white-space: nowrap;
     }
 
     .status-dot {
-        width: 6px;
-        height: 6px;
+        width: 5px;
+        height: 5px;
+
         border-radius: 50%;
+
         background: currentColor;
     }
 
@@ -481,39 +1053,60 @@
     ========================================================== */
 
     .descripcion-main {
-        color: #f8fafc;
+        max-width: 210px;
+
+        color: #dbe5ef;
+
+        font-size: 9px;
+
         font-weight: 650;
-        font-size: 13px;
-        max-width: 240px;
+
         line-height: 1.4;
+
         overflow: hidden;
+
         text-overflow: ellipsis;
+
         white-space: nowrap;
     }
 
     .descripcion-secondary {
-        color: #71829a;
-        font-size: 11px;
-        margin-top: 4px;
-        max-width: 240px;
+        max-width: 210px;
+
+        margin-top: 3px;
+
+        color: #607087;
+
+        font-size: 8px;
+
         line-height: 1.4;
+
         overflow: hidden;
+
         text-overflow: ellipsis;
+
         white-space: nowrap;
     }
 
     .descripcion-label {
-        color: #52627a;
-        font-size: 10px;
-        font-weight: 700;
+        color: #53637a;
+
+        font-size: 7px;
+
+        font-weight: 800;
+
         text-transform: uppercase;
-        letter-spacing: .5px;
-        margin-right: 4px;
+
+        letter-spacing: .04em;
+
+        margin-right: 3px;
     }
 
     .sin-descripcion {
-        color: #64748b;
+        color: #53637a;
+
         font-weight: 500;
+
         font-style: italic;
     }
 
@@ -524,28 +1117,44 @@
 
     .actions {
         display: flex;
+
         justify-content: flex-end;
-        gap: 6px;
+
+        gap: 5px;
     }
 
     .action-btn {
-        width: 34px;
-        height: 34px;
         display: inline-flex;
+
         align-items: center;
+
         justify-content: center;
-        border-radius: 9px;
-        text-decoration: none;
+
+        width: 29px;
+        height: 29px;
+
+        padding: 0;
+
+        border:
+            1px solid
+            rgba(148, 163, 184, .13);
+
+        border-radius: 7px;
+
         background: transparent;
-        border: 1px solid #334155;
-        transition: .18s ease;
+
+        text-decoration: none;
+
         cursor: pointer;
+
         box-sizing: border-box;
+
+        transition: .18s ease;
     }
 
     .action-btn svg {
-        width: 15px;
-        height: 15px;
+        width: 12px;
+        height: 12px;
     }
 
     .action-view {
@@ -553,8 +1162,11 @@
     }
 
     .action-view:hover {
-        background: rgba(56, 189, 248, .10);
-        border-color: rgba(56, 189, 248, .4);
+        border-color:
+            rgba(56, 189, 248, .35);
+
+        background:
+            rgba(56, 189, 248, .08);
     }
 
     .action-edit {
@@ -562,8 +1174,11 @@
     }
 
     .action-edit:hover {
-        background: rgba(251, 191, 36, .10);
-        border-color: rgba(251, 191, 36, .4);
+        border-color:
+            rgba(251, 191, 36, .35);
+
+        background:
+            rgba(251, 191, 36, .08);
     }
 
     .action-delete {
@@ -571,8 +1186,15 @@
     }
 
     .action-delete:hover {
-        background: rgba(251, 113, 133, .10);
-        border-color: rgba(251, 113, 133, .4);
+        border-color:
+            rgba(251, 113, 133, .35);
+
+        background:
+            rgba(251, 113, 133, .08);
+    }
+
+    .actions form {
+        margin: 0;
     }
 
 
@@ -581,44 +1203,62 @@
     ========================================================== */
 
     .empty-state {
-        padding: 60px 20px;
+        padding: 55px 20px;
+
         text-align: center;
     }
 
     .empty-icon {
-        width: 66px;
-        height: 66px;
-        display: inline-flex;
+        display: flex;
+
         align-items: center;
+
         justify-content: center;
-        border-radius: 18px;
-        background: rgba(56, 189, 248, .07);
-        border: 1px solid rgba(56, 189, 248, .12);
+
+        width: 50px;
+        height: 50px;
+
+        margin: 0 auto 12px;
+
+        border:
+            1px solid
+            rgba(56, 189, 248, .12);
+
+        border-radius: 13px;
+
+        background:
+            rgba(56, 189, 248, .05);
+
         color: #38bdf8;
-        margin-bottom: 16px;
     }
 
     .empty-icon svg {
-        width: 27px;
-        height: 27px;
+        width: 21px;
+        height: 21px;
     }
 
     .empty-title {
-        color: #f8fafc;
+        color: #f1f5f9;
+
+        font-size: 13px;
+
         font-weight: 750;
-        font-size: 17px;
-        margin-bottom: 5px;
     }
 
     .empty-text {
+        margin: 5px 0 0;
+
         color: #64748b;
-        font-size: 13px;
-        margin: 0;
+
+        font-size: 10px;
     }
 
     .pagination-wrapper {
-        padding: 18px 22px;
-        border-top: 1px solid #24344c;
+        padding: 14px 16px;
+
+        border-top:
+            1px solid
+            rgba(255, 255, 255, .045);
     }
 
 
@@ -626,69 +1266,111 @@
        RESPONSIVE
     ========================================================== */
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1050px) {
 
-        .citas-summary {
-            grid-template-columns: 1fr;
+        .filters-main {
+            grid-template-columns:
+                minmax(230px, 1fr)
+                1fr
+                1fr;
+        }
+
+        .filter-buttons {
+            grid-column:
+                1 / -1;
+        }
+    }
+
+
+    @media (max-width: 750px) {
+
+        .citas-page {
+            padding:
+                22px 15px;
         }
 
         .citas-header {
-            align-items: stretch;
-            flex-direction: column;
+            align-items:
+                flex-start;
+
+            flex-direction:
+                column;
         }
 
         .btn-nueva-cita {
-            align-self: flex-start;
-        }
-    }
-
-    @media (max-width: 768px) {
-
-        .citas-page {
-            padding: 22px 15px;
+            width: 100%;
         }
 
-        .citas-title {
-            font-size: 28px;
+        .citas-stats {
+            grid-template-columns:
+                1fr;
         }
 
-        .filters-body {
-            padding: 16px;
+        .stat-card {
+            min-height: 105px;
+
+            padding:
+                18px;
+        }
+
+        .filters-main {
+            grid-template-columns:
+                1fr;
+        }
+
+        .filter-buttons {
+            grid-column: 1;
+        }
+
+        .btn-filter {
+            flex: 1;
+        }
+
+        .advanced-content {
+            grid-template-columns:
+                1fr;
         }
 
         .table-header {
-            padding: 17px;
-        }
+            align-items:
+                flex-start;
 
-        .citas-table {
-            min-width: 950px;
+            flex-direction:
+                column;
         }
     }
-
 </style>
 
 
 <div class="citas-page">
 
     {{-- =========================================================
-         ENCABEZADO
+         HEADER
     ========================================================== --}}
 
     <div class="citas-header">
 
         <div>
 
-            <div class="citas-kicker">
-                <span class="citas-kicker-dot"></span>
+            <div class="citas-eyebrow">
+
+                <span class="citas-eyebrow-dot"></span>
+
                 Gestión de citas
+
             </div>
+
 
             <h1 class="citas-title">
                 Citas
             </h1>
 
+
             <p class="citas-subtitle">
-                Consulta y administra las citas de los operarios de tu empresa.
+
+                Consulta, filtra y administra las citas
+                registradas por los operarios de tu empresa.
+
             </p>
 
         </div>
@@ -698,8 +1380,11 @@
             href="{{ route('citas.create') }}"
             class="btn-nueva-cita"
         >
+
             <i data-lucide="calendar-plus"></i>
+
             Nueva cita
+
         </a>
 
     </div>
@@ -715,7 +1400,9 @@
 
             <i data-lucide="circle-check"></i>
 
-            {{ session('exito') }}
+            <div>
+                {{ session('exito') }}
+            </div>
 
         </div>
 
@@ -726,25 +1413,28 @@
 
         <div class="citas-alert citas-alert-danger">
 
-            <div class="fw-bold mb-1">
+            <i data-lucide="triangle-alert"></i>
 
-                <i data-lucide="triangle-alert"></i>
+            <div>
 
-                Revisa los siguientes datos:
+                <strong>
+                    Revisa los siguientes datos:
+                </strong>
+
+
+                <ul>
+
+                    @foreach($errors->all() as $error)
+
+                        <li>
+                            {{ $error }}
+                        </li>
+
+                    @endforeach
+
+                </ul>
 
             </div>
-
-            <ul class="mb-0 ps-4">
-
-                @foreach($errors->all() as $error)
-
-                    <li>
-                        {{ $error }}
-                    </li>
-
-                @endforeach
-
-            </ul>
 
         </div>
 
@@ -755,37 +1445,74 @@
          RESUMEN
     ========================================================== --}}
 
-    <div class="citas-summary">
+    <div class="citas-stats">
 
-        <div class="summary-card">
 
-            <div class="summary-label">
-                Citas mostradas
+        {{-- CITAS ENCONTRADAS --}}
+
+        <div class="stat-card">
+
+            <div class="stat-content">
+
+                <div class="stat-label">
+                    Citas encontradas
+                </div>
+
+
+                <div class="stat-number">
+                    {{ $citas->total() }}
+                </div>
+
+
+                <div class="stat-description">
+
+                    Registros que coinciden con
+                    la búsqueda y filtros actuales.
+
+                </div>
+
             </div>
 
-            <div class="summary-number">
-                {{ $citas->total() }}
-            </div>
 
-            <div class="summary-icon">
+            <div class="stat-icon">
+
                 <i data-lucide="calendar-days"></i>
+
             </div>
 
         </div>
 
 
-        <div class="summary-card green">
+        {{-- OPERARIOS --}}
 
-            <div class="summary-label">
-                Operarios disponibles
+        <div class="stat-card green">
+
+            <div class="stat-content">
+
+                <div class="stat-label">
+                    Operarios disponibles
+                </div>
+
+
+                <div class="stat-number">
+                    {{ $operarios->count() }}
+                </div>
+
+
+                <div class="stat-description">
+
+                    Operarios disponibles para
+                    consulta dentro de la empresa.
+
+                </div>
+
             </div>
 
-            <div class="summary-number">
-                {{ $operarios->count() }}
-            </div>
 
-            <div class="summary-icon">
-                <i data-lucide="users"></i>
+            <div class="stat-icon green">
+
+                <i data-lucide="users-round"></i>
+
             </div>
 
         </div>
@@ -797,124 +1524,184 @@
          FILTROS
     ========================================================== --}}
 
-    <div class="citas-card filters-card">
+    <form
+        method="GET"
+        action="{{ route('citas.index') }}"
+    >
 
-        <div class="card-heading">
+        <div class="filters-shell">
 
-            <h2 class="card-heading-title">
-
-                <i data-lucide="funnel"></i>
-
-                <span style="margin-left:8px;">
-                    Filtrar citas
-                </span>
-
-            </h2>
-
-            <p class="card-heading-subtitle">
-                Utiliza los filtros para localizar una cita específica.
-            </p>
-
-        </div>
+            <div class="filters-main">
 
 
-        <div class="filters-body">
+                {{-- BUSCAR --}}
 
-            <form
-                method="GET"
-                action="{{ route('citas.index') }}"
-            >
+                <div class="filter-group">
 
-                <div class="row g-3">
+                    <label class="filter-label">
+                        Buscar cliente
+                    </label>
 
-                    {{-- BUSCAR --}}
 
-                    <div class="col-12 col-lg-4">
+                    <div class="search-control-wrapper">
 
-                        <label class="filter-label">
-                            Buscar cliente
-                        </label>
+                        <i data-lucide="search"></i>
+
 
                         <input
                             type="text"
                             name="buscar"
-                            value="{{ $buscar }}"
+                            value="{{ $buscarActual }}"
                             class="filter-control"
-                            placeholder="Nombre, empresa, correo o teléfono"
+                            placeholder="Nombre, empresa, correo o teléfono..."
                         >
 
                     </div>
 
+                </div>
 
-                    {{-- OPERARIO --}}
 
-                    <div class="col-12 col-md-6 col-lg-2">
+                {{-- OPERARIO --}}
 
-                        <label class="filter-label">
-                            Operario
-                        </label>
+                <div class="filter-group">
 
-                        <select
-                            name="operario"
-                            class="filter-control"
-                        >
+                    <label class="filter-label">
+                        Operario
+                    </label>
 
-                            <option value="">
-                                Todos
+
+                    <select
+                        name="operario"
+                        class="filter-control"
+                    >
+
+                        <option value="">
+                            Todos
+                        </option>
+
+
+                        @foreach($operarios as $operario)
+
+                            <option
+                                value="{{ $operario->id }}"
+                                {{
+                                    request('operario')
+                                    == $operario->id
+                                        ? 'selected'
+                                        : ''
+                                }}
+                            >
+
+                                {{ $operario->name }}
+
                             </option>
 
-                            @foreach($operarios as $operario)
+                        @endforeach
 
-                                <option
-                                    value="{{ $operario->id }}"
-                                    {{ request('operario') == $operario->id ? 'selected' : '' }}
-                                >
-                                    {{ $operario->name }}
-                                </option>
+                    </select>
 
-                            @endforeach
-
-                        </select>
-
-                    </div>
+                </div>
 
 
-                    {{-- ESTADO --}}
+                {{-- ESTADO --}}
 
-                    <div class="col-12 col-md-6 col-lg-2">
+                <div class="filter-group">
 
-                        <label class="filter-label">
-                            Estado
-                        </label>
+                    <label class="filter-label">
+                        Estado
+                    </label>
 
-                        <select
-                            name="estado"
-                            class="filter-control"
-                        >
 
-                            <option value="">
-                                Todos
+                    <select
+                        name="estado"
+                        class="filter-control"
+                    >
+
+                        <option value="">
+                            Todos
+                        </option>
+
+
+                        @foreach($estados as $estado)
+
+                            <option
+                                value="{{ $estado->id_estado_cita }}"
+                                {{
+                                    request('estado')
+                                    == $estado->id_estado_cita
+                                        ? 'selected'
+                                        : ''
+                                }}
+                            >
+
+                                {{ $estado->nombre }}
+
                             </option>
 
-                            @foreach($estados as $estado)
+                        @endforeach
 
-                                <option
-                                    value="{{ $estado->id_estado_cita }}"
-                                    {{ request('estado') == $estado->id_estado_cita ? 'selected' : '' }}
-                                >
-                                    {{ $estado->nombre }}
-                                </option>
+                    </select>
 
-                            @endforeach
-
-                        </select>
-
-                    </div>
+                </div>
 
 
-                    {{-- DESDE --}}
+                {{-- BOTONES --}}
 
-                    <div class="col-12 col-md-6 col-lg-2">
+                <div class="filter-buttons">
+
+                    <button
+                        type="submit"
+                        class="btn-filter"
+                    >
+
+                        <i data-lucide="search"></i>
+
+                        Aplicar
+
+                    </button>
+
+
+                    @if($hayFiltros)
+
+                        <a
+                            href="{{ route('citas.index') }}"
+                            class="btn-clear"
+                            title="Limpiar filtros"
+                        >
+
+                            <i data-lucide="rotate-ccw"></i>
+
+                        </a>
+
+                    @endif
+
+                </div>
+
+            </div>
+
+
+            {{-- =================================================
+                 FILTROS AVANZADOS
+            ================================================== --}}
+
+            <details
+                class="advanced-filters"
+                {{ $hayFiltrosAvanzados ? 'open' : '' }}
+            >
+
+                <summary>
+
+                    <i data-lucide="sliders-horizontal"></i>
+
+                    Más filtros
+
+                </summary>
+
+
+                <div class="advanced-content">
+
+
+                    <div class="filter-group">
 
                         <label class="filter-label">
                             Desde
@@ -930,9 +1717,7 @@
                     </div>
 
 
-                    {{-- HASTA --}}
-
-                    <div class="col-12 col-md-6 col-lg-2">
+                    <div class="filter-group">
 
                         <label class="filter-label">
                             Hasta
@@ -947,56 +1732,102 @@
 
                     </div>
 
-
-                    {{-- BOTONES --}}
-
-                    <div class="col-12">
-
-                        <div class="d-flex flex-wrap gap-2">
-
-                            <button
-                                type="submit"
-                                class="btn-filter"
-                            >
-
-                                <i data-lucide="search"></i>
-
-                                <span style="margin-left:5px;">
-                                    Filtrar
-                                </span>
-
-                            </button>
-
-
-                            <a
-                                href="{{ route('citas.index') }}"
-                                class="btn-clear"
-                            >
-
-                                <i data-lucide="rotate-ccw"></i>
-
-                                Limpiar
-
-                            </a>
-
-                        </div>
-
-                    </div>
-
                 </div>
 
-            </form>
+            </details>
 
         </div>
 
-    </div>
+    </form>
+
+
+    {{-- =========================================================
+         FILTROS ACTIVOS
+    ========================================================== --}}
+
+    @if($hayFiltros)
+
+        <div class="active-filters">
+
+            <span class="active-filter-label">
+                Filtros activos:
+            </span>
+
+
+            @if(request()->filled('buscar'))
+
+                <span class="filter-chip">
+
+                    <i data-lucide="search"></i>
+
+                    {{ request('buscar') }}
+
+                </span>
+
+            @endif
+
+
+            @if($operarioSeleccionado)
+
+                <span class="filter-chip">
+
+                    <i data-lucide="user"></i>
+
+                    {{ $operarioSeleccionado->name }}
+
+                </span>
+
+            @endif
+
+
+            @if($estadoSeleccionado)
+
+                <span class="filter-chip">
+
+                    <i data-lucide="circle-dot"></i>
+
+                    {{ $estadoSeleccionado->nombre }}
+
+                </span>
+
+            @endif
+
+
+            @if(request()->filled('fecha_desde'))
+
+                <span class="filter-chip">
+
+                    <i data-lucide="calendar"></i>
+
+                    Desde {{ request('fecha_desde') }}
+
+                </span>
+
+            @endif
+
+
+            @if(request()->filled('fecha_hasta'))
+
+                <span class="filter-chip">
+
+                    <i data-lucide="calendar-check"></i>
+
+                    Hasta {{ request('fecha_hasta') }}
+
+                </span>
+
+            @endif
+
+        </div>
+
+    @endif
 
 
     {{-- =========================================================
          TABLA
     ========================================================== --}}
 
-    <div class="citas-card">
+    <div class="table-card">
 
         <div class="table-header">
 
@@ -1006,23 +1837,35 @@
                     Citas registradas
                 </h2>
 
-                <span class="table-count">
 
-                    {{ $citas->total() }}
+                <div class="table-subtitle">
 
-                    {{ $citas->total() == 1
-                        ? 'cita encontrada'
-                        : 'citas encontradas'
-                    }}
+                    Consulta la información
+                    y administra cada cita.
 
-                </span>
+                </div>
+
+            </div>
+
+
+            <div class="table-count">
+
+                <i data-lucide="calendar-range"></i>
+
+                {{ $citas->total() }}
+
+                {{
+                    $citas->total() === 1
+                        ? 'resultado'
+                        : 'resultados'
+                }}
 
             </div>
 
         </div>
 
 
-        <div class="table-responsive">
+        <div class="table-scroll">
 
             <table class="citas-table">
 
@@ -1051,10 +1894,10 @@
                         </th>
 
                         <th>
-                            Descripción
+                            Detalle
                         </th>
 
-                        <th class="text-end">
+                        <th style="text-align:right;">
                             Acciones
                         </th>
 
@@ -1069,36 +1912,71 @@
 
                         <tr>
 
+
                             {{-- CLIENTE --}}
 
                             <td>
 
                                 @if($cita->cliente)
 
-                                    <div class="cliente-name">
+                                    @php
+                                        $nombreCliente = trim(
+                                            ($cita->cliente->nombre ?? '')
+                                            . ' ' .
+                                            ($cita->cliente->apellido_paterno ?? '')
+                                            . ' ' .
+                                            ($cita->cliente->apellido_materno ?? '')
+                                        );
 
-                                        {{ $cita->cliente->nombre }}
-                                        {{ $cita->cliente->apellido_paterno }}
-                                        {{ $cita->cliente->apellido_materno }}
+                                        $inicialCliente =
+                                            mb_strtoupper(
+                                                mb_substr(
+                                                    $cita->cliente->nombre
+                                                    ?? 'C',
+                                                    0,
+                                                    1
+                                                )
+                                            );
+                                    @endphp
 
-                                    </div>
 
+                                    <div class="cliente-wrap">
 
-                                    @if($cita->cliente->empresa)
+                                        <div class="cliente-avatar">
 
-                                        <div class="cliente-company">
-
-                                            <i data-lucide="building-2"></i>
-
-                                            {{ $cita->cliente->empresa }}
+                                            {{ $inicialCliente }}
 
                                         </div>
 
-                                    @endif
+
+                                        <div>
+
+                                            <div class="cliente-name">
+
+                                                {{ $nombreCliente }}
+
+                                            </div>
+
+
+                                            @if($cita->cliente->empresa)
+
+                                                <div class="cliente-company">
+
+                                                    <i data-lucide="building-2"></i>
+
+                                                    {{ $cita->cliente->empresa }}
+
+                                                </div>
+
+                                            @endif
+
+                                        </div>
+
+                                    </div>
 
                                 @else
 
-                                    <span class="text-secondary">
+                                    <span class="sin-descripcion">
                                         Cliente no disponible
                                     </span>
 
@@ -1123,7 +2001,7 @@
 
                                 @else
 
-                                    <span class="text-secondary">
+                                    <span class="sin-descripcion">
                                         Sin asignar
                                     </span>
 
@@ -1138,7 +2016,11 @@
 
                                 <span class="date-main">
 
-                                    {{ $cita->fecha_hora_inicio->format('d/m/Y') }}
+                                    {{
+                                        $cita
+                                            ->fecha_hora_inicio
+                                            ->format('d/m/Y')
+                                    }}
 
                                 </span>
 
@@ -1153,13 +2035,22 @@
 
                                     <i data-lucide="clock-3"></i>
 
-                                    {{ $cita->fecha_hora_inicio->format('H:i') }}
+                                    {{
+                                        $cita
+                                            ->fecha_hora_inicio
+                                            ->format('H:i')
+                                    }}
+
 
                                     @if($cita->fecha_hora_fin)
 
                                         -
 
-                                        {{ $cita->fecha_hora_fin->format('H:i') }}
+                                        {{
+                                            $cita
+                                                ->fecha_hora_fin
+                                                ->format('H:i')
+                                        }}
 
                                     @endif
 
@@ -1184,7 +2075,7 @@
 
                                 @else
 
-                                    <span class="text-secondary">
+                                    <span class="sin-descripcion">
                                         Sin estado
                                     </span>
 
@@ -1193,7 +2084,7 @@
                             </td>
 
 
-                            {{-- DESCRIPCIÓN: MOTIVO + OBSERVACIONES --}}
+                            {{-- DETALLE --}}
 
                             <td>
 
@@ -1203,19 +2094,20 @@
                                         class="descripcion-main"
                                         title="{{ $cita->motivo }}"
                                     >
-                                        <span class="descripcion-label">
-                                            Motivo:
-                                        </span>
 
                                         {{ $cita->motivo }}
+
                                     </div>
 
                                 @else
 
-                                    <div class="descripcion-main sin-descripcion">
-
+                                    <div
+                                        class="
+                                            descripcion-main
+                                            sin-descripcion
+                                        "
+                                    >
                                         Sin motivo
-
                                     </div>
 
                                 @endif
@@ -1227,11 +2119,13 @@
                                         class="descripcion-secondary"
                                         title="{{ $cita->observaciones }}"
                                     >
+
                                         <span class="descripcion-label">
-                                            Nota:
+                                            Nota
                                         </span>
 
                                         {{ $cita->observaciones }}
+
                                     </div>
 
                                 @endif
@@ -1245,45 +2139,73 @@
 
                                 <div class="actions">
 
+
                                     {{-- VER --}}
 
                                     <a
-                                        href="{{ route('citas.show', $cita->id_cita) }}"
+                                        href="{{
+                                            route(
+                                                'citas.show',
+                                                $cita->id_cita
+                                            )
+                                        }}"
                                         class="action-btn action-view"
                                         title="Ver cita"
                                     >
+
                                         <i data-lucide="eye"></i>
+
                                     </a>
 
 
                                     {{-- EDITAR --}}
 
                                     <a
-                                        href="{{ route('citas.edit', $cita->id_cita) }}"
+                                        href="{{
+                                            route(
+                                                'citas.edit',
+                                                $cita->id_cita
+                                            )
+                                        }}"
                                         class="action-btn action-edit"
                                         title="Editar cita"
                                     >
+
                                         <i data-lucide="pencil"></i>
+
                                     </a>
 
 
                                     {{-- ELIMINAR --}}
 
                                     <form
-                                        action="{{ route('citas.destroy', $cita->id_cita) }}"
+                                        action="{{
+                                            route(
+                                                'citas.destroy',
+                                                $cita->id_cita
+                                            )
+                                        }}"
                                         method="POST"
-                                        onsubmit="return confirm('¿Seguro que deseas eliminar esta cita?');"
+                                        onsubmit="
+                                            return confirm(
+                                                '¿Seguro que deseas eliminar esta cita?'
+                                            );
+                                        "
                                     >
 
                                         @csrf
+
                                         @method('DELETE')
+
 
                                         <button
                                             type="submit"
                                             class="action-btn action-delete"
                                             title="Eliminar cita"
                                         >
+
                                             <i data-lucide="trash-2"></i>
+
                                         </button>
 
                                     </form>
@@ -1299,10 +2221,7 @@
 
                         <tr>
 
-                            <td
-                                colspan="7"
-                                class="p-0"
-                            >
+                            <td colspan="7">
 
                                 <div class="empty-state">
 
@@ -1312,12 +2231,17 @@
 
                                     </div>
 
+
                                     <div class="empty-title">
-                                        No hay citas registradas
+                                        No hay citas para mostrar
                                     </div>
 
+
                                     <p class="empty-text">
-                                        No se encontraron citas con los filtros seleccionados.
+
+                                        No encontramos resultados
+                                        con los filtros seleccionados.
+
                                     </p>
 
                                 </div>
@@ -1335,7 +2259,9 @@
         </div>
 
 
-        {{-- PAGINACIÓN --}}
+        {{-- =====================================================
+             PAGINACIÓN
+        ====================================================== --}}
 
         @if($citas->hasPages())
 
@@ -1353,15 +2279,16 @@
 
 
 <script>
-
-    document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
 
-    });
-
+    }
+);
 </script>
 
 @endsection

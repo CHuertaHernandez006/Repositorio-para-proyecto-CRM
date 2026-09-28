@@ -5,13 +5,11 @@
 @section('content')
 
 <style>
-
     .operarios-page {
         color: #e8eef7;
         max-width: 1400px;
         margin: 0 auto;
     }
-
 
     /* =========================================================
        HEADER
@@ -42,7 +40,7 @@
         height: 6px;
         border-radius: 50%;
         background: #35c6ff;
-        box-shadow: 0 0 10px rgba(53,198,255,.6);
+        box-shadow: 0 0 10px rgba(53, 198, 255, .6);
     }
 
     .operarios-title {
@@ -61,14 +59,58 @@
         line-height: 1.6;
     }
 
+    .operarios-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+
+    /* =========================================================
+       BOTÓN OBJETIVOS
+    ========================================================== */
+
+    .btn-objetivos {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 11px 17px;
+        border: 1px solid rgba(52, 211, 153, .22);
+        border-radius: 11px;
+        background: rgba(52, 211, 153, .08);
+        color: #34d399;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: .2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-objetivos:hover {
+        background: rgba(52, 211, 153, .16);
+        border-color: rgba(52, 211, 153, .45);
+        color: #6ee7b7;
+        transform: translateY(-1px);
+        box-shadow: 0 0 15px rgba(52, 211, 153, .10);
+    }
+
+    .btn-objetivos svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* =========================================================
+       BOTÓN NUEVO OPERARIO
+    ========================================================== */
+
     .btn-nuevo-operario {
         display: inline-flex;
         align-items: center;
         gap: 9px;
         padding: 11px 17px;
-        border: 1px solid rgba(53,198,255,.22);
+        border: 1px solid rgba(53, 198, 255, .22);
         border-radius: 11px;
-        background: rgba(53,198,255,.09);
+        background: rgba(53, 198, 255, .09);
         color: #55ceff;
         font-size: 13px;
         font-weight: 700;
@@ -78,11 +120,11 @@
     }
 
     .btn-nuevo-operario:hover {
-        background: rgba(53,198,255,.18);
-        border-color: rgba(53,198,255,.48);
+        background: rgba(53, 198, 255, .18);
+        border-color: rgba(53, 198, 255, .48);
         color: #8dddff;
         transform: translateY(-1px);
-        box-shadow: 0 0 15px rgba(53,198,255,.10);
+        box-shadow: 0 0 15px rgba(53, 198, 255, .10);
     }
 
     .btn-nuevo-operario svg {
@@ -90,6 +132,29 @@
         height: 16px;
     }
 
+    /* =========================================================
+       ALERTA
+    ========================================================== */
+
+    .success-alert {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        padding: 12px 15px;
+        border: 1px solid rgba(52, 211, 153, .15);
+        border-radius: 10px;
+        background: rgba(52, 211, 153, .07);
+        color: #6ee7b7;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .success-alert svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+    }
 
     /* =========================================================
        STATS
@@ -107,10 +172,10 @@
         overflow: hidden;
         min-height: 115px;
         padding: 20px;
-        border: 1px solid rgba(255,255,255,.055);
+        border: 1px solid rgba(255, 255, 255, .055);
         border-radius: 15px;
         background: #111c30;
-        box-shadow: 0 12px 30px rgba(0,0,0,.08);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, .08);
     }
 
     .operario-stat::after {
@@ -121,7 +186,7 @@
         right: -45px;
         bottom: -55px;
         border-radius: 50%;
-        background: rgba(53,198,255,.04);
+        background: rgba(53, 198, 255, .04);
         pointer-events: none;
     }
 
@@ -148,7 +213,6 @@
         font-weight: 750;
     }
 
-
     /* =========================================================
        ICONOS DE ESTADÍSTICAS
     ========================================================== */
@@ -159,9 +223,9 @@
         justify-content: center;
         width: 39px;
         height: 39px;
-        border: 1px solid rgba(53,198,255,.28);
+        border: 1px solid rgba(53, 198, 255, .28);
         border-radius: 10px;
-        background: rgba(53,198,255,.13);
+        background: rgba(53, 198, 255, .13);
         color: #35c6ff;
         transition: .2s ease;
     }
@@ -173,45 +237,38 @@
     }
 
     .stat-icon:hover {
-        border-color: rgba(53,198,255,.55);
-        background: rgba(53,198,255,.22);
+        border-color: rgba(53, 198, 255, .55);
+        background: rgba(53, 198, 255, .22);
         color: #72d9ff;
-        box-shadow: 0 0 14px rgba(53,198,255,.12);
+        box-shadow: 0 0 14px rgba(53, 198, 255, .12);
         transform: translateY(-1px);
     }
 
-
-    /* ACTIVOS */
-
     .stat-icon.green {
-        border-color: rgba(52,211,153,.28);
-        background: rgba(52,211,153,.13);
+        border-color: rgba(52, 211, 153, .28);
+        background: rgba(52, 211, 153, .13);
         color: #34d399;
     }
 
     .stat-icon.green:hover {
-        border-color: rgba(52,211,153,.55);
-        background: rgba(52,211,153,.22);
+        border-color: rgba(52, 211, 153, .55);
+        background: rgba(52, 211, 153, .22);
         color: #6ee7b7;
-        box-shadow: 0 0 14px rgba(52,211,153,.12);
+        box-shadow: 0 0 14px rgba(52, 211, 153, .12);
     }
 
-
-    /* INACTIVOS */
-
     .stat-icon.gray {
-        border-color: rgba(148,163,184,.25);
-        background: rgba(148,163,184,.11);
+        border-color: rgba(148, 163, 184, .25);
+        background: rgba(148, 163, 184, .11);
         color: #94a3b8;
     }
 
     .stat-icon.gray:hover {
-        border-color: rgba(148,163,184,.5);
-        background: rgba(148,163,184,.19);
+        border-color: rgba(148, 163, 184, .5);
+        background: rgba(148, 163, 184, .19);
         color: #cbd5e1;
-        box-shadow: 0 0 14px rgba(148,163,184,.10);
+        box-shadow: 0 0 14px rgba(148, 163, 184, .10);
     }
-
 
     /* =========================================================
        MAIN CARD
@@ -219,10 +276,10 @@
 
     .operarios-card {
         overflow: hidden;
-        border: 1px solid rgba(255,255,255,.055);
+        border: 1px solid rgba(255, 255, 255, .055);
         border-radius: 16px;
         background: #111c30;
-        box-shadow: 0 20px 50px rgba(0,0,0,.10);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, .10);
     }
 
     .operarios-card-header {
@@ -231,7 +288,7 @@
         justify-content: space-between;
         gap: 20px;
         padding: 19px 21px;
-        border-bottom: 1px solid rgba(255,255,255,.055);
+        border-bottom: 1px solid rgba(255, 255, 255, .055);
     }
 
     .card-title {
@@ -246,7 +303,6 @@
         color: #66758d;
         font-size: 12px;
     }
-
 
     /* =========================================================
        SEARCH
@@ -272,7 +328,7 @@
         width: 100%;
         height: 38px;
         padding: 0 12px 0 36px;
-        border: 1px solid rgba(255,255,255,.08);
+        border: 1px solid rgba(255, 255, 255, .08);
         border-radius: 9px;
         outline: none;
         background: #0c1628;
@@ -287,10 +343,9 @@
     }
 
     .operario-search input:focus {
-        border-color: rgba(53,198,255,.35);
-        box-shadow: 0 0 0 3px rgba(53,198,255,.05);
+        border-color: rgba(53, 198, 255, .35);
+        box-shadow: 0 0 0 3px rgba(53, 198, 255, .05);
     }
-
 
     /* =========================================================
        TABLE
@@ -307,7 +362,7 @@
 
     .operarios-table th {
         padding: 13px 21px;
-        border-bottom: 1px solid rgba(255,255,255,.045);
+        border-bottom: 1px solid rgba(255, 255, 255, .045);
         color: #59687f;
         font-size: 10px;
         font-weight: 700;
@@ -319,7 +374,7 @@
 
     .operarios-table td {
         padding: 15px 21px;
-        border-bottom: 1px solid rgba(255,255,255,.035);
+        border-bottom: 1px solid rgba(255, 255, 255, .035);
         vertical-align: middle;
     }
 
@@ -328,13 +383,12 @@
     }
 
     .operarios-table tbody tr:hover {
-        background: rgba(255,255,255,.018);
+        background: rgba(255, 255, 255, .018);
     }
 
     .operarios-table tbody tr:last-child td {
         border-bottom: none;
     }
-
 
     /* =========================================================
        USER
@@ -355,9 +409,9 @@
         width: 40px;
         height: 40px;
         flex: 0 0 40px;
-        border: 1px solid rgba(53,198,255,.12);
+        border: 1px solid rgba(53, 198, 255, .12);
         border-radius: 11px;
-        background: rgba(53,198,255,.07);
+        background: rgba(53, 198, 255, .07);
         color: #52cfff;
         font-size: 13px;
         font-weight: 800;
@@ -387,7 +441,6 @@
         font-size: 10px;
     }
 
-
     /* =========================================================
        EMAIL
     ========================================================== */
@@ -407,7 +460,6 @@
         color: #58677d;
     }
 
-
     /* =========================================================
        EMPRESA
     ========================================================== */
@@ -417,9 +469,9 @@
         align-items: center;
         gap: 7px;
         padding: 6px 9px;
-        border: 1px solid rgba(255,255,255,.05);
+        border: 1px solid rgba(255, 255, 255, .05);
         border-radius: 7px;
-        background: rgba(255,255,255,.025);
+        background: rgba(255, 255, 255, .025);
         color: #a1adbd;
         font-size: 10px;
         font-weight: 600;
@@ -432,6 +484,10 @@
         color: #66758b;
     }
 
+    .sin-empresa {
+        color: #59687f;
+        font-size: 11px;
+    }
 
     /* =========================================================
        STATUS
@@ -448,14 +504,14 @@
     }
 
     .status-badge.active {
-        border: 1px solid rgba(52,211,153,.14);
-        background: rgba(52,211,153,.07);
+        border: 1px solid rgba(52, 211, 153, .14);
+        background: rgba(52, 211, 153, .07);
         color: #6ee7b7;
     }
 
     .status-badge.inactive {
-        border: 1px solid rgba(148,163,184,.1);
-        background: rgba(148,163,184,.05);
+        border: 1px solid rgba(148, 163, 184, .1);
+        background: rgba(148, 163, 184, .05);
         color: #728097;
     }
 
@@ -467,13 +523,12 @@
 
     .active .status-dot {
         background: #34d399;
-        box-shadow: 0 0 7px rgba(52,211,153,.6);
+        box-shadow: 0 0 7px rgba(52, 211, 153, .6);
     }
 
     .inactive .status-dot {
         background: #64748b;
     }
-
 
     /* =========================================================
        ACTIONS
@@ -492,9 +547,9 @@
         justify-content: center;
         width: 31px;
         height: 31px;
-        border: 1px solid rgba(148,163,184,.16);
+        border: 1px solid rgba(148, 163, 184, .16);
         border-radius: 8px;
-        background: rgba(148,163,184,.07);
+        background: rgba(148, 163, 184, .07);
         color: #94a3b8;
         cursor: pointer;
         transition: .18s ease;
@@ -508,76 +563,63 @@
     }
 
     .action-button:hover {
-        border-color: rgba(203,213,225,.4);
-        background: rgba(203,213,225,.13);
+        border-color: rgba(203, 213, 225, .4);
+        background: rgba(203, 213, 225, .13);
         color: #e2e8f0;
         transform: translateY(-1px);
     }
 
-
-    /* VER */
-
     .action-button.view {
-        border-color: rgba(53,198,255,.18);
-        background: rgba(53,198,255,.08);
+        border-color: rgba(53, 198, 255, .18);
+        background: rgba(53, 198, 255, .08);
         color: #35c6ff;
     }
 
     .action-button.view:hover {
-        border-color: rgba(53,198,255,.5);
-        background: rgba(53,198,255,.18);
+        border-color: rgba(53, 198, 255, .5);
+        background: rgba(53, 198, 255, .18);
         color: #7bddff;
-        box-shadow: 0 0 12px rgba(53,198,255,.10);
+        box-shadow: 0 0 12px rgba(53, 198, 255, .10);
     }
 
-
-    /* EDITAR */
-
     .action-button.edit {
-        border-color: rgba(251,191,36,.18);
-        background: rgba(251,191,36,.07);
+        border-color: rgba(251, 191, 36, .18);
+        background: rgba(251, 191, 36, .07);
         color: #fbbf24;
     }
 
     .action-button.edit:hover {
-        border-color: rgba(251,191,36,.5);
-        background: rgba(251,191,36,.17);
+        border-color: rgba(251, 191, 36, .5);
+        background: rgba(251, 191, 36, .17);
         color: #fde68a;
-        box-shadow: 0 0 12px rgba(251,191,36,.10);
+        box-shadow: 0 0 12px rgba(251, 191, 36, .10);
     }
 
-
-    /* ACTIVAR / DESACTIVAR */
-
     .action-button.toggle {
-        border-color: rgba(52,211,153,.18);
-        background: rgba(52,211,153,.07);
+        border-color: rgba(52, 211, 153, .18);
+        background: rgba(52, 211, 153, .07);
         color: #34d399;
     }
 
     .action-button.toggle:hover {
-        border-color: rgba(52,211,153,.5);
-        background: rgba(52,211,153,.17);
+        border-color: rgba(52, 211, 153, .5);
+        background: rgba(52, 211, 153, .17);
         color: #6ee7b7;
-        box-shadow: 0 0 12px rgba(52,211,153,.10);
+        box-shadow: 0 0 12px rgba(52, 211, 153, .10);
     }
 
-
-    /* ELIMINAR */
-
     .action-button.delete {
-        border-color: rgba(248,113,113,.18);
-        background: rgba(248,113,113,.07);
+        border-color: rgba(248, 113, 113, .18);
+        background: rgba(248, 113, 113, .07);
         color: #f87171;
     }
 
     .action-button.delete:hover {
-        border-color: rgba(248,113,113,.5);
-        background: rgba(248,113,113,.17);
+        border-color: rgba(248, 113, 113, .5);
+        background: rgba(248, 113, 113, .17);
         color: #fca5a5;
-        box-shadow: 0 0 12px rgba(248,113,113,.10);
+        box-shadow: 0 0 12px rgba(248, 113, 113, .10);
     }
-
 
     /* =========================================================
        EMPTY
@@ -595,9 +637,9 @@
         width: 58px;
         height: 58px;
         margin: 0 auto;
-        border: 1px solid rgba(53,198,255,.1);
+        border: 1px solid rgba(53, 198, 255, .1);
         border-radius: 15px;
-        background: rgba(53,198,255,.045);
+        background: rgba(53, 198, 255, .045);
         color: #35c6ff;
     }
 
@@ -639,14 +681,13 @@
     .empty-button:hover {
         background: #67d5ff;
         transform: translateY(-1px);
-        box-shadow: 0 0 16px rgba(53,198,255,.15);
+        box-shadow: 0 0 16px rgba(53, 198, 255, .15);
     }
 
     .empty-button svg {
         width: 15px;
         height: 15px;
     }
-
 
     /* =========================================================
        NO RESULTS
@@ -660,13 +701,11 @@
         font-size: 12px;
     }
 
-
     /* =========================================================
        RESPONSIVE
     ========================================================== */
 
     @media (max-width: 900px) {
-
         .operarios-stats {
             grid-template-columns: 1fr;
         }
@@ -676,9 +715,16 @@
             flex-direction: column;
         }
 
+        .operarios-header-actions {
+            width: 100%;
+            flex-direction: column;
+        }
+
+        .btn-objetivos,
         .btn-nuevo-operario {
             width: 100%;
             justify-content: center;
+            box-sizing: border-box;
         }
 
         .operarios-card-header {
@@ -692,7 +738,6 @@
     }
 
     @media (max-width: 650px) {
-
         .operarios-page {
             padding: 0 2px;
         }
@@ -707,12 +752,10 @@
             padding-right: 14px;
         }
     }
-
 </style>
 
 
 <div class="operarios-page">
-
 
     {{-- =========================================================
          HEADER
@@ -723,18 +766,13 @@
         <div>
 
             <div class="operarios-eyebrow">
-
                 <span class="operarios-eyebrow-dot"></span>
-
                 Gestión del equipo
-
             </div>
-
 
             <h1 class="operarios-title">
                 Operarios
             </h1>
-
 
             <p class="operarios-description">
                 Administra las cuentas de los operarios y consulta la información
@@ -744,16 +782,36 @@
         </div>
 
 
-        <a
-            href="{{ route('operarios.create') }}"
-            class="btn-nuevo-operario"
-        >
+        <div class="operarios-header-actions">
 
-            <i data-lucide="user-plus"></i>
+            {{-- OBJETIVOS --}}
 
-            Nuevo operario
+            @if(Route::has('operarios.objetivos'))
 
-        </a>
+                <a
+                    href="{{ route('operarios.objetivos') }}"
+                    class="btn-objetivos"
+                >
+                    <i data-lucide="target"></i>
+
+                    Objetivos
+                </a>
+
+            @endif
+
+
+            {{-- NUEVO OPERARIO --}}
+
+            <a
+                href="{{ route('operarios.create') }}"
+                class="btn-nuevo-operario"
+            >
+                <i data-lucide="user-plus"></i>
+
+                Nuevo operario
+            </a>
+
+        </div>
 
     </div>
 
@@ -764,24 +822,9 @@
 
     @if(session('success'))
 
-        <div style="
-            display:flex;
-            align-items:center;
-            gap:10px;
-            margin-bottom:20px;
-            padding:12px 15px;
-            border:1px solid rgba(52,211,153,.15);
-            border-radius:10px;
-            background:rgba(52,211,153,.07);
-            color:#6ee7b7;
-            font-size:12px;
-            font-weight:600;
-        ">
+        <div class="success-alert">
 
-            <i
-                data-lucide="circle-check"
-                style="width:16px;height:16px;"
-            ></i>
+            <i data-lucide="circle-check"></i>
 
             {{ session('success') }}
 
@@ -795,7 +838,6 @@
     ========================================================== --}}
 
     <div class="operarios-stats">
-
 
         {{-- TOTAL --}}
 
@@ -815,11 +857,8 @@
 
                 </div>
 
-
                 <div class="stat-icon">
-
                     <i data-lucide="users-round"></i>
-
                 </div>
 
             </div>
@@ -845,11 +884,8 @@
 
                 </div>
 
-
                 <div class="stat-icon green">
-
                     <i data-lucide="user-round-check"></i>
-
                 </div>
 
             </div>
@@ -875,11 +911,8 @@
 
                 </div>
 
-
                 <div class="stat-icon gray">
-
                     <i data-lucide="user-round-x"></i>
-
                 </div>
 
             </div>
@@ -894,7 +927,6 @@
     ========================================================== --}}
 
     <div class="operarios-card">
-
 
         <div class="operarios-card-header">
 
@@ -928,7 +960,6 @@
 
 
         @if($operarios->count() > 0)
-
 
             <div class="operarios-table-wrapper">
 
@@ -965,25 +996,25 @@
 
                     <tbody id="tablaOperarios">
 
-
                         @foreach($operarios as $operario)
 
                             @php
-
                                 $activo = $operario->estado ?? true;
 
                                 $inicial = strtoupper(
                                     substr($operario->name, 0, 1)
                                 );
-
                             @endphp
 
 
                             <tr
                                 class="operario-row"
-                                data-search="{{ strtolower($operario->name . ' ' . $operario->email . ' ' . ($operario->empresa->nombre ?? '')) }}"
+                                data-search="{{ strtolower(
+                                    $operario->name . ' ' .
+                                    $operario->email . ' ' .
+                                    ($operario->empresa->nombre ?? '')
+                                ) }}"
                             >
-
 
                                 {{-- OPERARIO --}}
 
@@ -995,11 +1026,8 @@
 
                                             {{ $inicial }}
 
-
                                             @if($activo)
-
                                                 <span class="operario-online"></span>
-
                                             @endif
 
                                         </div>
@@ -1053,10 +1081,7 @@
 
                                     @else
 
-                                        <span style="
-                                            color:#59687f;
-                                            font-size:11px;
-                                        ">
+                                        <span class="sin-empresa">
                                             Sin empresa
                                         </span>
 
@@ -1100,7 +1125,6 @@
 
                                     <div class="operario-actions">
 
-
                                         {{-- VER --}}
 
                                         @if(Route::has('operarios.show'))
@@ -1110,9 +1134,7 @@
                                                 class="action-button view"
                                                 title="Ver operario"
                                             >
-
                                                 <i data-lucide="eye"></i>
-
                                             </a>
 
                                         @endif
@@ -1127,9 +1149,7 @@
                                                 class="action-button edit"
                                                 title="Editar operario"
                                             >
-
                                                 <i data-lucide="pencil"></i>
-
                                             </a>
 
                                         @endif
@@ -1146,20 +1166,16 @@
                                             >
 
                                                 @csrf
-
                                                 @method('PATCH')
-
 
                                                 <button
                                                     type="submit"
                                                     class="action-button toggle"
                                                     title="{{ $activo ? 'Desactivar' : 'Activar' }}"
                                                 >
-
                                                     <i
                                                         data-lucide="{{ $activo ? 'user-round-x' : 'user-round-check' }}"
                                                     ></i>
-
                                                 </button>
 
                                             </form>
@@ -1179,24 +1195,19 @@
                                             >
 
                                                 @csrf
-
                                                 @method('DELETE')
-
 
                                                 <button
                                                     type="submit"
                                                     class="action-button delete"
                                                     title="Eliminar"
                                                 >
-
                                                     <i data-lucide="trash-2"></i>
-
                                                 </button>
 
                                             </form>
 
                                         @endif
-
 
                                     </div>
 
@@ -1205,7 +1216,6 @@
                             </tr>
 
                         @endforeach
-
 
                     </tbody>
 
@@ -1220,14 +1230,10 @@
                 id="sinResultados"
                 class="operarios-no-results"
             >
-
                 No encontramos operarios que coincidan con tu búsqueda.
-
             </div>
 
-
         @else
-
 
             {{-- =================================================
                  EMPTY STATE
@@ -1235,44 +1241,31 @@
 
             <div class="operarios-empty">
 
-
                 <div class="empty-icon">
-
                     <i data-lucide="users-round"></i>
-
                 </div>
-
 
                 <h3 class="empty-title">
                     Aún no hay operarios
                 </h3>
 
-
                 <p class="empty-description">
-
                     Crea el primer operario para comenzar a administrar
                     tu equipo dentro del CRM.
-
                 </p>
-
 
                 <a
                     href="{{ route('operarios.create') }}"
                     class="empty-button"
                 >
-
                     <i data-lucide="user-plus"></i>
 
                     Crear primer operario
-
                 </a>
-
 
             </div>
 
-
         @endif
-
 
     </div>
 
@@ -1280,18 +1273,14 @@
 
 
 <script>
-
 document.addEventListener('DOMContentLoaded', function () {
-
 
     /* =========================================================
        INICIALIZAR LUCIDE
     ========================================================== */
 
     if (typeof lucide !== 'undefined') {
-
         lucide.createIcons();
-
     }
 
 
@@ -1299,36 +1288,35 @@ document.addEventListener('DOMContentLoaded', function () {
        BUSCADOR DE OPERARIOS
     ========================================================== */
 
-    const buscador = document.getElementById('buscarOperario');
+    const buscador =
+        document.getElementById('buscarOperario');
 
-    const filas = document.querySelectorAll('.operario-row');
+    const filas =
+        document.querySelectorAll('.operario-row');
 
-    const sinResultados = document.getElementById('sinResultados');
+    const sinResultados =
+        document.getElementById('sinResultados');
 
 
     if (!buscador) {
-
         return;
-
     }
 
 
     buscador.addEventListener('input', function () {
 
-
-        const texto = this.value
-            .toLowerCase()
-            .trim();
-
+        const texto =
+            this.value
+                .toLowerCase()
+                .trim();
 
         let encontrados = 0;
 
 
         filas.forEach(function (fila) {
 
-
-            const contenido = fila.dataset.search || '';
-
+            const contenido =
+                fila.dataset.search || '';
 
             if (contenido.includes(texto)) {
 
@@ -1342,32 +1330,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
             }
 
-
         });
 
 
         if (sinResultados) {
 
-
-            if (encontrados === 0 && texto !== '') {
-
+            if (
+                encontrados === 0 &&
+                texto !== ''
+            ) {
                 sinResultados.style.display = 'block';
-
             } else {
-
                 sinResultados.style.display = 'none';
-
             }
-
 
         }
 
-
     });
 
-
 });
-
 </script>
 
 @endsection

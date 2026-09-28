@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ObjetivoOperario;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -24,59 +25,29 @@ class OperarioController extends Controller
             ->with('empresa')
             ->where('id_rol', 3);
 
-        /*
-         * Admin Cliente:
-         * solamente puede ver operarios de su empresa.
-         */
+        // Admin Cliente: solamente puede ver operarios de su empresa.
         if ($usuario->id_rol == 2) {
-            $consulta->where(
-                'id_empresa',
-                $usuario->id_empresa
-            );
+            $consulta->where('id_empresa', $usuario->id_empresa);
         }
 
-        /*
-         * Búsqueda
-         */
+        // Búsqueda por nombre o correo.
         if ($request->filled('buscar')) {
-
             $buscar = trim($request->buscar);
 
             $consulta->where(function ($query) use ($buscar) {
-
-                $query->where(
-                    'name',
-                    'like',
-                    '%' . $buscar . '%'
-                )
-                ->orWhere(
-                    'email',
-                    'like',
-                    '%' . $buscar . '%'
-                );
-
+                $query->where('name', 'like', '%' . $buscar . '%')
+                    ->orWhere('email', 'like', '%' . $buscar . '%');
             });
         }
 
-        /*
-         * Filtro por estado
-         */
+        // Filtro por estado del operario.
         if ($request->filled('estado')) {
-
             if ($request->estado === 'activo') {
-
-                $consulta->where(
-                    'estado',
-                    true
-                );
+                $consulta->where('estado', true);
             }
 
             if ($request->estado === 'inactivo') {
-
-                $consulta->where(
-                    'estado',
-                    false
-                );
+                $consulta->where('estado', false);
             }
         }
 
@@ -85,11 +56,235 @@ class OperarioController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view(
-            'operarios.index',
-            compact('operarios')
+        return view('operarios.index', compact('operarios'));
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PANEL GENERAL DE OBJETIVOS
+    |--------------------------------------------------------------------------
+    |
+    | Esta será la nueva sección desde donde podremos consultar el progreso
+    | general de los operarios y posteriormente administrar objetivos
+    | de manera más cómoda.
+    |
+    */
+
+ public function objetivos()
+{
+    $usuario = auth()->user();
+
+    if (!in_array($usuario->id_rol, [1, 2])) {
+        abort(403);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | OBTENER OPERARIOS PERMITIDOS
+    |--------------------------------------------------------------------------
+    */
+
+    $consultaOperarios = User::query()
+        ->with('empresa')
+        ->where('id_rol', 3);
+
+    /*
+     * Admin Cliente solamente puede ver
+     * operarios pertenecientes a su empresa.
+     */
+    if ($usuario->id_rol == 2) {
+        $consultaOperarios->where(
+            'id_empresa',
+            $usuario->id_empresa
         );
     }
+
+    $operarios = $consultaOperarios
+        ->orderBy('name')
+        ->get();
+
+    /*
+     * IDs de los operarios permitidos.
+     */
+    $idsOperarios = $operarios->pluck('id');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZAR OBJETIVOS VENCIDOS
+    |--------------------------------------------------------------------------
+    */
+
+    ObjetivoOperario::query()
+        ->whereIn(
+            'id_usuario',
+            $idsOperarios
+        )
+        ->whereIn('estado', [
+            'pendiente',
+            'en_progreso',
+        ])
+        ->whereDate(
+            'fecha_fin',
+            '<',
+            now()->toDateString()
+        )
+        ->update([
+            'estado' => 'vencido',
+        ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | OBTENER OBJETIVO ACTUAL DE CADA OPERARIO
+    |--------------------------------------------------------------------------
+    */
+
+    foreach ($operarios as $operario) {
+
+        /*
+         * Primero buscamos un objetivo vigente.
+         */
+        $objetivoActual = ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id
+            )
+            ->whereIn('estado', [
+                'pendiente',
+                'en_progreso',
+            ])
+            ->whereDate(
+                'fecha_fin',
+                '>=',
+                now()->toDateString()
+            )
+            ->latest('id_objetivo')
+            ->first();
+
+        /*
+         * Guardamos temporalmente el objetivo
+         * dentro del objeto del operario para
+         * poder usarlo desde objetivos.blade.php.
+         */
+        $operario->objetivo_actual =
+            $objetivoActual;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SITUACIÓN VISUAL DEL OBJETIVO
+        |--------------------------------------------------------------------------
+        */
+
+        $operario->situacion_objetivo =
+            'sin_objetivo';
+
+        if ($objetivoActual) {
+
+            /*
+             * Si todavía no comienza.
+             */
+            if (
+                $objetivoActual->estado === 'pendiente' ||
+                \Carbon\Carbon::parse(
+                    $objetivoActual->fecha_inicio
+                )->isFuture()
+            ) {
+
+                $operario->situacion_objetivo =
+                    'pendiente';
+
+            } else {
+
+                $fechaFin = \Carbon\Carbon::parse(
+                    $objetivoActual->fecha_fin
+                )->startOfDay();
+
+                $diasRestantes = now()
+                    ->startOfDay()
+                    ->diffInDays(
+                        $fechaFin,
+                        false
+                    );
+
+                /*
+                 * Si faltan dos días o menos.
+                 */
+                if ($diasRestantes <= 2) {
+
+                    $operario->situacion_objetivo =
+                        'proximo_vencer';
+
+                } else {
+
+                    $operario->situacion_objetivo =
+                        'en_progreso';
+                }
+            }
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ESTADÍSTICAS DE LA PANTALLA
+    |--------------------------------------------------------------------------
+    */
+
+    $totalOperarios =
+        $operarios->count();
+
+    $operariosActivos =
+        $operarios
+            ->where('estado', true)
+            ->count();
+
+    $operariosInactivos =
+        $operarios
+            ->where('estado', false)
+            ->count();
+
+    $operariosConObjetivo =
+        $operarios
+            ->filter(function ($operario) {
+                return $operario->objetivo_actual !== null;
+            })
+            ->count();
+
+    $operariosSinObjetivo =
+        $totalOperarios -
+        $operariosConObjetivo;
+
+    $objetivosProximosVencer =
+        $operarios
+            ->where(
+                'situacion_objetivo',
+                'proximo_vencer'
+            )
+            ->count();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ENVIAR DATOS A LA VISTA
+    |--------------------------------------------------------------------------
+    */
+
+    return view(
+        'operarios.objetivos',
+        compact(
+            'operarios',
+            'totalOperarios',
+            'operariosActivos',
+            'operariosInactivos',
+            'operariosConObjetivo',
+            'operariosSinObjetivo',
+            'objetivosProximosVencer'
+        )
+    );
+}
 
 
     /*
@@ -125,7 +320,6 @@ class OperarioController extends Controller
         }
 
         $datos = $request->validate([
-
             'name' => [
                 'required',
                 'string',
@@ -155,35 +349,24 @@ class OperarioController extends Controller
                 'integer',
                 'exists:empresas,id_empresa',
             ],
-
         ]);
 
         /*
-         * Si es Admin Cliente, el operario pertenece
-         * automáticamente a su empresa.
+         * Admin Cliente:
+         * el operario pertenece automáticamente
+         * a su misma empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $datos['id_empresa'] =
                 $usuario->id_empresa;
         }
 
-        /*
-         * El usuario creado será operario.
-         */
         $datos['id_rol'] = 3;
 
-        /*
-         * Operario activo por defecto.
-         */
         $datos['estado'] = true;
 
-        /*
-         * Encriptar contraseña.
-         */
-        $datos['password'] = Hash::make(
-            $datos['password']
-        );
+        $datos['password'] =
+            Hash::make($datos['password']);
 
         User::create($datos);
 
@@ -218,7 +401,6 @@ class OperarioController extends Controller
          * operarios de su empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -227,16 +409,10 @@ class OperarioController extends Controller
 
         $operario = $consulta->findOrFail($id);
 
-
         /*
         |--------------------------------------------------------------------------
         | VENCIMIENTO AUTOMÁTICO DE OBJETIVOS
         |--------------------------------------------------------------------------
-        |
-        | Si la fecha final ya pasó y el objetivo todavía estaba
-        | pendiente o en progreso, se marca automáticamente
-        | como vencido.
-        |
         */
 
         ObjetivoOperario::query()
@@ -257,7 +433,6 @@ class OperarioController extends Controller
                 'estado' => 'vencido',
             ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | LLAMADAS REALIZADAS
@@ -265,22 +440,14 @@ class OperarioController extends Controller
         |
         | Por ahora permanece en 0.
         |
-        | Después podemos conectarlo directamente con la tabla
-        | llamadas para que muestre el número real.
-        |
         */
 
         $llamadasRealizadas = 0;
-
 
         /*
         |--------------------------------------------------------------------------
         | OBJETIVO ACTUAL
         |--------------------------------------------------------------------------
-        |
-        | Buscamos solamente objetivos cuyo periodo
-        | actualmente esté vigente.
-        |
         */
 
         $objetivoActual = ObjetivoOperario::query()
@@ -305,7 +472,6 @@ class OperarioController extends Controller
             ->latest('id_objetivo')
             ->first();
 
-
         /*
         |--------------------------------------------------------------------------
         | SITUACIÓN DEL OBJETIVO
@@ -314,27 +480,22 @@ class OperarioController extends Controller
 
         $situacionObjetivo = null;
 
-
         if ($objetivoActual) {
 
             $objetivo =
                 (int) $objetivoActual->objetivo_llamadas;
 
-
             /*
-             * Si alcanzó el objetivo.
+             * Objetivo cumplido.
              */
             if ($llamadasRealizadas >= $objetivo) {
 
                 $situacionObjetivo = 'cumplido';
 
-                /*
-                 * Guardamos el estado como cumplido.
-                 */
                 if (
-                    $objetivoActual->estado !== 'cumplido'
+                    $objetivoActual->estado !==
+                    'cumplido'
                 ) {
-
                     $objetivoActual->update([
                         'estado' => 'cumplido',
                     ]);
@@ -347,7 +508,7 @@ class OperarioController extends Controller
                  */
                 $hoy = now()->startOfDay();
 
-                $fechaFin = \Carbon\Carbon::parse(
+                $fechaFin = Carbon::parse(
                     $objetivoActual->fecha_fin
                 )->startOfDay();
 
@@ -356,34 +517,24 @@ class OperarioController extends Controller
                     false
                 );
 
-
                 /*
                  * Si faltan dos días o menos,
-                 * mostrar aviso de próximo vencimiento.
+                 * mostramos aviso.
                  */
                 if ($diasRestantes <= 2) {
-
                     $situacionObjetivo =
                         'proximo_vencer';
-
                 } else {
-
                     $situacionObjetivo =
                         'en_progreso';
                 }
             }
         }
 
-
         /*
         |--------------------------------------------------------------------------
-        | COMPROBAR SI EXISTE UN OBJETIVO VENCIDO
+        | ÚLTIMO OBJETIVO VENCIDO
         |--------------------------------------------------------------------------
-        |
-        | Como los objetivos vencidos ya no aparecen en
-        | $objetivoActual, buscamos el último objetivo vencido
-        | para poder mostrar la alerta.
-        |
         */
 
         $objetivoVencido = ObjetivoOperario::query()
@@ -403,25 +554,16 @@ class OperarioController extends Controller
             ->latest('fecha_fin')
             ->first();
 
-
         /*
-        |--------------------------------------------------------------------------
-        | SITUACIÓN CUANDO EL ÚLTIMO OBJETIVO VENCIÓ
-        |--------------------------------------------------------------------------
-        |
-        | Si no existe un objetivo actual pero sí existe
-        | uno vencido, la vista recibirá "vencido".
-        |
-        */
-
+         * Si no existe objetivo actual pero sí existe
+         * uno vencido, mostramos esa situación.
+         */
         if (
             !$objetivoActual &&
             $objetivoVencido
         ) {
-
             $situacionObjetivo = 'vencido';
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -437,13 +579,6 @@ class OperarioController extends Controller
             ->orderByDesc('fecha_inicio')
             ->orderByDesc('id_objetivo')
             ->get();
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | ENVIAR INFORMACIÓN A LA VISTA
-        |--------------------------------------------------------------------------
-        */
 
         return view(
             'operarios.show',
@@ -481,7 +616,6 @@ class OperarioController extends Controller
          * operarios de su empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -521,7 +655,6 @@ class OperarioController extends Controller
          * operarios de su empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -530,12 +663,7 @@ class OperarioController extends Controller
 
         $operario = $consulta->findOrFail($id);
 
-
-        /*
-         * Validación.
-         */
         $datos = $request->validate([
-
             'name' => [
                 'required',
                 'string',
@@ -567,12 +695,10 @@ class OperarioController extends Controller
                 'regex:/[^A-Za-z0-9]/',
                 'not_regex:/\s/',
             ],
-
         ]);
 
-
         /*
-         * Actualizar nombre y correo.
+         * Actualizar datos generales.
          */
         $operario->name =
             $datos['name'];
@@ -580,22 +706,20 @@ class OperarioController extends Controller
         $operario->email =
             $datos['email'];
 
-
         /*
          * Cambiar contraseña solamente si
-         * se escribió una nueva.
+         * se proporcionó una nueva.
          */
         if (!empty($datos['password'])) {
 
             /*
-             * Se requiere contraseña actual.
+             * Se necesita la contraseña actual.
              */
             if (
                 empty(
                     $datos['current_password']
                 )
             ) {
-
                 return back()
                     ->withErrors([
                         'current_password' =>
@@ -603,7 +727,6 @@ class OperarioController extends Controller
                     ])
                     ->withInput();
             }
-
 
             /*
              * Comprobar contraseña actual.
@@ -614,7 +737,6 @@ class OperarioController extends Controller
                     $operario->password
                 )
             ) {
-
                 return back()
                     ->withErrors([
                         'current_password' =>
@@ -622,7 +744,6 @@ class OperarioController extends Controller
                     ])
                     ->withInput();
             }
-
 
             /*
              * Guardar nueva contraseña.
@@ -633,9 +754,7 @@ class OperarioController extends Controller
                 );
         }
 
-
         $operario->save();
-
 
         return redirect()
             ->route(
@@ -662,18 +781,17 @@ class OperarioController extends Controller
         $usuario = auth()->user();
 
         /*
-         * Solo Super Administrador y Admin Cliente.
+         * Solo Super Administrador
+         * y Admin Cliente.
          */
         if (!in_array($usuario->id_rol, [1, 2])) {
             abort(403);
         }
 
-
         /*
-         * Validación.
+         * Validar datos.
          */
         $datos = $request->validate([
-
             'objetivo_llamadas' => [
                 'required',
                 'integer',
@@ -700,9 +818,7 @@ class OperarioController extends Controller
                 'date',
                 'after_or_equal:fecha_inicio',
             ],
-
         ]);
-
 
         /*
          * Buscar operario.
@@ -717,13 +833,11 @@ class OperarioController extends Controller
                 3
             );
 
-
         /*
          * Admin Cliente solamente puede asignar
          * objetivos a operarios de su empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -733,18 +847,13 @@ class OperarioController extends Controller
         $operario =
             $consulta->firstOrFail();
 
-
         /*
         |--------------------------------------------------------------------------
         | CERRAR OBJETIVO ANTERIOR
         |--------------------------------------------------------------------------
         |
-        | Si ya existe un objetivo pendiente o en progreso,
-        | se marca como vencido.
-        |
-        | No se elimina.
-        |
-        | De esta forma se conserva el historial.
+        | No eliminamos el objetivo anterior.
+        | Lo conservamos como parte del historial.
         |
         */
 
@@ -761,26 +870,36 @@ class OperarioController extends Controller
                 'estado' => 'vencido',
             ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | DETERMINAR ESTADO INICIAL
+        |--------------------------------------------------------------------------
+        |
+        | Si el objetivo comienza en una fecha futura,
+        | queda pendiente.
+        |
+        | Si comienza hoy o antes, queda en progreso.
+        |
+        */
+
+        $fechaInicio = Carbon::parse(
+            $datos['fecha_inicio']
+        )->startOfDay();
+
+        $hoy = now()->startOfDay();
+
+        $estadoInicial =
+            $fechaInicio->greaterThan($hoy)
+                ? 'pendiente'
+                : 'en_progreso';
 
         /*
         |--------------------------------------------------------------------------
         | CREAR NUEVO OBJETIVO
         |--------------------------------------------------------------------------
-        |
-        | La migración acepta únicamente:
-        |
-        | pendiente
-        | en_progreso
-        | cumplido
-        | vencido
-        |
-        | Por eso utilizamos "en_progreso" como estado
-        | activo del objetivo.
-        |
         */
 
         ObjetivoOperario::create([
-
             'id_usuario' =>
                 $operario->id,
 
@@ -797,14 +916,9 @@ class OperarioController extends Controller
                 $datos['fecha_fin'],
 
             'estado' =>
-                'en_progreso',
-
+                $estadoInicial,
         ]);
 
-
-        /*
-         * Regresar a la información del operario.
-         */
         return redirect()
             ->route(
                 'operarios.show',
@@ -841,13 +955,11 @@ class OperarioController extends Controller
                 3
             );
 
-
         /*
          * Admin Cliente solamente puede modificar
          * operarios de su empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -857,7 +969,6 @@ class OperarioController extends Controller
         $operario =
             $consulta->firstOrFail();
 
-
         /*
          * Cambiar estado.
          */
@@ -865,7 +976,6 @@ class OperarioController extends Controller
             !$operario->estado;
 
         $operario->save();
-
 
         return redirect()
             ->back()
@@ -902,13 +1012,11 @@ class OperarioController extends Controller
                 3
             );
 
-
         /*
          * Admin Cliente solamente puede eliminar
          * operarios de su empresa.
          */
         if ($usuario->id_rol == 2) {
-
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -918,20 +1026,14 @@ class OperarioController extends Controller
         $operario =
             $consulta->firstOrFail();
 
-
         /*
-         * Eliminar operario.
-         *
          * Los objetivos relacionados se eliminan
-         * automáticamente por cascadeOnDelete().
+         * automáticamente gracias a cascadeOnDelete().
          */
         $operario->delete();
 
-
         return redirect()
-            ->route(
-                'operarios.index'
-            )
+            ->route('operarios.index')
             ->with(
                 'success',
                 'Operario eliminado correctamente.'

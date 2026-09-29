@@ -1,8 +1,8 @@
 {{-- resources/views/calendario/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Calendario - CRM')
-@section('header-title', 'Calendario')
+@section('title', 'Agenda - CRM')
+@section('header-title', 'Agenda')
 
 @section('content')
 @php
@@ -176,20 +176,38 @@
     @media(max-width: 800px) { .comi-calendario .fc .fc-toolbar { flex-wrap: wrap; gap: 12px; } .comi-calendario .cal-shell { padding: 16px 10px; } .comi-calendario .cal-zone { margin-left: 0; } }
     .comi-calendario .cal-search-feedback { margin-top: 16px; padding: 14px 16px; border: 1px solid #31516a; border-radius: 9px; background: #17364a; color: #bae6fd; font-size: 13px; overflow-wrap: anywhere; }
     .comi-calendario .cal-search-feedback p { margin: 5px 0 0; color: #b6c8df; font-size: 12px; }
+
+    .comi-calendario .cc-header-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .comi-calendario .cal-dialog { margin: auto; overflow-y: auto; }
+    .comi-calendario .cal-calendar-dialog { width: min(1250px, calc(100vw - 32px)); max-width: none; max-height: 92vh; max-height: 92dvh; padding: 0; }
+    .comi-calendario .cal-window-heading { padding: 22px 24px; }
+    .comi-calendario .cal-calendar-dialog::backdrop { background: #020617cc; backdrop-filter: blur(4px); }
+    .comi-calendario .cc-table td:first-child { color: #bae6fd; }
+    @media (max-width: 640px) {
+        .comi-calendario .cc-header-actions { width: 100%; }
+        .comi-calendario .cc-header-actions .cc-btn { flex: 1; }
+        .comi-calendario .cal-calendar-dialog { width: calc(100vw - 16px); }
+        .comi-calendario .cal-window-heading { padding: 16px; }
+    }
 </style>
 
 <section class="comi-calendario" aria-labelledby="calendario-title">
     <header class="cc-header">
         <div>
             <p class="cc-eyebrow">COMICenter / Panel de gestión</p>
-            <h1 class="cc-title" id="calendario-title">Calendario</h1>
+            <h1 class="cc-title" id="calendario-title">Agenda</h1>
             <p class="cc-subtitle">Gestión de reuniones y seguimientos agendados con prospectos.</p>
         </div>
+        <div class="cc-header-actions">
+            <button type="button" id="cal-abrir" class="cc-btn cc-btn-secondary" aria-haspopup="dialog" aria-controls="cal-ventana" hidden>
+                <i class="bi bi-calendar3" aria-hidden="true"></i> Ver calendario
+            </button>
         @if (Route::has('calendario.create'))
             <a href="{{ route('calendario.create') }}" class="cc-btn cc-btn-primary">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i> Agendar cita
             </a>
         @endif
+        </div>
     </header>
 
     @if (session('success') || session('exito'))
@@ -204,7 +222,7 @@
             <span class="cc-heading-icon"><i class="bi bi-calendar-event" aria-hidden="true"></i></span>
             <div>
                 <h2 class="cc-card-title">Agenda de Citas</h2>
-                <p class="cc-card-note">Organiza tu semana y consulta los detalles de cada cita.</p>
+                <p class="cc-card-note">Consulta tus citas y seguimientos. Usa el calendario para ubicar tus horarios.</p>
             </div>
         </div>
 
@@ -231,32 +249,12 @@
                         <p>Prueba con otro nombre, motivo u observación, o limpia la búsqueda.</p>
                     @else
                         <strong>{{ $totalResultados === 1 ? 'Se encontró 1 cita' : 'Se encontraron ' . $totalResultados . ' citas' }} para “{{ $buscar }}”.</strong>
-                        <p>El listado inferior contiene los resultados. El calendario se abre en la primera cita con fecha válida.</p>
+                        <p>La agenda muestra los resultados de tu búsqueda. Al abrir el calendario, verás la primera cita con fecha válida.</p>
                     @endif
                 </div>
             @endif
         </div>
 
-        <div class="cal-shell">
-            @if (isset($citas) && method_exists($citas, 'hasPages') && $citas->hasPages())
-                <p class="cal-notice">Vista parcial: se muestran las citas de la página {{ $citas->currentPage() }} del listado. Hay más citas en otras páginas; utiliza la navegación inferior para consultarlas.</p>
-            @endif
-            @if ($sinFechaCalendario > 0)
-                <p class="cal-notice">{{ $sinFechaCalendario }} cita(s) sin fecha válida no pudieron ubicarse. Consúltalas en el listado inferior.</p>
-            @endif
-            <div class="cal-controls">
-                <label for="cal-ir-fecha">Ir a una fecha</label>
-                <input type="date" id="cal-ir-fecha" class="cal-date">
-                <span class="cal-zone">Horario de la aplicación · {{ $zonaCalendario }}</span>
-            </div>
-            <p id="cal-load-error" class="cal-notice" hidden>No se pudo cargar el calendario. Revisa tu conexión o consulta el listado inferior.</p>
-            <noscript><p class="cal-notice">Activa JavaScript para ver el calendario. Tus citas también están en el listado inferior.</p></noscript>
-            <div id="comi-agenda" aria-label="Calendario de citas"></div>
-            <p class="cal-note" id="cal-range-status" role="status"></p>
-            <p class="cal-note">Pulsa una cita para ver sus detalles. Las citas sin hora de fin ocupan 30 minutos únicamente como referencia visual.</p>
-        </div>
-        <details id="cal-listado" @if ($buscar !== '') open @endif>
-            <summary class="cal-list-summary">Ver listado y acciones de las citas cargadas</summary>
         @if (isset($citas) && $citas->count() > 0)
             <div class="cc-table-scroll" tabindex="0" role="region" aria-label="Tabla de citas; desplaza horizontalmente para ver todas las columnas">
                 <table class="cc-table" aria-label="Agenda de Citas">
@@ -332,9 +330,8 @@
             </div>
         @endif
 
-        </details>
         <footer class="cc-footer">
-            <p>{{ isset($citas) ? $citas->count() : 0 }} {{ (isset($citas) && $citas->count() === 1) ? 'cita cargada' : 'citas cargadas' }} · El calendario muestra las citas cargadas con fecha válida.</p>
+            <p>{{ isset($citas) ? $citas->count() : 0 }} {{ (isset($citas) && $citas->count() === 1) ? 'cita cargada' : 'citas cargadas' }} en esta página · {{ $totalResultados }} en total.</p>
             @if (isset($citas) && method_exists($citas, 'hasPages') && $citas->hasPages())
                 <nav class="cc-pagination" aria-label="Paginación de citas">
                     @if ($citas->onFirstPage())
@@ -352,6 +349,34 @@
             @endif
         </footer>
     </div>
+    <dialog class="cal-dialog cal-calendar-dialog" id="cal-ventana" aria-labelledby="cal-ventana-title">
+        <div class="cal-dialog-top cal-window-heading">
+            <div>
+                <p class="cc-eyebrow">Vista de apoyo</p>
+                <h2 id="cal-ventana-title">Calendario de citas</h2>
+                <p class="cc-card-note">Explora tus horarios por mes, semana o día.</p>
+            </div>
+            <button type="button" class="cc-btn cc-btn-secondary" id="cal-ventana-cerrar" autofocus>Cerrar</button>
+        </div>
+        <div class="cal-shell">
+            @if (isset($citas) && method_exists($citas, 'hasPages') && $citas->hasPages())
+                <p class="cal-notice">Vista parcial: se muestran las citas de la página {{ $citas->currentPage() }} del listado. Hay más citas en otras páginas; utiliza la paginación de la agenda principal para consultarlas.</p>
+            @endif
+            @if ($sinFechaCalendario > 0)
+                <p class="cal-notice">{{ $sinFechaCalendario }} cita(s) sin fecha válida no pudieron ubicarse. Consúltalas en el agenda principal.</p>
+            @endif
+            <div class="cal-controls">
+                <label for="cal-ir-fecha">Ir a una fecha</label>
+                <input type="date" id="cal-ir-fecha" class="cal-date">
+                <span class="cal-zone">Horario de la aplicación · {{ $zonaCalendario }}</span>
+            </div>
+            <p id="cal-load-error" class="cal-notice" hidden>No se pudo cargar el calendario. Revisa tu conexión o consulta el agenda principal.</p>
+            <noscript><p class="cal-notice">Activa JavaScript para ver el calendario. Tus citas también están en el agenda principal.</p></noscript>
+            <div id="comi-agenda" aria-label="Calendario de citas"></div>
+            <p class="cal-note" id="cal-range-status" role="status"></p>
+            <p class="cal-note">Pulsa una cita para ver sus detalles. Las citas sin hora de fin ocupan 30 minutos únicamente como referencia visual.</p>
+        </div>
+    </dialog>
     <dialog class="cal-dialog" id="cal-detalle" aria-labelledby="cal-detalle-title">
         <div class="cal-dialog-top">
             <div><p class="cc-eyebrow">Detalle de la cita</p><h2 id="cal-detalle-title"></h2></div>
@@ -386,11 +411,29 @@
     const dateInput = document.getElementById('cal-ir-fecha');
     const status = document.getElementById('cal-range-status');
     const dialog = document.getElementById('cal-detalle');
-    if (!window.FullCalendar) {
-        document.getElementById('cal-load-error').hidden = false;
-        document.getElementById('cal-listado').open = true;
-        return;
-    }
+    const calendarDialog = document.getElementById('cal-ventana');
+    const openCalendar = document.getElementById('cal-abrir');
+    let calendar = null;
+    let previousOverflow = '';
+    openCalendar.hidden = false;
+    openCalendar.addEventListener('click', () => {
+        previousOverflow = document.body.style.overflow;
+        calendarDialog.showModal();
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => {
+            if (!window.FullCalendar) {
+                document.getElementById('cal-load-error').hidden = false;
+                return;
+            }
+            if (!calendar) initializeCalendar();
+            else calendar.updateSize();
+        });
+    });
+    document.getElementById('cal-ventana-cerrar').addEventListener('click', () => calendarDialog.close());
+    calendarDialog.addEventListener('close', () => {
+        document.body.style.overflow = previousOverflow;
+        openCalendar.focus();
+    });
     let lastTrigger = null;
     function showDetails(event, trigger) {
         lastTrigger = trigger;
@@ -410,7 +453,8 @@
     }
     document.getElementById('cal-cerrar').addEventListener('click', () => dialog.close());
     dialog.addEventListener('close', () => { if (lastTrigger?.isConnected) lastTrigger.focus(); });
-    const calendar = new FullCalendar.Calendar(document.getElementById('comi-agenda'), {
+    function initializeCalendar() {
+    calendar = new FullCalendar.Calendar(document.getElementById('comi-agenda'), {
         locale: 'es', firstDay: 1,
         initialView: window.matchMedia('(max-width: 640px)').matches ? 'timeGridDay' : 'timeGridWeek',
         initialDate: isSearching && firstResult ? firstResult.start.slice(0, 10) : serverToday,
@@ -421,7 +465,7 @@
         buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Agenda' },
         allDayText: 'Sin hora', noEventsText: 'No hay citas cargadas en este período.',
         moreLinkText: n => '+' + n + ' más',
-        height: 700, scrollTime: isSearching && firstResult && !firstResult.allDay ? firstResult.start.slice(11, 19) : '07:00:00', slotMinTime: '00:00:00', slotMaxTime: '24:00:00',
+        height: Math.max(380, Math.min(680, window.innerHeight - 240)), scrollTime: isSearching && firstResult && !firstResult.allDay ? firstResult.start.slice(11, 19) : '07:00:00', slotMinTime: '00:00:00', slotMaxTime: '24:00:00',
         slotDuration: '00:30:00', defaultTimedEventDuration: '00:30:00',
         slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
         eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
@@ -448,7 +492,8 @@
         }
     });
     calendar.render();
-    dateInput.addEventListener('change', () => { if (dateInput.value) calendar.gotoDate(dateInput.value); });
+    }
+    dateInput.addEventListener('change', () => { if (dateInput.value && calendar) calendar.gotoDate(dateInput.value); });
 })();
 </script>
 @endsection

@@ -646,6 +646,41 @@
                 transition: none;
             }
         }
+
+        /* Identidad del rol: acento suave, sin animaciones. */
+        .comi-role-badge {
+            --role-rgb: 148, 163, 184;
+            --role-text: #e2e8f0;
+            margin: 24px 8px 0;
+            padding: 13px 14px;
+            border: 1px solid rgba(var(--role-rgb), .38);
+            border-left: 3px solid rgb(var(--role-rgb));
+            border-radius: 10px;
+            background: linear-gradient(120deg, rgba(var(--role-rgb), .12), rgba(var(--role-rgb), .03));
+            box-shadow: 0 0 18px rgba(var(--role-rgb), .07);
+        }
+        .comi-role-badge--super { --role-rgb: 192, 132, 252; --role-text: #e9d5ff; }
+        .comi-role-badge--admin { --role-rgb: 56, 189, 248; --role-text: #bae6fd; }
+        .comi-role-badge--agente { --role-rgb: 52, 211, 153; --role-text: #a7f3d0; }
+        .comi-role-badge__label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a5b4c8;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        .comi-role-badge__identity { display: flex; align-items: center; gap: 9px; }
+        .comi-role-badge__identity strong { color: var(--role-text); font-size: 13px; font-weight: 650; line-height: 1.4; }
+        .comi-role-badge__dot {
+            width: 7px;
+            height: 7px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: rgb(var(--role-rgb));
+            box-shadow: 0 0 9px rgba(var(--role-rgb), .6);
+        }
     </style>
 
     @stack('styles')
@@ -685,6 +720,12 @@
     | Título de la sección actual
     |--------------------------------------------------------------------------
     */
+    $insigniaRol = [
+        1 => ['nombre' => 'Súper Admin', 'clase' => 'super'],
+        2 => ['nombre' => 'Admin Cliente', 'clase' => 'admin'],
+        3 => ['nombre' => 'Operario / Agente', 'clase' => 'agente'],
+    ][$rolActual] ?? ['nombre' => 'Usuario', 'clase' => 'usuario'];
+
     $tituloSeccion = 'Dashboard';
 
     foreach ([
@@ -796,6 +837,15 @@
         <p class="comi-brand-sub">
             Gestión de interacciones y datos
         </p>
+
+        {{-- Identificación visual de la cuenta --}}
+        <div class="comi-role-badge comi-role-badge--{{ $insigniaRol['clase'] }}">
+            <span class="comi-role-badge__label">Rol de la cuenta</span>
+            <div class="comi-role-badge__identity">
+                <span class="comi-role-badge__dot" aria-hidden="true"></span>
+                <strong>{{ $insigniaRol['nombre'] }}</strong>
+            </div>
+        </div>
 
         {{-- Navegación --}}
         <nav aria-label="Secciones del CRM">

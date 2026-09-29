@@ -12,7 +12,6 @@
         margin: 0 auto;
     }
 
-
     /* =========================================================
        HEADER
     ========================================================== */
@@ -21,61 +20,42 @@
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
-
         gap: 24px;
-
         margin-bottom: 26px;
     }
 
     .operarios-eyebrow {
         display: flex;
         align-items: center;
-
         gap: 8px;
-
         margin-bottom: 9px;
-
         color: #35c6ff;
-
         font-size: 11px;
         font-weight: 700;
-
         letter-spacing: .16em;
-
         text-transform: uppercase;
     }
 
     .operarios-eyebrow-dot {
         width: 6px;
         height: 6px;
-
         border-radius: 50%;
-
         background: #35c6ff;
-
-        box-shadow:
-            0 0 10px
-            rgba(53, 198, 255, .6);
+        box-shadow: 0 0 10px rgba(53, 198, 255, .6);
     }
 
     .operarios-title {
         margin: 0;
-
         color: #ffffff;
-
         font-size: 32px;
         line-height: 1.15;
-
         font-weight: 750;
-
         letter-spacing: -.03em;
     }
 
     .operarios-description {
         margin: 9px 0 0;
-
         color: #8190a7;
-
         font-size: 14px;
         line-height: 1.6;
     }
@@ -83,12 +63,9 @@
     .operarios-header-actions {
         display: flex;
         align-items: center;
-
         gap: 10px;
-
         flex-shrink: 0;
     }
-
 
     /* =========================================================
        BOTONES SUPERIORES
@@ -99,66 +76,39 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-
         gap: 9px;
-
         padding: 11px 17px;
-
         border-radius: 11px;
-
         font-size: 13px;
         font-weight: 700;
-
         text-decoration: none;
-
         transition: .2s ease;
-
         white-space: nowrap;
     }
 
     .btn-objetivos {
-        border:
-            1px solid
-            rgba(52, 211, 153, .22);
-
-        background:
-            rgba(52, 211, 153, .08);
-
+        border: 1px solid rgba(52, 211, 153, .22);
+        background: rgba(52, 211, 153, .08);
         color: #34d399;
     }
 
     .btn-objetivos:hover {
-        border-color:
-            rgba(52, 211, 153, .45);
-
-        background:
-            rgba(52, 211, 153, .16);
-
+        border-color: rgba(52, 211, 153, .45);
+        background: rgba(52, 211, 153, .16);
         color: #6ee7b7;
-
         transform: translateY(-1px);
     }
 
     .btn-nuevo-operario {
-        border:
-            1px solid
-            rgba(53, 198, 255, .22);
-
-        background:
-            rgba(53, 198, 255, .09);
-
+        border: 1px solid rgba(53, 198, 255, .22);
+        background: rgba(53, 198, 255, .09);
         color: #55ceff;
     }
 
     .btn-nuevo-operario:hover {
-        border-color:
-            rgba(53, 198, 255, .48);
-
-        background:
-            rgba(53, 198, 255, .18);
-
+        border-color: rgba(53, 198, 255, .48);
+        background: rgba(53, 198, 255, .18);
         color: #8dddff;
-
         transform: translateY(-1px);
     }
 
@@ -168,7 +118,6 @@
         height: 16px;
     }
 
-
     /* =========================================================
        ALERTAS
     ========================================================== */
@@ -177,39 +126,24 @@
     .error-alert {
         display: flex;
         align-items: flex-start;
-
         gap: 10px;
-
         margin-bottom: 20px;
-
         padding: 12px 15px;
-
         border-radius: 10px;
-
         font-size: 12px;
         font-weight: 600;
         line-height: 1.5;
     }
 
     .success-alert {
-        border:
-            1px solid
-            rgba(52, 211, 153, .15);
-
-        background:
-            rgba(52, 211, 153, .07);
-
+        border: 1px solid rgba(52, 211, 153, .15);
+        background: rgba(52, 211, 153, .07);
         color: #6ee7b7;
     }
 
     .error-alert {
-        border:
-            1px solid
-            rgba(248, 113, 113, .15);
-
-        background:
-            rgba(248, 113, 113, .06);
-
+        border: 1px solid rgba(248, 113, 113, .15);
+        background: rgba(248, 113, 113, .06);
         color: #fca5a5;
     }
 
@@ -217,12 +151,9 @@
     .error-alert svg {
         width: 16px;
         height: 16px;
-
         flex: 0 0 16px;
-
         margin-top: 1px;
     }
-
 
     /* =========================================================
        ESTADÍSTICAS
@@ -230,53 +161,31 @@
 
     .operarios-stats {
         display: grid;
-
-        grid-template-columns:
-            repeat(5, minmax(0, 1fr));
-
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 12px;
-
         margin-bottom: 22px;
     }
 
     .operario-stat {
         position: relative;
-
         overflow: hidden;
-
         min-height: 105px;
-
         padding: 18px;
-
-        border:
-            1px solid
-            rgba(255, 255, 255, .055);
-
+        border: 1px solid rgba(255, 255, 255, .055);
         border-radius: 15px;
-
         background: #111c30;
-
-        box-shadow:
-            0 12px 30px
-            rgba(0, 0, 0, .08);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, .08);
     }
 
     .operario-stat::after {
         content: "";
-
         position: absolute;
-
         right: -45px;
         bottom: -55px;
-
         width: 100px;
         height: 100px;
-
         border-radius: 50%;
-
-        background:
-            rgba(53, 198, 255, .04);
-
+        background: rgba(53, 198, 255, .04);
         pointer-events: none;
     }
 
@@ -284,29 +193,22 @@
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-
         gap: 10px;
     }
 
     .stat-label {
         color: #718098;
-
         font-size: 9px;
         font-weight: 700;
-
         letter-spacing: .09em;
-
         text-transform: uppercase;
     }
 
     .stat-number {
         margin-top: 8px;
-
         color: #ffffff;
-
         font-size: 27px;
         line-height: 1;
-
         font-weight: 750;
     }
 
@@ -314,21 +216,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-
         width: 37px;
         height: 37px;
-
         flex: 0 0 37px;
-
-        border:
-            1px solid
-            rgba(53, 198, 255, .28);
-
+        border: 1px solid rgba(53, 198, 255, .28);
         border-radius: 10px;
-
-        background:
-            rgba(53, 198, 255, .13);
-
+        background: rgba(53, 198, 255, .13);
         color: #35c6ff;
     }
 
@@ -338,45 +231,28 @@
     }
 
     .stat-icon.green {
-        border-color:
-            rgba(52, 211, 153, .28);
-
-        background:
-            rgba(52, 211, 153, .13);
-
+        border-color: rgba(52, 211, 153, .28);
+        background: rgba(52, 211, 153, .13);
         color: #34d399;
     }
 
     .stat-icon.yellow {
-        border-color:
-            rgba(251, 191, 36, .28);
-
-        background:
-            rgba(251, 191, 36, .11);
-
+        border-color: rgba(251, 191, 36, .28);
+        background: rgba(251, 191, 36, .11);
         color: #fbbf24;
     }
 
     .stat-icon.gray {
-        border-color:
-            rgba(148, 163, 184, .25);
-
-        background:
-            rgba(148, 163, 184, .11);
-
+        border-color: rgba(148, 163, 184, .25);
+        background: rgba(148, 163, 184, .11);
         color: #94a3b8;
     }
 
     .stat-icon.red {
-        border-color:
-            rgba(248, 113, 113, .24);
-
-        background:
-            rgba(248, 113, 113, .09);
-
+        border-color: rgba(248, 113, 113, .24);
+        background: rgba(248, 113, 113, .09);
         color: #f87171;
     }
-
 
     /* =========================================================
        MAIN CARD
@@ -384,51 +260,33 @@
 
     .operarios-card {
         overflow: hidden;
-
-        border:
-            1px solid
-            rgba(255, 255, 255, .055);
-
+        border: 1px solid rgba(255, 255, 255, .055);
         border-radius: 16px;
-
         background: #111c30;
-
-        box-shadow:
-            0 20px 50px
-            rgba(0, 0, 0, .10);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, .10);
     }
 
     .operarios-card-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-
         gap: 20px;
-
         padding: 19px 21px;
-
-        border-bottom:
-            1px solid
-            rgba(255, 255, 255, .055);
+        border-bottom: 1px solid rgba(255, 255, 255, .055);
     }
 
     .card-title {
         margin: 0;
-
         color: #ffffff;
-
         font-size: 15px;
         font-weight: 700;
     }
 
     .card-subtitle {
         margin: 4px 0 0;
-
         color: #66758d;
-
         font-size: 12px;
     }
-
 
     /* =========================================================
        FILTROS
@@ -437,81 +295,54 @@
     .filters-form {
         display: flex;
         align-items: center;
-
         gap: 8px;
-
         flex-wrap: wrap;
     }
 
     .search-wrapper {
         position: relative;
-
         min-width: 240px;
     }
 
     .search-wrapper svg {
         position: absolute;
-
         left: 12px;
         top: 50%;
-
         width: 14px;
         height: 14px;
-
-        transform:
-            translateY(-50%);
-
+        transform: translateY(-50%);
         color: #5c6b81;
-
         pointer-events: none;
     }
 
     .search-wrapper input,
     .filter-select {
         height: 38px;
-
-        border:
-            1px solid
-            rgba(255, 255, 255, .08);
-
+        border: 1px solid rgba(255, 255, 255, .08);
         border-radius: 9px;
-
         outline: none;
-
         background: #0c1628;
-
         color: #ffffff;
-
         font-size: 11px;
-
         box-sizing: border-box;
-
         color-scheme: dark;
     }
 
     .search-wrapper input {
         width: 100%;
-
-        padding:
-            0 12px 0 35px;
+        padding: 0 12px 0 35px;
     }
 
     .filter-select {
         min-width: 145px;
-
         padding: 0 10px;
-
         cursor: pointer;
     }
 
     .search-wrapper input:focus,
     .filter-select:focus {
-        border-color:
-            rgba(53, 198, 255, .35);
-
-        box-shadow:
-            0 0 0 3px
-            rgba(53, 198, 255, .05);
+        border-color: rgba(53, 198, 255, .35);
+        box-shadow: 0 0 0 3px rgba(53, 198, 255, .05);
     }
 
     .filter-button,
@@ -519,42 +350,25 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-
         gap: 6px;
-
         height: 38px;
-
         padding: 0 12px;
-
         border-radius: 9px;
-
         font-size: 10px;
         font-weight: 700;
-
         text-decoration: none;
-
         cursor: pointer;
     }
 
     .filter-button {
-        border:
-            1px solid
-            rgba(53, 198, 255, .18);
-
-        background:
-            rgba(53, 198, 255, .08);
-
+        border: 1px solid rgba(53, 198, 255, .18);
+        background: rgba(53, 198, 255, .08);
         color: #55ceff;
     }
 
     .clear-filters {
-        border:
-            1px solid
-            rgba(148, 163, 184, .12);
-
-        background:
-            rgba(148, 163, 184, .05);
-
+        border: 1px solid rgba(148, 163, 184, .12);
+        background: rgba(148, 163, 184, .05);
         color: #8492a6;
     }
 
@@ -563,7 +377,6 @@
         width: 13px;
         height: 13px;
     }
-
 
     /* =========================================================
        TABLA
@@ -575,54 +388,38 @@
 
     .operarios-table {
         width: 100%;
-
         border-collapse: collapse;
     }
 
     .operarios-table th {
         padding: 13px 18px;
-
-        border-bottom:
-            1px solid
-            rgba(255, 255, 255, .045);
-
+        border-bottom: 1px solid rgba(255, 255, 255, .045);
         color: #59687f;
-
         font-size: 9px;
         font-weight: 700;
-
         letter-spacing: .10em;
-
         text-align: left;
         text-transform: uppercase;
-
         white-space: nowrap;
     }
 
     .operarios-table td {
         padding: 14px 18px;
-
-        border-bottom:
-            1px solid
-            rgba(255, 255, 255, .035);
-
+        border-bottom: 1px solid rgba(255, 255, 255, .035);
         vertical-align: middle;
     }
 
     .operarios-table tbody tr {
-        transition:
-            background .15s ease;
+        transition: background .15s ease;
     }
 
     .operarios-table tbody tr:hover {
-        background:
-            rgba(255, 255, 255, .018);
+        background: rgba(255, 255, 255, .018);
     }
 
     .operarios-table tbody tr:last-child td {
         border-bottom: none;
     }
-
 
     /* =========================================================
        OPERARIO
@@ -631,74 +428,49 @@
     .operario-user {
         display: flex;
         align-items: center;
-
         gap: 12px;
-
         min-width: 190px;
     }
 
     .operario-avatar {
         position: relative;
-
         display: flex;
         align-items: center;
         justify-content: center;
-
         width: 40px;
         height: 40px;
-
         flex: 0 0 40px;
-
-        border:
-            1px solid
-            rgba(53, 198, 255, .12);
-
+        border: 1px solid rgba(53, 198, 255, .12);
         border-radius: 11px;
-
-        background:
-            rgba(53, 198, 255, .07);
-
+        background: rgba(53, 198, 255, .07);
         color: #52cfff;
-
         font-size: 13px;
         font-weight: 800;
     }
 
     .operario-online {
         position: absolute;
-
         right: -2px;
         bottom: -2px;
-
         width: 9px;
         height: 9px;
-
-        border:
-            2px solid
-            #111c30;
-
+        border: 2px solid #111c30;
         border-radius: 50%;
-
         background: #34d399;
     }
 
     .operario-name {
         margin: 0;
-
         color: #edf3fb;
-
         font-size: 12px;
         font-weight: 650;
     }
 
     .operario-id {
         margin-top: 3px;
-
         color: #59687f;
-
         font-size: 9px;
     }
-
 
     /* =========================================================
        EMAIL
@@ -707,23 +479,17 @@
     .operario-email {
         display: flex;
         align-items: center;
-
         gap: 7px;
-
         color: #8996aa;
-
         font-size: 11px;
-
         white-space: nowrap;
     }
 
     .operario-email svg {
         width: 13px;
         height: 13px;
-
         color: #58677d;
     }
-
 
     /* =========================================================
        EMPRESA
@@ -732,41 +498,27 @@
     .empresa-badge {
         display: inline-flex;
         align-items: center;
-
         gap: 6px;
-
         padding: 6px 8px;
-
-        border:
-            1px solid
-            rgba(255, 255, 255, .05);
-
+        border: 1px solid rgba(255, 255, 255, .05);
         border-radius: 7px;
-
-        background:
-            rgba(255, 255, 255, .025);
-
+        background: rgba(255, 255, 255, .025);
         color: #a1adbd;
-
         font-size: 9px;
         font-weight: 600;
-
         white-space: nowrap;
     }
 
     .empresa-badge svg {
         width: 12px;
         height: 12px;
-
         color: #66758b;
     }
 
     .sin-empresa {
         color: #59687f;
-
         font-size: 10px;
     }
-
 
     /* =========================================================
        TIPO DE OPERARIO
@@ -775,25 +527,14 @@
     .tipo-badge {
         display: inline-flex;
         align-items: center;
-
         gap: 6px;
-
         padding: 6px 8px;
-
-        border:
-            1px solid
-            rgba(53, 198, 255, .10);
-
+        border: 1px solid rgba(53, 198, 255, .10);
         border-radius: 7px;
-
-        background:
-            rgba(53, 198, 255, .04);
-
+        background: rgba(53, 198, 255, .04);
         color: #6fcff5;
-
         font-size: 9px;
         font-weight: 650;
-
         white-space: nowrap;
     }
 
@@ -803,21 +544,15 @@
     }
 
     .tipo-badge.assignment {
-        border-color:
-            rgba(167, 139, 250, .12);
-
-        background:
-            rgba(167, 139, 250, .05);
-
+        border-color: rgba(167, 139, 250, .12);
+        background: rgba(167, 139, 250, .05);
         color: #c4b5fd;
     }
 
     .tipo-none {
         color: #58677d;
-
         font-size: 9px;
     }
-
 
     /* =========================================================
        ESTADOS
@@ -826,53 +561,34 @@
     .status-badge {
         display: inline-flex;
         align-items: center;
-
         gap: 7px;
-
         padding: 6px 9px;
-
         border-radius: 30px;
-
         font-size: 9px;
         font-weight: 700;
-
         white-space: nowrap;
     }
 
     .status-dot {
         width: 5px;
         height: 5px;
-
         border-radius: 50%;
     }
 
     .status-badge.active {
-        border:
-            1px solid
-            rgba(52, 211, 153, .14);
-
-        background:
-            rgba(52, 211, 153, .07);
-
+        border: 1px solid rgba(52, 211, 153, .14);
+        background: rgba(52, 211, 153, .07);
         color: #6ee7b7;
     }
 
     .status-badge.active .status-dot {
         background: #34d399;
-
-        box-shadow:
-            0 0 7px
-            rgba(52, 211, 153, .6);
+        box-shadow: 0 0 7px rgba(52, 211, 153, .6);
     }
 
     .status-badge.inactive {
-        border:
-            1px solid
-            rgba(148, 163, 184, .1);
-
-        background:
-            rgba(148, 163, 184, .05);
-
+        border: 1px solid rgba(148, 163, 184, .1);
+        background: rgba(148, 163, 184, .05);
         color: #728097;
     }
 
@@ -881,32 +597,19 @@
     }
 
     .status-badge.pending {
-        border:
-            1px solid
-            rgba(251, 191, 36, .16);
-
-        background:
-            rgba(251, 191, 36, .07);
-
+        border: 1px solid rgba(251, 191, 36, .16);
+        background: rgba(251, 191, 36, .07);
         color: #fbbf24;
     }
 
     .status-badge.pending .status-dot {
         background: #fbbf24;
-
-        box-shadow:
-            0 0 7px
-            rgba(251, 191, 36, .45);
+        box-shadow: 0 0 7px rgba(251, 191, 36, .45);
     }
 
     .status-badge.rejected {
-        border:
-            1px solid
-            rgba(248, 113, 113, .15);
-
-        background:
-            rgba(248, 113, 113, .065);
-
+        border: 1px solid rgba(248, 113, 113, .15);
+        background: rgba(248, 113, 113, .065);
         color: #f87171;
     }
 
@@ -914,6 +617,47 @@
         background: #f87171;
     }
 
+    /* =========================================================
+       MOTIVO DE RECHAZO
+    ========================================================== */
+
+    .rejection-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 7px;
+        min-width: 150px;
+        max-width: 230px;
+    }
+
+    .rejection-reason {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        width: 100%;
+        padding: 7px 9px;
+        border: 1px solid rgba(248, 113, 113, .12);
+        border-radius: 8px;
+        background: rgba(248, 113, 113, .045);
+        color: #d9a1aa;
+        font-size: 8px;
+        line-height: 1.45;
+        word-break: break-word;
+        box-sizing: border-box;
+    }
+
+    .rejection-reason svg {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 12px;
+        margin-top: 1px;
+        color: #f87171;
+    }
+
+    .rejection-reason strong {
+        color: #fca5a5;
+        font-weight: 700;
+    }
 
     /* =========================================================
        ACCIONES
@@ -923,7 +667,6 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
-
         gap: 5px;
     }
 
@@ -935,92 +678,57 @@
         display: flex;
         align-items: center;
         justify-content: center;
-
         width: 31px;
         height: 31px;
-
-        border:
-            1px solid
-            rgba(148, 163, 184, .16);
-
+        border: 1px solid rgba(148, 163, 184, .16);
         border-radius: 8px;
-
-        background:
-            rgba(148, 163, 184, .07);
-
+        background: rgba(148, 163, 184, .07);
         color: #94a3b8;
-
         cursor: pointer;
-
         transition: .18s ease;
-
         text-decoration: none;
-
         box-sizing: border-box;
     }
 
     .action-button svg {
         width: 14px;
         height: 14px;
-
         stroke-width: 2.2;
     }
 
     .action-button:hover {
-        transform:
-            translateY(-1px);
+        transform: translateY(-1px);
     }
 
     .action-button.view {
-        border-color:
-            rgba(53, 198, 255, .18);
-
-        background:
-            rgba(53, 198, 255, .08);
-
+        border-color: rgba(53, 198, 255, .18);
+        background: rgba(53, 198, 255, .08);
         color: #35c6ff;
     }
 
     .action-button.edit {
-        border-color:
-            rgba(251, 191, 36, .18);
-
-        background:
-            rgba(251, 191, 36, .07);
-
+        border-color: rgba(251, 191, 36, .18);
+        background: rgba(251, 191, 36, .07);
         color: #fbbf24;
     }
 
     .action-button.toggle {
-        border-color:
-            rgba(52, 211, 153, .18);
-
-        background:
-            rgba(52, 211, 153, .07);
-
+        border-color: rgba(52, 211, 153, .18);
+        background: rgba(52, 211, 153, .07);
         color: #34d399;
     }
 
     .action-button.resend {
-        border-color:
-            rgba(167, 139, 250, .20);
-
-        background:
-            rgba(167, 139, 250, .08);
-
+        border-color: rgba(167, 139, 250, .20);
+        background: rgba(167, 139, 250, .08);
         color: #c4b5fd;
     }
 
     .action-button.delete {
-        border-color:
-            rgba(248, 113, 113, .18);
-
-        background:
-            rgba(248, 113, 113, .07);
-
+        border-color: rgba(248, 113, 113, .18);
+        background: rgba(248, 113, 113, .07);
         color: #f87171;
     }
-
 
     /* =========================================================
        PAGINACIÓN
@@ -1028,12 +736,8 @@
 
     .pagination-container {
         padding: 14px 18px;
-
-        border-top:
-            1px solid
-            rgba(255, 255, 255, .045);
+        border-top: 1px solid rgba(255, 255, 255, .045);
     }
-
 
     /* =========================================================
        EMPTY
@@ -1041,7 +745,6 @@
 
     .operarios-empty {
         padding: 65px 25px;
-
         text-align: center;
     }
 
@@ -1049,21 +752,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-
         width: 58px;
         height: 58px;
-
         margin: 0 auto;
-
-        border:
-            1px solid
-            rgba(53, 198, 255, .1);
-
+        border: 1px solid rgba(53, 198, 255, .1);
         border-radius: 15px;
-
-        background:
-            rgba(53, 198, 255, .045);
-
+        background: rgba(53, 198, 255, .045);
         color: #35c6ff;
     }
 
@@ -1074,21 +768,15 @@
 
     .empty-title {
         margin: 17px 0 0;
-
         color: #ffffff;
-
         font-size: 16px;
         font-weight: 700;
     }
 
     .empty-description {
         max-width: 420px;
-
-        margin:
-            7px auto 0;
-
+        margin: 7px auto 0;
         color: #65748b;
-
         font-size: 12px;
         line-height: 1.7;
     }
@@ -1096,67 +784,50 @@
     .empty-button {
         display: inline-flex;
         align-items: center;
-
         gap: 8px;
-
         margin-top: 20px;
-
         padding: 10px 16px;
-
         border-radius: 9px;
-
         background: #35c6ff;
-
         color: #07111f;
-
         font-size: 12px;
         font-weight: 800;
-
         text-decoration: none;
     }
-
 
     /* =========================================================
        RESPONSIVE
     ========================================================== */
 
     @media (max-width: 1200px) {
-
         .operarios-stats {
-            grid-template-columns:
-                repeat(3, 1fr);
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 
     @media (max-width: 900px) {
-
         .operarios-stats {
-            grid-template-columns:
-                repeat(2, 1fr);
+            grid-template-columns: repeat(2, 1fr);
         }
 
         .operarios-header {
             align-items: flex-start;
-
             flex-direction: column;
         }
 
         .operarios-header-actions {
             width: 100%;
-
             flex-direction: column;
         }
 
         .btn-objetivos,
         .btn-nuevo-operario {
             width: 100%;
-
             box-sizing: border-box;
         }
 
         .operarios-card-header {
             align-items: flex-start;
-
             flex-direction: column;
         }
 
@@ -1170,7 +841,6 @@
     }
 
     @media (max-width: 600px) {
-
         .operarios-stats {
             grid-template-columns: 1fr;
         }
@@ -1206,11 +876,9 @@
 
             </div>
 
-
             <h1 class="operarios-title">
                 Operarios
             </h1>
-
 
             <p class="operarios-description">
 
@@ -1304,8 +972,6 @@
 
     <div class="operarios-stats">
 
-        {{-- TOTAL --}}
-
         <div class="operario-stat">
 
             <div class="stat-top">
@@ -1332,8 +998,6 @@
 
         </div>
 
-
-        {{-- ACTIVOS --}}
 
         <div class="operario-stat">
 
@@ -1362,8 +1026,6 @@
         </div>
 
 
-        {{-- PENDIENTES --}}
-
         <div class="operario-stat">
 
             <div class="stat-top">
@@ -1382,7 +1044,7 @@
 
                 <div class="stat-icon yellow">
 
-                    <i data-lucide="user-round-clock"></i>
+                    <i data-lucide="clock-3"></i>
 
                 </div>
 
@@ -1390,8 +1052,6 @@
 
         </div>
 
-
-        {{-- INACTIVOS --}}
 
         <div class="operario-stat">
 
@@ -1419,8 +1079,6 @@
 
         </div>
 
-
-        {{-- RECHAZADOS --}}
 
         <div class="operario-stat">
 
@@ -1474,10 +1132,6 @@
 
             </div>
 
-
-            {{-- =================================================
-                 FILTROS
-            ================================================== --}}
 
             <form
                 action="{{ route('operarios.index') }}"
@@ -1648,13 +1302,6 @@
                         @foreach($operarios as $operario)
 
                             @php
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | ESTADO DE APROBACIÓN
-                                |--------------------------------------------------------------------------
-                                */
-
                                 $estadoAprobacion =
                                     $operario->estado_aprobacion;
 
@@ -1663,12 +1310,6 @@
 
                                 $rechazado =
                                     $estadoAprobacion === 'rechazado';
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | NULL se acepta temporalmente para cuentas antiguas.
-                                |--------------------------------------------------------------------------
-                                */
 
                                 $aprobado =
                                     $estadoAprobacion === 'aprobado'
@@ -1685,13 +1326,6 @@
                                     &&
                                     !(bool) $operario->estado;
 
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | INICIAL
-                                |--------------------------------------------------------------------------
-                                */
-
                                 $inicial =
                                     mb_strtoupper(
                                         mb_substr(
@@ -1700,13 +1334,6 @@
                                             1
                                         )
                                     );
-
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | TIPO
-                                |--------------------------------------------------------------------------
-                                */
 
                                 $nombreTipo =
                                     $operario->tipoOperario->nombre
@@ -1757,7 +1384,6 @@
                                                 {{ $operario->name }}
 
                                             </p>
-
 
                                             <p class="operario-id">
 
@@ -1881,13 +1507,37 @@
 
                                     @elseif($rechazado)
 
-                                        <span class="status-badge rejected">
+                                        <div class="rejection-wrapper">
 
-                                            <span class="status-dot"></span>
+                                            <span class="status-badge rejected">
 
-                                            Rechazado
+                                                <span class="status-dot"></span>
 
-                                        </span>
+                                                Rechazado
+
+                                            </span>
+
+
+                                            <div class="rejection-reason">
+
+                                                <i data-lucide="message-square-warning"></i>
+
+                                                <div>
+
+                                                    <strong>
+                                                        Motivo:
+                                                    </strong>
+
+                                                    {{
+                                                        $operario->motivo_rechazo
+                                                        ?: 'No se registró un motivo de rechazo.'
+                                                    }}
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
 
 
                                     @elseif($activo)

@@ -1795,7 +1795,7 @@
 
         <div class="campanas-header-actions">
 
-            @if(Route::has('campanas.create'))
+            @if(auth()->user()->id_rol != 3 && Route::has('campanas.create'))
 
                 <a
                     href="{{ route('campanas.create') }}"
@@ -2784,89 +2784,93 @@
                             @endif
 
 
-                            {{-- ADMINISTRAR CLIENTES --}}
+                            @if(auth()->user()->id_rol != 3)
 
-                            <a
-                                href="{{
-                                    route(
-                                        'campanas.clientes',
-                                        $campana->id_campana
-                                    )
-                                }}"
-                                class="campaign-btn-clients"
-                                title="
-                                    Agregar o retirar
-                                    clientes de esta campaña
-                                "
-                            >
-
-                                <i data-lucide="user-plus"></i>
-
-                                Administrar clientes
-
-                            </a>
-
-
-                            {{-- EDITAR --}}
-
-                            @if(Route::has('campanas.edit'))
+                                {{-- ADMINISTRAR CLIENTES --}}
 
                                 <a
                                     href="{{
                                         route(
-                                            'campanas.edit',
+                                            'campanas.clientes',
                                             $campana->id_campana
                                         )
                                     }}"
-                                    class="campaign-btn-secondary"
-                                    title="Editar campaña"
-                                >
-
-                                    <i data-lucide="pencil"></i>
-
-                                    Editar
-
-                                </a>
-
-                            @endif
-
-
-                            {{-- ELIMINAR --}}
-
-                            @if(Route::has('campanas.destroy'))
-
-                                <form
-                                    action="{{
-                                        route(
-                                            'campanas.destroy',
-                                            $campana->id_campana
-                                        )
-                                    }}"
-                                    method="POST"
-                                    class="delete-form"
-                                    onsubmit="
-                                        return confirm(
-                                            '¿Seguro que deseas eliminar esta campaña?'
-                                        );
+                                    class="campaign-btn-clients"
+                                    title="
+                                        Agregar o retirar
+                                        clientes de esta campaña
                                     "
                                 >
 
-                                    @csrf
+                                    <i data-lucide="user-plus"></i>
 
-                                    @method('DELETE')
+                                    Administrar clientes
+
+                                </a>
 
 
-                                    <button
-                                        type="submit"
-                                        class="campaign-btn-danger"
-                                        title="Eliminar campaña"
+                                {{-- EDITAR --}}
+
+                                @if(Route::has('campanas.edit'))
+
+                                    <a
+                                        href="{{
+                                            route(
+                                                'campanas.edit',
+                                                $campana->id_campana
+                                            )
+                                        }}"
+                                        class="campaign-btn-secondary"
+                                        title="Editar campaña"
                                     >
 
-                                        <i data-lucide="trash-2"></i>
+                                        <i data-lucide="pencil"></i>
 
-                                    </button>
+                                        Editar
 
-                                </form>
+                                    </a>
+
+                                @endif
+
+
+                                {{-- ELIMINAR --}}
+
+                                @if(Route::has('campanas.destroy'))
+
+                                    <form
+                                        action="{{
+                                            route(
+                                                'campanas.destroy',
+                                                $campana->id_campana
+                                            )
+                                        }}"
+                                        method="POST"
+                                        class="delete-form"
+                                        onsubmit="
+                                            return confirm(
+                                                '¿Seguro que deseas eliminar esta campaña?'
+                                            );
+                                        "
+                                    >
+
+                                        @csrf
+
+                                        @method('DELETE')
+
+
+                                        <button
+                                            type="submit"
+                                            class="campaign-btn-danger"
+                                            title="Eliminar campaña"
+                                        >
+
+                                            <i data-lucide="trash-2"></i>
+
+                                        </button>
+
+                                    </form>
+
+                                @endif
 
                             @endif
 
@@ -2958,7 +2962,7 @@
                 </p>
 
 
-                @if(Route::has('campanas.create'))
+                @if(auth()->user()->id_rol != 3 && Route::has('campanas.create'))
 
                     <a
                         href="{{ route('campanas.create') }}"

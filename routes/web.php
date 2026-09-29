@@ -383,12 +383,18 @@ Route::middleware(['rol:1'])->group(function () {
 
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| OPERARIOS
+| OPERARIOS - ADMIN CLIENTE
 |--------------------------------------------------------------------------
-| Acceso exclusivo para Admin Cliente (Rol 2)
+| El Admin Cliente puede:
+|
+| - Consultar sus operarios
+| - Crear solicitudes de nuevos operarios
+| - Editar operarios de su empresa
+| - Reenviar solicitudes rechazadas
+| - Activar/desactivar únicamente operarios ya aprobados
+| - Eliminar operarios
 |--------------------------------------------------------------------------
 */
 
@@ -411,8 +417,8 @@ Route::middleware(['rol:2'])->group(function () {
     | OBJETIVOS
     |--------------------------------------------------------------------------
     |
-    | Esta ruta debe estar antes de /operarios/{operario}.
-    |
+    | Debe ir antes de /operarios/{operario}.
+    |--------------------------------------------------------------------------
     */
 
     Route::get('/operarios/objetivos', [
@@ -423,7 +429,7 @@ Route::middleware(['rol:2'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | CREAR
+    | CREAR SOLICITUD DE OPERARIO
     |--------------------------------------------------------------------------
     */
 
@@ -437,6 +443,27 @@ Route::middleware(['rol:2'])->group(function () {
         OperarioController::class,
         'store',
     ])->name('operarios.store');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | REENVIAR SOLICITUD
+    |--------------------------------------------------------------------------
+    |
+    | Se utiliza cuando el Super Admin rechazó una solicitud
+    | y el Admin Cliente desea enviarla nuevamente.
+    |--------------------------------------------------------------------------
+    */
+
+    Route::patch(
+        '/operarios/{operario}/solicitud/reenviar',
+        [
+            OperarioController::class,
+            'reenviarSolicitud',
+        ]
+    )
+        ->whereNumber('operario')
+        ->name('operarios.solicitud.reenviar');
 
 
     /*
@@ -479,6 +506,10 @@ Route::middleware(['rol:2'])->group(function () {
     |--------------------------------------------------------------------------
     | ACTIVAR / DESACTIVAR
     |--------------------------------------------------------------------------
+    |
+    | El controlador valida que el operario ya haya sido
+    | aprobado por un Super Administrador.
+    |--------------------------------------------------------------------------
     */
 
     Route::patch('/operarios/{operario}/estado', [
@@ -507,6 +538,72 @@ Route::middleware(['rol:2'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| SOLICITUDES DE OPERARIOS - SUPER ADMIN
+|--------------------------------------------------------------------------
+| Acceso exclusivo para Super Administrador (Rol 1)
+|--------------------------------------------------------------------------
+|
+| Desde aquí el Super Admin podrá:
+|
+| - Consultar solicitudes pendientes
+| - Aprobar operarios
+| - Rechazar operarios
+|
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['rol:1'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | LISTADO DE SOLICITUDES
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/operarios/solicitudes', [
+        OperarioController::class,
+        'solicitudes',
+    ])->name('operarios.solicitudes');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | APROBAR SOLICITUD
+    |--------------------------------------------------------------------------
+    */
+
+    Route::patch(
+        '/operarios/{operario}/solicitud/aprobar',
+        [
+            OperarioController::class,
+            'aprobarSolicitud',
+        ]
+    )
+        ->whereNumber('operario')
+        ->name('operarios.solicitud.aprobar');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RECHAZAR SOLICITUD
+    |--------------------------------------------------------------------------
+    */
+
+    Route::patch(
+        '/operarios/{operario}/solicitud/rechazar',
+        [
+            OperarioController::class,
+            'rechazarSolicitud',
+        ]
+    )
+        ->whereNumber('operario')
+        ->name('operarios.solicitud.rechazar');
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
 | ASIGNACIÓN DE OBJETIVOS DE OPERARIOS
 |--------------------------------------------------------------------------
 | Súper Admin y Admin Cliente (Roles 1 y 2)
@@ -523,8 +620,6 @@ Route::middleware(['rol:1,2'])->group(function () {
         ->name('operarios.asignarObjetivo');
 
 });
-
-
 /*
 |--------------------------------------------------------------------------
 | CALENDARIO

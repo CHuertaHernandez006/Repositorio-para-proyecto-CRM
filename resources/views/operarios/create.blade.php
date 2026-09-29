@@ -1,5 +1,6 @@
 @extends('layouts.app')
 
+@section('title', 'Nuevo operario - CRM')
 @section('header-title', 'Nuevo operario')
 
 @section('content')
@@ -13,7 +14,7 @@
 
     /* =========================================================
        ENCABEZADO
-    ========================================================= */
+    ========================================================== */
 
     .crear-header {
         display: flex;
@@ -33,11 +34,14 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
         width: 48px;
         height: 48px;
         flex: 0 0 48px;
+
         border: 1px solid rgba(53, 198, 255, .13);
         border-radius: 13px;
+
         background: rgba(53, 198, 255, .07);
         color: #35c6ff;
     }
@@ -51,8 +55,11 @@
         display: flex;
         align-items: center;
         gap: 8px;
+
         margin-bottom: 7px;
+
         color: #35c6ff;
+
         font-size: 10px;
         font-weight: 700;
         letter-spacing: .15em;
@@ -62,23 +69,35 @@
     .crear-eyebrow-dot {
         width: 5px;
         height: 5px;
+
         border-radius: 50%;
+
         background: #35c6ff;
-        box-shadow: 0 0 9px rgba(53, 198, 255, .6);
+
+        box-shadow:
+            0 0 9px
+            rgba(53, 198, 255, .6);
     }
 
     .crear-title {
         margin: 0;
+
         color: #ffffff;
+
         font-size: 30px;
         line-height: 1.15;
         font-weight: 750;
+
         letter-spacing: -.025em;
     }
 
     .crear-description {
+        max-width: 650px;
+
         margin: 7px 0 0;
+
         color: #718098;
+
         font-size: 13px;
         line-height: 1.6;
     }
@@ -86,16 +105,29 @@
     .volver-link {
         display: inline-flex;
         align-items: center;
+
         gap: 7px;
+
         padding: 9px 12px;
-        border: 1px solid rgba(255,255,255,.06);
+
+        border:
+            1px solid
+            rgba(255,255,255,.06);
+
         border-radius: 9px;
-        background: rgba(255,255,255,.02);
+
+        background:
+            rgba(255,255,255,.02);
+
         color: #718098;
+
         font-size: 11px;
         font-weight: 600;
+
         text-decoration: none;
+
         transition: .2s ease;
+
         white-space: nowrap;
     }
 
@@ -105,57 +137,153 @@
     }
 
     .volver-link:hover {
-        border-color: rgba(53,198,255,.15);
-        background: rgba(53,198,255,.04);
+        border-color:
+            rgba(53,198,255,.15);
+
+        background:
+            rgba(53,198,255,.04);
+
         color: #35c6ff;
     }
 
+    /* =========================================================
+       AVISO DE APROBACIÓN
+    ========================================================== */
+
+    .approval-notice {
+        display: flex;
+        align-items: flex-start;
+
+        gap: 12px;
+
+        margin-bottom: 20px;
+
+        padding: 14px 16px;
+
+        border:
+            1px solid
+            rgba(251, 191, 36, .13);
+
+        border-radius: 11px;
+
+        background:
+            rgba(251, 191, 36, .045);
+    }
+
+    .approval-notice-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 34px;
+        height: 34px;
+
+        flex: 0 0 34px;
+
+        border-radius: 9px;
+
+        background:
+            rgba(251, 191, 36, .08);
+
+        color: #fbbf24;
+    }
+
+    .approval-notice-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .approval-notice-title {
+        margin: 0;
+
+        color: #f6d365;
+
+        font-size: 11px;
+        font-weight: 750;
+    }
+
+    .approval-notice-text {
+        margin: 4px 0 0;
+
+        color: #8e8060;
+
+        font-size: 10px;
+        line-height: 1.55;
+    }
 
     /* =========================================================
-       FORMULARIO PRINCIPAL
-    ========================================================= */
+       CARD
+    ========================================================== */
 
     .crear-card {
         overflow: hidden;
-        border: 1px solid rgba(255,255,255,.055);
+
+        border:
+            1px solid
+            rgba(255,255,255,.055);
+
         border-radius: 16px;
+
         background: #111c30;
-        box-shadow: 0 20px 50px rgba(0,0,0,.10);
+
+        box-shadow:
+            0 20px 50px
+            rgba(0,0,0,.10);
     }
 
     .crear-card-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
+
         gap: 20px;
+
         padding: 19px 22px;
-        border-bottom: 1px solid rgba(255,255,255,.055);
+
+        border-bottom:
+            1px solid
+            rgba(255,255,255,.055);
     }
 
     .crear-card-title {
         margin: 0;
+
         color: #ffffff;
+
         font-size: 15px;
         font-weight: 700;
     }
 
     .crear-card-subtitle {
         margin: 4px 0 0;
+
         color: #65748b;
+
         font-size: 11px;
     }
 
     .rol-badge {
         display: inline-flex;
         align-items: center;
+
         gap: 7px;
+
         padding: 7px 10px;
-        border: 1px solid rgba(53,198,255,.12);
+
+        border:
+            1px solid
+            rgba(53,198,255,.12);
+
         border-radius: 8px;
-        background: rgba(53,198,255,.05);
+
+        background:
+            rgba(53,198,255,.05);
+
         color: #54ccf9;
+
         font-size: 10px;
         font-weight: 700;
+
         white-space: nowrap;
     }
 
@@ -164,10 +292,9 @@
         height: 13px;
     }
 
-
     /* =========================================================
        FORM
-    ========================================================= */
+    ========================================================== */
 
     .crear-form {
         padding: 24px 22px;
@@ -184,7 +311,9 @@
     .section-heading {
         display: flex;
         align-items: flex-start;
+
         gap: 11px;
+
         margin-bottom: 18px;
     }
 
@@ -192,11 +321,17 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
         width: 31px;
         height: 31px;
+
         flex: 0 0 31px;
+
         border-radius: 9px;
-        background: rgba(53,198,255,.07);
+
+        background:
+            rgba(53,198,255,.07);
+
         color: #35c6ff;
     }
 
@@ -207,37 +342,47 @@
 
     .section-title {
         margin: 0;
+
         color: #ffffff;
+
         font-size: 13px;
         font-weight: 700;
     }
 
     .section-description {
         margin: 3px 0 0;
+
         color: #5f6e84;
+
         font-size: 10px;
         line-height: 1.5;
     }
 
-
     /* =========================================================
        GRID
-    ========================================================= */
+    ========================================================== */
 
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
         gap: 17px;
     }
 
     .form-field.full {
-        grid-column: 1 / -1;
+        grid-column:
+            1 / -1;
     }
 
     .form-label {
         display: block;
+
         margin-bottom: 7px;
+
         color: #a3afbf;
+
         font-size: 10px;
         font-weight: 700;
     }
@@ -252,28 +397,47 @@
 
     .input-icon {
         position: absolute;
+
         left: 12px;
         top: 50%;
+
         width: 15px;
         height: 15px;
-        transform: translateY(-50%);
+
+        transform:
+            translateY(-50%);
+
         color: #536278;
+
         pointer-events: none;
     }
 
     .form-input {
         width: 100%;
         height: 42px;
+
         box-sizing: border-box;
-        padding: 0 13px 0 37px;
-        border: 1px solid rgba(255,255,255,.075);
+
+        padding:
+            0 13px 0 37px;
+
+        border:
+            1px solid
+            rgba(255,255,255,.075);
+
         border-radius: 10px;
+
         outline: none;
+
         background: #0c1628;
         color: #ffffff;
+
         font-family: inherit;
         font-size: 12px;
+
         transition: .2s ease;
+
+        color-scheme: dark;
     }
 
     .form-input::placeholder {
@@ -281,35 +445,35 @@
     }
 
     .form-input:hover {
-        border-color: rgba(255,255,255,.11);
+        border-color:
+            rgba(255,255,255,.11);
     }
 
     .form-input:focus {
-        border-color: rgba(53,198,255,.38);
+        border-color:
+            rgba(53,198,255,.38);
+
         background: #0b1526;
-        box-shadow: 0 0 0 3px rgba(53,198,255,.045);
-    }
 
-    .form-input[type="number"] {
-        appearance: textfield;
+        box-shadow:
+            0 0 0 3px
+            rgba(53,198,255,.045);
     }
-
-    .form-input[type="number"]::-webkit-inner-spin-button,
-    .form-input[type="number"]::-webkit-outer-spin-button {
-        opacity: .5;
-    }
-
 
     /* =========================================================
        ERRORES
-    ========================================================= */
+    ========================================================== */
 
     .field-error {
         display: flex;
         align-items: flex-start;
+
         gap: 6px;
+
         margin-top: 7px;
+
         color: #f87171;
+
         font-size: 10px;
         line-height: 1.5;
     }
@@ -317,59 +481,404 @@
     .field-error svg {
         width: 13px;
         height: 13px;
+
         flex: 0 0 13px;
+
         margin-top: 1px;
     }
 
-
-    /* =========================================================
-       INFO PASSWORD
-    ========================================================= */
-
-    .password-info {
+    .general-error {
         display: flex;
         align-items: flex-start;
-        gap: 9px;
-        margin-top: 13px;
-        padding: 10px 12px;
-        border: 1px solid rgba(255,255,255,.045);
-        border-radius: 9px;
-        background: rgba(255,255,255,.018);
+
+        gap: 10px;
+
+        margin-bottom: 20px;
+
+        padding: 12px 14px;
+
+        border:
+            1px solid
+            rgba(248,113,113,.14);
+
+        border-radius: 10px;
+
+        background:
+            rgba(248,113,113,.055);
+
+        color: #fca5a5;
+
+        font-size: 11px;
+        line-height: 1.5;
     }
 
-    .password-info svg {
-        width: 14px;
-        height: 14px;
-        flex: 0 0 14px;
-        color: #65748a;
-        margin-top: 1px;
+    .general-error svg {
+        width: 16px;
+        height: 16px;
+
+        flex: 0 0 16px;
+
+        color: #f87171;
     }
 
-    .password-info span {
-        color: #64738a;
-        font-size: 10px;
+    /* =========================================================
+       TIPO DE OPERARIO
+    ========================================================== */
+
+    .tipo-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 12px;
+    }
+
+    .tipo-option {
+        position: relative;
+
+        cursor: pointer;
+    }
+
+    .tipo-option input {
+        position: absolute;
+
+        opacity: 0;
+
+        pointer-events: none;
+    }
+
+    .tipo-card {
+        position: relative;
+
+        display: flex;
+        align-items: flex-start;
+
+        gap: 12px;
+
+        min-height: 110px;
+
+        padding: 15px;
+
+        border:
+            1px solid
+            rgba(255,255,255,.06);
+
+        border-radius: 12px;
+
+        background: #0c1628;
+
+        transition: .2s ease;
+
+        box-sizing: border-box;
+    }
+
+    .tipo-option:hover .tipo-card {
+        border-color:
+            rgba(53,198,255,.18);
+
+        background:
+            rgba(53,198,255,.025);
+    }
+
+    .tipo-option input:checked + .tipo-card {
+        border-color:
+            rgba(53,198,255,.42);
+
+        background:
+            rgba(53,198,255,.065);
+
+        box-shadow:
+            0 0 0 3px
+            rgba(53,198,255,.035);
+    }
+
+    .tipo-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 40px;
+        height: 40px;
+
+        flex: 0 0 40px;
+
+        border-radius: 10px;
+
+        background:
+            rgba(53,198,255,.07);
+
+        color: #35c6ff;
+    }
+
+    .tipo-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .tipo-content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .tipo-name {
+        margin: 1px 0 0;
+
+        color: #e9f1fb;
+
+        font-size: 12px;
+        font-weight: 750;
+    }
+
+    .tipo-description {
+        margin: 5px 0 0;
+
+        color: #68788e;
+
+        font-size: 9px;
         line-height: 1.55;
     }
 
+    .tipo-check {
+        position: absolute;
+
+        top: 12px;
+        right: 12px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 18px;
+        height: 18px;
+
+        border:
+            1px solid
+            rgba(148,163,184,.16);
+
+        border-radius: 50%;
+
+        color: transparent;
+
+        transition: .2s ease;
+    }
+
+    .tipo-check svg {
+        width: 10px;
+        height: 10px;
+    }
+
+    .tipo-option input:checked +
+    .tipo-card
+    .tipo-check {
+        border-color: #35c6ff;
+
+        background: #35c6ff;
+
+        color: #06111e;
+    }
+
+    .tipo-note {
+        display: flex;
+        align-items: flex-start;
+
+        gap: 8px;
+
+        margin-top: 11px;
+
+        padding: 10px 12px;
+
+        border:
+            1px solid
+            rgba(255,255,255,.045);
+
+        border-radius: 9px;
+
+        background:
+            rgba(255,255,255,.018);
+
+        color: #64738a;
+
+        font-size: 9px;
+        line-height: 1.55;
+    }
+
+    .tipo-note svg {
+        width: 13px;
+        height: 13px;
+
+        flex: 0 0 13px;
+
+        margin-top: 1px;
+
+        color: #35c6ff;
+    }
 
     /* =========================================================
-       EMPRESA AUTOMÁTICA
-    ========================================================= */
+       PASSWORD
+    ========================================================== */
+
+    .password-rules {
+        margin-top: 12px;
+
+        padding: 12px 14px;
+
+        border:
+            1px solid
+            rgba(255,255,255,.045);
+
+        border-radius: 9px;
+
+        background:
+            rgba(255,255,255,.018);
+    }
+
+    .password-rules-title {
+        margin:
+            0 0 9px;
+
+        color: #718098;
+
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .password-rule {
+        display: flex;
+        align-items: center;
+
+        gap: 7px;
+
+        margin-bottom: 6px;
+
+        color: #59677c;
+
+        font-size: 10px;
+
+        transition: .2s ease;
+    }
+
+    .password-rule:last-child {
+        margin-bottom: 0;
+    }
+
+    .password-rule .rule-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 15px;
+        height: 15px;
+
+        color: #59677c;
+
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .password-rule.rule-valid {
+        color: #34d399;
+    }
+
+    .password-rule.rule-valid
+    .rule-icon {
+        color: #34d399;
+    }
+
+    .password-rule.rule-invalid {
+        color: #f87171;
+    }
+
+    .password-rule.rule-invalid
+    .rule-icon {
+        color: #f87171;
+    }
+
+    .password-match {
+        display: none;
+
+        margin-top: 7px;
+
+        font-size: 10px;
+        line-height: 1.5;
+    }
+
+    .password-match.valid {
+        display: block;
+
+        color: #34d399;
+    }
+
+    .password-match.invalid {
+        display: block;
+
+        color: #f87171;
+    }
+
+    .form-input.field-invalid {
+        border-color:
+            #f87171 !important;
+
+        box-shadow:
+            0 0 0 3px
+            rgba(248,113,113,.05);
+    }
+
+    .form-input.field-valid {
+        border-color:
+            #34d399 !important;
+    }
+
+    .validation-message {
+        display: flex;
+        align-items: flex-start;
+
+        gap: 6px;
+
+        margin-top: 7px;
+
+        color: #f87171;
+
+        font-size: 10px;
+        line-height: 1.5;
+    }
+
+    .validation-message svg {
+        width: 13px;
+        height: 13px;
+
+        flex: 0 0 13px;
+
+        margin-top: 1px;
+    }
+
+    /* =========================================================
+       EMPRESA
+    ========================================================== */
 
     .empresa-auto {
         display: flex;
         align-items: center;
         justify-content: space-between;
+
         gap: 15px;
+
         padding: 14px;
-        border: 1px solid rgba(53,198,255,.10);
+
+        border:
+            1px solid
+            rgba(53,198,255,.10);
+
         border-radius: 11px;
-        background: rgba(53,198,255,.035);
+
+        background:
+            rgba(53,198,255,.035);
     }
 
     .empresa-auto-left {
         display: flex;
         align-items: center;
+
         gap: 11px;
     }
 
@@ -377,11 +886,17 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
         width: 38px;
         height: 38px;
+
         flex: 0 0 38px;
+
         border-radius: 9px;
-        background: rgba(53,198,255,.08);
+
+        background:
+            rgba(53,198,255,.08);
+
         color: #35c6ff;
     }
 
@@ -392,14 +907,18 @@
 
     .empresa-auto-title {
         margin: 0;
+
         color: #dce5f0;
+
         font-size: 11px;
         font-weight: 700;
     }
 
     .empresa-auto-text {
         margin: 3px 0 0;
+
         color: #5e6d83;
+
         font-size: 10px;
         line-height: 1.5;
     }
@@ -407,22 +926,30 @@
     .empresa-check {
         width: 17px;
         height: 17px;
+
         flex: 0 0 17px;
+
         color: #34d399;
     }
 
-
     /* =========================================================
        ROL
-    ========================================================= */
+    ========================================================== */
 
     .rol-info {
         display: flex;
         align-items: flex-start;
+
         gap: 11px;
+
         padding: 13px 14px;
-        border: 1px solid rgba(255,255,255,.05);
+
+        border:
+            1px solid
+            rgba(255,255,255,.05);
+
         border-radius: 11px;
+
         background: #0c1628;
     }
 
@@ -430,11 +957,17 @@
         display: flex;
         align-items: center;
         justify-content: center;
+
         width: 34px;
         height: 34px;
+
         flex: 0 0 34px;
+
         border-radius: 9px;
-        background: rgba(53,198,255,.08);
+
+        background:
+            rgba(53,198,255,.08);
+
         color: #35c6ff;
     }
 
@@ -445,65 +978,90 @@
 
     .rol-info-title {
         margin: 0;
+
         color: #e2e9f2;
+
         font-size: 11px;
         font-weight: 700;
     }
 
     .rol-info-text {
         margin: 3px 0 0;
+
         color: #5f6e84;
+
         font-size: 10px;
         line-height: 1.6;
     }
 
     .rol-info-code {
         color: #49caff;
+
         font-weight: 700;
     }
 
-
     /* =========================================================
        SEPARADORES
-    ========================================================= */
+    ========================================================== */
 
     .form-divider {
         height: 1px;
-        margin: 27px 0;
-        background: rgba(255,255,255,.045);
-    }
 
+        margin: 27px 0;
+
+        background:
+            rgba(255,255,255,.045);
+    }
 
     /* =========================================================
        BOTONES
-    ========================================================= */
+    ========================================================== */
 
     .form-actions {
         display: flex;
         align-items: center;
         justify-content: flex-end;
+
         gap: 9px;
+
         padding-top: 21px;
-        border-top: 1px solid rgba(255,255,255,.045);
+
+        border-top:
+            1px solid
+            rgba(255,255,255,.045);
     }
 
     .btn-cancelar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+
         gap: 7px;
+
         min-width: 105px;
         height: 40px;
+
         padding: 0 15px;
-        border: 1px solid rgba(255,255,255,.075);
+
+        border:
+            1px solid
+            rgba(255,255,255,.075);
+
         border-radius: 9px;
-        background: rgba(255,255,255,.02);
+
+        background:
+            rgba(255,255,255,.02);
+
         color: #7b899d;
+
         font-family: inherit;
         font-size: 11px;
         font-weight: 700;
+
         text-decoration: none;
+
         transition: .2s ease;
+
         box-sizing: border-box;
     }
 
@@ -513,8 +1071,12 @@
     }
 
     .btn-cancelar:hover {
-        border-color: rgba(255,255,255,.12);
-        background: rgba(255,255,255,.04);
+        border-color:
+            rgba(255,255,255,.12);
+
+        background:
+            rgba(255,255,255,.04);
+
         color: #ffffff;
     }
 
@@ -522,19 +1084,30 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+
         gap: 8px;
-        min-width: 145px;
+
+        min-width: 160px;
         height: 40px;
+
         padding: 0 18px;
+
         border: 0;
         border-radius: 9px;
+
         background: #35c6ff;
         color: #06111e;
+
         font-family: inherit;
         font-size: 11px;
         font-weight: 800;
+
         cursor: pointer;
-        box-shadow: 0 8px 22px rgba(53,198,255,.12);
+
+        box-shadow:
+            0 8px 22px
+            rgba(53,198,255,.12);
+
         transition: .2s ease;
     }
 
@@ -545,149 +1118,23 @@
 
     .btn-crear:hover {
         background: #65d4ff;
-        transform: translateY(-1px);
-        box-shadow: 0 10px 25px rgba(53,198,255,.18);
+
+        transform:
+            translateY(-1px);
+
+        box-shadow:
+            0 10px 25px
+            rgba(53,198,255,.18);
     }
 
     .btn-crear:active {
-        transform: translateY(0);
+        transform:
+            translateY(0);
     }
-
-
-    /* =========================================================
-       ALERTA GENERAL
-    ========================================================= */
-
-    .general-error {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        margin-bottom: 20px;
-        padding: 12px 14px;
-        border: 1px solid rgba(248,113,113,.14);
-        border-radius: 10px;
-        background: rgba(248,113,113,.055);
-        color: #fca5a5;
-        font-size: 11px;
-        line-height: 1.5;
-    }
-
-    .general-error svg {
-        width: 16px;
-        height: 16px;
-        flex: 0 0 16px;
-        color: #f87171;
-    }
-/* =========================================================
-   VALIDACIONES EN CAMPOS
-========================================================= */
-
-.form-input.field-invalid {
-    border-color: #f87171 !important;
-    box-shadow: 0 0 0 3px rgba(248,113,113,.05);
-}
-
-.form-input.field-valid {
-    border-color: #34d399 !important;
-}
-
-.validation-message {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    margin-top: 7px;
-    color: #f87171;
-    font-size: 10px;
-    line-height: 1.5;
-}
-
-.validation-message svg {
-    width: 13px;
-    height: 13px;
-    flex: 0 0 13px;
-    margin-top: 1px;
-}
-
-/* =========================================================
-   REGLAS DE CONTRASEÑA
-========================================================= */
-
-.password-rules {
-    margin-top: 12px;
-    padding: 12px 14px;
-    border: 1px solid rgba(255,255,255,.045);
-    border-radius: 9px;
-    background: rgba(255,255,255,.018);
-}
-
-.password-rules-title {
-    margin: 0 0 9px;
-    color: #718098;
-    font-size: 10px;
-    font-weight: 700;
-}
-
-.password-rule {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 6px;
-    color: #59677c;
-    font-size: 10px;
-    transition: .2s ease;
-}
-
-.password-rule:last-child {
-    margin-bottom: 0;
-}
-
-.password-rule .rule-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 15px;
-    height: 15px;
-    color: #59677c;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.password-rule.rule-valid {
-    color: #34d399;
-}
-
-.password-rule.rule-valid .rule-icon {
-    color: #34d399;
-}
-
-.password-rule.rule-invalid {
-    color: #f87171;
-}
-
-.password-rule.rule-invalid .rule-icon {
-    color: #f87171;
-}
-
-.password-match {
-    display: none;
-    margin-top: 7px;
-    font-size: 10px;
-    line-height: 1.5;
-}
-
-.password-match.valid {
-    display: block;
-    color: #34d399;
-}
-
-.password-match.invalid {
-    display: block;
-    color: #f87171;
-}
 
     /* =========================================================
        RESPONSIVE
-    ========================================================= */
+    ========================================================== */
 
     @media (max-width: 800px) {
 
@@ -699,7 +1146,8 @@
             align-self: flex-start;
         }
 
-        .form-grid {
+        .form-grid,
+        .tipo-grid {
             grid-template-columns: 1fr;
         }
 
@@ -725,6 +1173,7 @@
         .crear-icon-main {
             width: 42px;
             height: 42px;
+
             flex-basis: 42px;
         }
 
@@ -773,8 +1222,11 @@
             <div>
 
                 <div class="crear-eyebrow">
+
                     <span class="crear-eyebrow-dot"></span>
+
                     Gestión del equipo
+
                 </div>
 
                 <h1 class="crear-title">
@@ -782,7 +1234,11 @@
                 </h1>
 
                 <p class="crear-description">
-                    Registra una nueva cuenta para un integrante de tu equipo.
+
+                    Registra los datos del nuevo integrante
+                    y selecciona el tipo de operación que realizará
+                    dentro del sistema.
+
                 </p>
 
             </div>
@@ -794,15 +1250,55 @@
             href="{{ route('operarios.index') }}"
             class="volver-link"
         >
+
             <i data-lucide="arrow-left"></i>
+
             Volver a operarios
+
         </a>
 
     </div>
 
 
     {{-- =========================================================
-         ERRORES GENERALES
+         AVISO DE APROBACIÓN
+    ========================================================== --}}
+
+    @if((int) auth()->user()->id_rol === 2)
+
+        <div class="approval-notice">
+
+            <div class="approval-notice-icon">
+
+                <i data-lucide="shield-clock"></i>
+
+            </div>
+
+            <div>
+
+                <p class="approval-notice-title">
+                    Este registro requiere autorización
+                </p>
+
+                <p class="approval-notice-text">
+
+                    Al enviar el formulario se generará una solicitud
+                    para el Super Administrador.
+
+                    La cuenta permanecerá inactiva hasta que
+                    la solicitud sea aprobada.
+
+                </p>
+
+            </div>
+
+        </div>
+
+    @endif
+
+
+    {{-- =========================================================
+         ERRORES
     ========================================================== --}}
 
     @if($errors->any())
@@ -826,18 +1322,19 @@
 
     <div class="crear-card">
 
-        {{-- CABECERA --}}
-
         <div class="crear-card-header">
 
             <div>
 
                 <h2 class="crear-card-title">
-                    Información de acceso
+                    Información del operario
                 </h2>
 
                 <p class="crear-card-subtitle">
-                    Estos datos serán utilizados para ingresar al sistema.
+
+                    Los datos serán utilizados para crear
+                    la cuenta cuando sea autorizada.
+
                 </p>
 
             </div>
@@ -854,12 +1351,15 @@
         </div>
 
 
-        {{-- FORMULARIO --}}
+        {{-- =====================================================
+             FORMULARIO
+        ====================================================== --}}
 
         <form
             action="{{ route('operarios.store') }}"
             method="POST"
             class="crear-form"
+            id="crearOperarioForm"
         >
 
             @csrf
@@ -874,7 +1374,9 @@
                 <div class="section-heading">
 
                     <div class="section-icon">
+
                         <i data-lucide="user"></i>
+
                     </div>
 
                     <div>
@@ -902,9 +1404,13 @@
                             for="name"
                             class="form-label"
                         >
+
                             Nombre completo
+
                             <span class="required">*</span>
+
                         </label>
+
 
                         <div class="input-wrapper">
 
@@ -926,6 +1432,7 @@
 
                         </div>
 
+
                         @error('name')
 
                             <p class="field-error">
@@ -941,51 +1448,243 @@
                     </div>
 
 
+                    {{-- CORREO --}}
 
-                   {{-- CORREO --}}
-<div class="form-field full">
-    <label
-        for="email"
-        class="form-label"
-    >
-        Correo electrónico
-        <span class="required">*</span>
-    </label>
+                    <div class="form-field full">
 
-    <div class="input-wrapper">
-        <i
-            data-lucide="mail"
-            class="input-icon"
-        ></i>
+                        <label
+                            for="email"
+                            class="form-label"
+                        >
 
-        <input
-            type="email"
-            id="email"
-            name="email"
-            value="{{ old('email') }}"
-            required
-            autocomplete="email"
-            placeholder="operario@empresa.com"
-            class="form-input"
-        >
-    </div>
+                            Correo electrónico
 
-    <p
-        id="email-validation"
-        class="validation-message"
-        style="display:none;"
-    >
-        <i data-lucide="circle-alert"></i>
-        <span></span>
-    </p>
+                            <span class="required">*</span>
 
-    @error('email')
-        <p class="field-error">
-            <i data-lucide="circle-alert"></i>
-            {{ $message }}
-        </p>
-    @enderror
-</div>
+                        </label>
+
+
+                        <div class="input-wrapper">
+
+                            <i
+                                data-lucide="mail"
+                                class="input-icon"
+                            ></i>
+
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                value="{{ old('email') }}"
+                                required
+                                autocomplete="email"
+                                placeholder="operario@empresa.com"
+                                class="form-input"
+                            >
+
+                        </div>
+
+
+                        <p
+                            id="email-validation"
+                            class="validation-message"
+                            style="display:none;"
+                        >
+
+                            <i data-lucide="circle-alert"></i>
+
+                            <span></span>
+
+                        </p>
+
+
+                        @error('email')
+
+                            <p class="field-error">
+
+                                <i data-lucide="circle-alert"></i>
+
+                                {{ $message }}
+
+                            </p>
+
+                        @enderror
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <div class="form-divider"></div>
+
+
+            {{-- =================================================
+                 TIPO DE OPERARIO
+            ================================================== --}}
+
+            <section class="form-section">
+
+                <div class="section-heading">
+
+                    <div class="section-icon">
+
+                        <i data-lucide="workflow"></i>
+
+                    </div>
+
+                    <div>
+
+                        <h3 class="section-title">
+                            Tipo de operario
+                        </h3>
+
+                        <p class="section-description">
+
+                            Selecciona la forma en que este
+                            operario trabajará con los clientes.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="tipo-grid">
+
+                    @forelse($tiposOperario as $tipo)
+
+                        @php
+                            $nombreTipo =
+                                mb_strtolower(
+                                    $tipo->nombre
+                                );
+
+                            $esProspeccion =
+                                str_contains(
+                                    $nombreTipo,
+                                    'prospec'
+                                );
+
+                            $iconoTipo =
+                                $esProspeccion
+                                    ? 'search'
+                                    : 'user-round-check';
+                        @endphp
+
+
+                        <label class="tipo-option">
+
+                            <input
+                                type="radio"
+                                name="id_tipo_operario"
+                                value="{{ $tipo->id_tipo_operario }}"
+                                required
+                                {{
+                                    (string) old('id_tipo_operario')
+                                    ===
+                                    (string) $tipo->id_tipo_operario
+                                        ? 'checked'
+                                        : ''
+                                }}
+                            >
+
+
+                            <div class="tipo-card">
+
+                                <div class="tipo-icon">
+
+                                    <i
+                                        data-lucide="{{ $iconoTipo }}"
+                                    ></i>
+
+                                </div>
+
+
+                                <div class="tipo-content">
+
+                                    <p class="tipo-name">
+
+                                        {{ $tipo->nombre }}
+
+                                    </p>
+
+
+                                    <p class="tipo-description">
+
+                                        {{
+                                            $tipo->descripcion
+                                            ??
+                                            'Tipo de operación asignado al usuario.'
+                                        }}
+
+                                    </p>
+
+                                </div>
+
+
+                                <div class="tipo-check">
+
+                                    <i data-lucide="check"></i>
+
+                                </div>
+
+                            </div>
+
+                        </label>
+
+
+                    @empty
+
+                        <div class="general-error">
+
+                            <i data-lucide="circle-alert"></i>
+
+                            <div>
+
+                                No existen tipos de operario activos.
+                                Debes registrar al menos uno antes
+                                de crear una solicitud.
+
+                            </div>
+
+                        </div>
+
+                    @endforelse
+
+                </div>
+
+
+                @error('id_tipo_operario')
+
+                    <p class="field-error">
+
+                        <i data-lucide="circle-alert"></i>
+
+                        {{ $message }}
+
+                    </p>
+
+                @enderror
+
+
+                <div class="tipo-note">
+
+                    <i data-lucide="info"></i>
+
+                    <div>
+
+                        El tipo seleccionado determinará posteriormente
+                        cómo obtiene y administra clientes este usuario.
+
+                        Los operarios de prospección podrán trabajar
+                        con búsqueda de prospectos, mientras que los
+                        de asignación trabajarán con clientes enviados
+                        por el administrador.
+
+                    </div>
 
                 </div>
 
@@ -1004,7 +1703,9 @@
                 <div class="section-heading">
 
                     <div class="section-icon">
+
                         <i data-lucide="lock-keyhole"></i>
+
                     </div>
 
                     <div>
@@ -1014,7 +1715,11 @@
                         </h3>
 
                         <p class="section-description">
-                            Define las credenciales de acceso del operario.
+
+                            Define las credenciales que utilizará
+                            el operario una vez que su cuenta
+                            sea autorizada.
+
                         </p>
 
                     </div>
@@ -1022,140 +1727,184 @@
                 </div>
 
 
-                {{-- CONTRASEÑA --}}
-<div class="form-field">
-    <label
-        for="password"
-        class="form-label"
-    >
-        Contraseña
-        <span class="required">*</span>
-    </label>
+                <div class="form-grid">
 
-    <div class="input-wrapper">
-        <i
-            data-lucide="key-round"
-            class="input-icon"
-        ></i>
+                    {{-- CONTRASEÑA --}}
 
-        <input
-            type="password"
-            id="password"
-            name="password"
-            required
-            minlength="8"
-            autocomplete="new-password"
-            placeholder="Crea una contraseña segura"
-            class="form-input"
-        >
-    </div>
+                    <div class="form-field">
 
-    {{-- REGLAS --}}
-    <div class="password-rules">
-        <p class="password-rules-title">
-            La contraseña debe contener:
-        </p>
+                        <label
+                            for="password"
+                            class="form-label"
+                        >
 
-        <div
-            class="password-rule"
-            data-rule="length"
-        >
-            <span class="rule-icon">○</span>
-            Mínimo 8 caracteres
-        </div>
+                            Contraseña
 
-        <div
-            class="password-rule"
-            data-rule="uppercase"
-        >
-            <span class="rule-icon">○</span>
-            Al menos una letra mayúscula
-        </div>
+                            <span class="required">*</span>
 
-        <div
-            class="password-rule"
-            data-rule="lowercase"
-        >
-            <span class="rule-icon">○</span>
-            Al menos una letra minúscula
-        </div>
-
-        <div
-            class="password-rule"
-            data-rule="number"
-        >
-            <span class="rule-icon">○</span>
-            Al menos un número
-        </div>
-
-        <div
-            class="password-rule"
-            data-rule="special"
-        >
-            <span class="rule-icon">○</span>
-            Al menos un carácter especial
-        </div>
-
-        <div
-            class="password-rule"
-            data-rule="spaces"
-        >
-            <span class="rule-icon">○</span>
-            No debe contener espacios
-        </div>
-    </div>
-
-    @error('password')
-        <p class="field-error">
-            <i data-lucide="circle-alert"></i>
-            {{ $message }}
-        </p>
-    @enderror
-</div>
+                        </label>
 
 
-{{-- CONFIRMAR --}}
-<div class="form-field">
-    <label
-        for="password_confirmation"
-        class="form-label"
-    >
-        Confirmar contraseña
-        <span class="required">*</span>
-    </label>
+                        <div class="input-wrapper">
 
-    <div class="input-wrapper">
-        <i
-            data-lucide="key-round"
-            class="input-icon"
-        ></i>
+                            <i
+                                data-lucide="key-round"
+                                class="input-icon"
+                            ></i>
 
-        <input
-            type="password"
-            id="password_confirmation"
-            name="password_confirmation"
-            required
-            minlength="8"
-            autocomplete="new-password"
-            placeholder="Repite la contraseña"
-            class="form-input"
-        >
-    </div>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                required
+                                minlength="8"
+                                autocomplete="new-password"
+                                placeholder="Crea una contraseña segura"
+                                class="form-input"
+                            >
 
-    <p
-        id="password-match"
-        class="password-match"
-    ></p>
-</div>
+                        </div>
 
 
-                <div class="password-info">
+                        <div class="password-rules">
 
-                    <i data-lucide="info"></i>
+                            <p class="password-rules-title">
+                                La contraseña debe contener:
+                            </p>
 
-                    <span>
-                        La contraseña debe contener al menos 8 caracteres.
-                    </span>
+
+                            <div
+                                class="password-rule"
+                                data-rule="length"
+                            >
+
+                                <span class="rule-icon">○</span>
+
+                                Mínimo 8 caracteres
+
+                            </div>
+
+
+                            <div
+                                class="password-rule"
+                                data-rule="uppercase"
+                            >
+
+                                <span class="rule-icon">○</span>
+
+                                Al menos una letra mayúscula
+
+                            </div>
+
+
+                            <div
+                                class="password-rule"
+                                data-rule="lowercase"
+                            >
+
+                                <span class="rule-icon">○</span>
+
+                                Al menos una letra minúscula
+
+                            </div>
+
+
+                            <div
+                                class="password-rule"
+                                data-rule="number"
+                            >
+
+                                <span class="rule-icon">○</span>
+
+                                Al menos un número
+
+                            </div>
+
+
+                            <div
+                                class="password-rule"
+                                data-rule="special"
+                            >
+
+                                <span class="rule-icon">○</span>
+
+                                Al menos un carácter especial
+
+                            </div>
+
+
+                            <div
+                                class="password-rule"
+                                data-rule="spaces"
+                            >
+
+                                <span class="rule-icon">○</span>
+
+                                No debe contener espacios
+
+                            </div>
+
+                        </div>
+
+
+                        @error('password')
+
+                            <p class="field-error">
+
+                                <i data-lucide="circle-alert"></i>
+
+                                {{ $message }}
+
+                            </p>
+
+                        @enderror
+
+                    </div>
+
+
+                    {{-- CONFIRMACIÓN --}}
+
+                    <div class="form-field">
+
+                        <label
+                            for="password_confirmation"
+                            class="form-label"
+                        >
+
+                            Confirmar contraseña
+
+                            <span class="required">*</span>
+
+                        </label>
+
+
+                        <div class="input-wrapper">
+
+                            <i
+                                data-lucide="key-round"
+                                class="input-icon"
+                            ></i>
+
+                            <input
+                                type="password"
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                required
+                                minlength="8"
+                                autocomplete="new-password"
+                                placeholder="Repite la contraseña"
+                                class="form-input"
+                            >
+
+                        </div>
+
+
+                        <p
+                            id="password-match"
+                            class="password-match"
+                        ></p>
+
+                    </div>
 
                 </div>
 
@@ -1174,7 +1923,9 @@
                 <div class="section-heading">
 
                     <div class="section-icon">
+
                         <i data-lucide="building-2"></i>
+
                     </div>
 
                     <div>
@@ -1184,7 +1935,10 @@
                         </h3>
 
                         <p class="section-description">
-                            Define la empresa a la que pertenecerá el operario.
+
+                            Define la empresa a la que
+                            pertenecerá el operario.
+
                         </p>
 
                     </div>
@@ -1202,9 +1956,13 @@
                             for="id_empresa"
                             class="form-label"
                         >
+
                             ID de empresa
+
                             <span class="required">*</span>
+
                         </label>
+
 
                         <div class="input-wrapper">
 
@@ -1226,6 +1984,7 @@
 
                         </div>
 
+
                         @error('id_empresa')
 
                             <p class="field-error">
@@ -1242,7 +2001,7 @@
 
                 @else
 
-                    {{-- ADMINISTRADOR CLIENTE --}}
+                    {{-- ADMIN CLIENTE --}}
 
                     <div class="empresa-auto">
 
@@ -1261,8 +2020,10 @@
                                 </p>
 
                                 <p class="empresa-auto-text">
-                                    El operario quedará asociado a la empresa
-                                    de tu cuenta.
+
+                                    El operario quedará asociado
+                                    a la misma empresa de tu cuenta.
+
                                 </p>
 
                             </div>
@@ -1282,34 +2043,69 @@
             </section>
 
 
+            <div class="form-divider"></div>
+
+
             {{-- =================================================
-                 ROL
+                 ROL Y APROBACIÓN
             ================================================== --}}
 
-            <div class="rol-info">
+            <section class="form-section">
 
-                <div class="rol-info-icon">
+                <div class="rol-info">
 
-                    <i data-lucide="shield-check"></i>
+                    <div class="rol-info-icon">
+
+                        <i data-lucide="shield-check"></i>
+
+                    </div>
+
+
+                    <div>
+
+                        <p class="rol-info-title">
+                            Cuenta de operario
+                        </p>
+
+
+                        <p class="rol-info-text">
+
+                            La cuenta será registrada con
+
+                            <span class="rol-info-code">
+                                id_rol = 3
+                            </span>.
+
+                            @if((int) auth()->user()->id_rol === 2)
+
+                                Inicialmente permanecerá inactiva y
+                                con estado de aprobación
+
+                                <span
+                                    class="rol-info-code"
+                                    style="color:#fbbf24;"
+                                >
+                                    Pendiente
+                                </span>
+
+                                hasta que un Super Administrador
+                                autorice la solicitud.
+
+                            @else
+
+                                Al ser registrada por un Super
+                                Administrador quedará aprobada
+                                inmediatamente.
+
+                            @endif
+
+                        </p>
+
+                    </div>
 
                 </div>
 
-                <div>
-
-                    <p class="rol-info-title">
-                        Cuenta de operario
-                    </p>
-
-                    <p class="rol-info-text">
-                        La cuenta se creará automáticamente con
-                        <span class="rol-info-code">id_rol = 3</span>.
-                        El operario tendrá acceso únicamente a las funciones
-                        correspondientes a su rol.
-                    </p>
-
-                </div>
-
-            </div>
+            </section>
 
 
             {{-- =================================================
@@ -1335,9 +2131,19 @@
                     class="btn-crear"
                 >
 
-                    <i data-lucide="user-plus"></i>
+                    @if((int) auth()->user()->id_rol === 2)
 
-                    Crear operario
+                        <i data-lucide="send"></i>
+
+                        Enviar solicitud
+
+                    @else
+
+                        <i data-lucide="user-plus"></i>
+
+                        Crear operario
+
+                    @endif
 
                 </button>
 
@@ -1348,69 +2154,133 @@
     </div>
 
 </div>
+
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    const formulario = document.querySelector('.crear-form');
-
-    const email = document.getElementById('email');
-    const emailValidation = document.getElementById('email-validation');
-
-    const password = document.getElementById('password');
-    const passwordConfirmation = document.getElementById('password_confirmation');
-    const passwordMatch = document.getElementById('password-match');
-
-
-    /* =========================================================
-       VALIDACIÓN DE CORREO
-    ========================================================= */
-
-    function validarEmail() {
-
-        if (!email) return true;
-
-        const valor = email.value.trim();
-
-        if (valor === '') {
-            email.classList.remove('field-valid', 'field-invalid');
-
-            if (emailValidation) {
-                emailValidation.style.display = 'none';
-            }
-
-            email.setCustomValidity('');
-
-            return false;
-        }
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
         /*
-         * Formato:
-         * usuario@dominio.extensión
-         */
-        const formatoValido =
-            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor);
+        |--------------------------------------------------------------------------
+        | ICONOS
+        |--------------------------------------------------------------------------
+        */
 
-        if (formatoValido) {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
 
-            email.classList.remove('field-invalid');
-            email.classList.add('field-valid');
 
-            if (emailValidation) {
-                emailValidation.style.display = 'none';
+        /*
+        |--------------------------------------------------------------------------
+        | ELEMENTOS
+        |--------------------------------------------------------------------------
+        */
+
+        const formulario =
+            document.getElementById(
+                'crearOperarioForm'
+            );
+
+        const email =
+            document.getElementById(
+                'email'
+            );
+
+        const emailValidation =
+            document.getElementById(
+                'email-validation'
+            );
+
+        const password =
+            document.getElementById(
+                'password'
+            );
+
+        const passwordConfirmation =
+            document.getElementById(
+                'password_confirmation'
+            );
+
+        const passwordMatch =
+            document.getElementById(
+                'password-match'
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | EMAIL
+        |--------------------------------------------------------------------------
+        */
+
+        function validarEmail() {
+
+            if (!email) {
+                return true;
             }
 
-            email.setCustomValidity('');
+            const valor =
+                email.value.trim();
 
-            return true;
+            if (valor === '') {
 
-        } else {
+                email.classList.remove(
+                    'field-valid',
+                    'field-invalid'
+                );
 
-            email.classList.remove('field-valid');
-            email.classList.add('field-invalid');
+                if (emailValidation) {
+                    emailValidation.style.display =
+                        'none';
+                }
+
+                email.setCustomValidity('');
+
+                return false;
+            }
+
+            const formatoValido =
+                /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+                    .test(valor);
+
+            if (formatoValido) {
+
+                email.classList.remove(
+                    'field-invalid'
+                );
+
+                email.classList.add(
+                    'field-valid'
+                );
+
+                if (emailValidation) {
+                    emailValidation.style.display =
+                        'none';
+                }
+
+                email.setCustomValidity('');
+
+                return true;
+            }
+
+            email.classList.remove(
+                'field-valid'
+            );
+
+            email.classList.add(
+                'field-invalid'
+            );
 
             if (emailValidation) {
-                emailValidation.style.display = 'flex';
-                emailValidation.querySelector('span').textContent =
+
+                emailValidation.style.display =
+                    'flex';
+
+                emailValidation
+                    .querySelector('span')
+                    .textContent =
                     'Ingresa un correo electrónico válido.';
             }
 
@@ -1420,203 +2290,236 @@ document.addEventListener('DOMContentLoaded', function () {
 
             return false;
         }
-    }
 
 
-    if (email) {
-        email.addEventListener('input', validarEmail);
-        email.addEventListener('blur', validarEmail);
-    }
+        /*
+        |--------------------------------------------------------------------------
+        | REGLAS DE CONTRASEÑA
+        |--------------------------------------------------------------------------
+        */
 
+        function actualizarRegla(
+            nombre,
+            cumple
+        ) {
+            const regla =
+                document.querySelector(
+                    `.password-rule[data-rule="${nombre}"]`
+                );
 
-    /* =========================================================
-       VALIDACIÓN DE CONTRASEÑA
-    ========================================================= */
-
-    function actualizarRegla(nombre, cumple) {
-
-        const regla = document.querySelector(
-            `.password-rule[data-rule="${nombre}"]`
-        );
-
-        if (!regla) return;
-
-        const icono = regla.querySelector('.rule-icon');
-
-        regla.classList.remove(
-            'rule-valid',
-            'rule-invalid'
-        );
-
-        if (cumple) {
-
-            regla.classList.add('rule-valid');
-            icono.textContent = '✓';
-
-        } else {
-
-            icono.textContent = '○';
-        }
-    }
-
-
-    function validarPassword() {
-
-        if (!password) return false;
-
-        const valor = password.value;
-
-        const reglas = {
-
-            length:
-                valor.length >= 8,
-
-            uppercase:
-                /[A-ZÁÉÍÓÚÑ]/.test(valor),
-
-            lowercase:
-                /[a-záéíóúñ]/.test(valor),
-
-            number:
-                /[0-9]/.test(valor),
-
-            special:
-                /[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]/.test(valor),
-
-            spaces:
-                !/\s/.test(valor)
-        };
-
-
-        actualizarRegla(
-            'length',
-            reglas.length
-        );
-
-        actualizarRegla(
-            'uppercase',
-            reglas.uppercase
-        );
-
-        actualizarRegla(
-            'lowercase',
-            reglas.lowercase
-        );
-
-        actualizarRegla(
-            'number',
-            reglas.number
-        );
-
-        actualizarRegla(
-            'special',
-            reglas.special
-        );
-
-        actualizarRegla(
-            'spaces',
-            reglas.spaces
-        );
-
-
-        const todasCumplen =
-            reglas.length &&
-            reglas.uppercase &&
-            reglas.lowercase &&
-            reglas.number &&
-            reglas.special &&
-            reglas.spaces;
-
-
-        if (valor === '') {
-
-            password.classList.remove(
-                'field-valid',
-                'field-invalid'
-            );
-
-        } else if (todasCumplen) {
-
-            password.classList.remove('field-invalid');
-            password.classList.add('field-valid');
-
-        } else {
-
-            password.classList.remove('field-valid');
-            password.classList.add('field-invalid');
-        }
-
-
-        validarCoincidencia();
-
-        return todasCumplen;
-    }
-
-
-    /* =========================================================
-       CONFIRMACIÓN DE CONTRASEÑA
-    ========================================================= */
-
-    function validarCoincidencia() {
-
-        if (!password || !passwordConfirmation) {
-            return false;
-        }
-
-        const nueva = password.value;
-        const confirmacion = passwordConfirmation.value;
-
-
-        if (confirmacion === '') {
-
-            passwordConfirmation.classList.remove(
-                'field-valid',
-                'field-invalid'
-            );
-
-            if (passwordMatch) {
-                passwordMatch.className = 'password-match';
-                passwordMatch.textContent = '';
+            if (!regla) {
+                return;
             }
 
-            passwordConfirmation.setCustomValidity('');
+            const icono =
+                regla.querySelector(
+                    '.rule-icon'
+                );
 
-            return false;
+            regla.classList.remove(
+                'rule-valid',
+                'rule-invalid'
+            );
+
+            if (cumple) {
+
+                regla.classList.add(
+                    'rule-valid'
+                );
+
+                icono.textContent = '✓';
+
+            } else {
+
+                icono.textContent = '○';
+            }
         }
 
 
-        if (nueva === confirmacion) {
+        function validarPassword() {
 
-            passwordConfirmation.classList.remove(
-                'field-invalid'
-            );
-
-            passwordConfirmation.classList.add(
-                'field-valid'
-            );
-
-            if (passwordMatch) {
-
-                passwordMatch.className =
-                    'password-match valid';
-
-                passwordMatch.textContent =
-                    '✓ Las contraseñas coinciden.';
+            if (!password) {
+                return false;
             }
 
-            passwordConfirmation.setCustomValidity('');
+            const valor =
+                password.value;
 
-            return true;
+            /*
+            |--------------------------------------------------------------------------
+            | Estas reglas coinciden con la validación del controlador.
+            |--------------------------------------------------------------------------
+            */
 
-        } else {
+            const reglas = {
+                length:
+                    valor.length >= 8,
 
-            passwordConfirmation.classList.remove(
-                'field-valid'
+                uppercase:
+                    /[A-Z]/.test(valor),
+
+                lowercase:
+                    /[a-z]/.test(valor),
+
+                number:
+                    /[0-9]/.test(valor),
+
+                special:
+                    /[^A-Za-z0-9\s]/.test(valor),
+
+                spaces:
+                    !/\s/.test(valor),
+            };
+
+
+            Object.entries(
+                reglas
+            ).forEach(
+                function ([nombre, cumple]) {
+
+                    actualizarRegla(
+                        nombre,
+                        cumple
+                    );
+
+                }
             );
 
-            passwordConfirmation.classList.add(
-                'field-invalid'
-            );
+
+            const todasCumplen =
+                reglas.length &&
+                reglas.uppercase &&
+                reglas.lowercase &&
+                reglas.number &&
+                reglas.special &&
+                reglas.spaces;
+
+
+            if (valor === '') {
+
+                password.classList.remove(
+                    'field-valid',
+                    'field-invalid'
+                );
+
+            } else if (todasCumplen) {
+
+                password.classList.remove(
+                    'field-invalid'
+                );
+
+                password.classList.add(
+                    'field-valid'
+                );
+
+            } else {
+
+                password.classList.remove(
+                    'field-valid'
+                );
+
+                password.classList.add(
+                    'field-invalid'
+                );
+            }
+
+
+            validarCoincidencia();
+
+            return todasCumplen;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CONFIRMACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        function validarCoincidencia() {
+
+            if (
+                !password ||
+                !passwordConfirmation
+            ) {
+                return false;
+            }
+
+            const nueva =
+                password.value;
+
+            const confirmacion =
+                passwordConfirmation.value;
+
+
+            if (confirmacion === '') {
+
+                passwordConfirmation
+                    .classList
+                    .remove(
+                        'field-valid',
+                        'field-invalid'
+                    );
+
+                if (passwordMatch) {
+
+                    passwordMatch.className =
+                        'password-match';
+
+                    passwordMatch.textContent =
+                        '';
+                }
+
+                passwordConfirmation
+                    .setCustomValidity('');
+
+                return false;
+            }
+
+
+            if (
+                nueva ===
+                confirmacion
+            ) {
+                passwordConfirmation
+                    .classList
+                    .remove(
+                        'field-invalid'
+                    );
+
+                passwordConfirmation
+                    .classList
+                    .add(
+                        'field-valid'
+                    );
+
+                if (passwordMatch) {
+
+                    passwordMatch.className =
+                        'password-match valid';
+
+                    passwordMatch.textContent =
+                        '✓ Las contraseñas coinciden.';
+                }
+
+                passwordConfirmation
+                    .setCustomValidity('');
+
+                return true;
+            }
+
+
+            passwordConfirmation
+                .classList
+                .remove(
+                    'field-valid'
+                );
+
+            passwordConfirmation
+                .classList
+                .add(
+                    'field-invalid'
+                );
 
             if (passwordMatch) {
 
@@ -1627,115 +2530,180 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Las contraseñas no coinciden.';
             }
 
-            passwordConfirmation.setCustomValidity(
-                'Las contraseñas no coinciden.'
-            );
+            passwordConfirmation
+                .setCustomValidity(
+                    'Las contraseñas no coinciden.'
+                );
 
             return false;
         }
-    }
 
 
-    if (password) {
-        password.addEventListener(
-            'input',
-            validarPassword
-        );
-    }
+        /*
+        |--------------------------------------------------------------------------
+        | EVENTOS
+        |--------------------------------------------------------------------------
+        */
+
+        if (email) {
+
+            email.addEventListener(
+                'input',
+                validarEmail
+            );
+
+            email.addEventListener(
+                'blur',
+                validarEmail
+            );
+        }
 
 
-    if (passwordConfirmation) {
-        passwordConfirmation.addEventListener(
-            'input',
-            validarCoincidencia
-        );
-    }
+        if (password) {
+
+            password.addEventListener(
+                'input',
+                validarPassword
+            );
+        }
 
 
-    /* =========================================================
-       VALIDACIÓN AL ENVIAR
-    ========================================================= */
+        if (passwordConfirmation) {
 
-    if (formulario) {
-
-        formulario.addEventListener(
-            'submit',
-            function (e) {
-
-                const emailValido =
-                    validarEmail();
-
-                const passwordValida =
-                    validarPassword();
-
-                const passwordCoincide =
-                    validarCoincidencia();
+            passwordConfirmation
+                .addEventListener(
+                    'input',
+                    validarCoincidencia
+                );
+        }
 
 
-                if (!emailValido) {
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN AL ENVIAR
+        |--------------------------------------------------------------------------
+        */
 
-                    e.preventDefault();
+        if (formulario) {
 
-                    alert(
-                        'Ingresa un correo electrónico válido.'
-                    );
+            formulario.addEventListener(
+                'submit',
+                function (e) {
 
-                    email.focus();
+                    const emailValido =
+                        validarEmail();
 
-                    return;
+                    const passwordValida =
+                        validarPassword();
+
+                    const passwordCoincide =
+                        validarCoincidencia();
+
+                    const tipoSeleccionado =
+                        document.querySelector(
+                            'input[name="id_tipo_operario"]:checked'
+                        );
+
+
+                    if (!emailValido) {
+
+                        e.preventDefault();
+
+                        alert(
+                            'Ingresa un correo electrónico válido.'
+                        );
+
+                        email.focus();
+
+                        return;
+                    }
+
+
+                    if (!tipoSeleccionado) {
+
+                        e.preventDefault();
+
+                        alert(
+                            'Selecciona el tipo de operario.'
+                        );
+
+                        const tipoGrid =
+                            document.querySelector(
+                                '.tipo-grid'
+                            );
+
+                        if (tipoGrid) {
+
+                            tipoGrid.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center',
+                            });
+                        }
+
+                        return;
+                    }
+
+
+                    if (!passwordValida) {
+
+                        e.preventDefault();
+
+                        alert(
+                            'La contraseña no cumple con todos los requisitos de seguridad.'
+                        );
+
+                        password.focus();
+
+                        return;
+                    }
+
+
+                    if (!passwordCoincide) {
+
+                        e.preventDefault();
+
+                        alert(
+                            'Las contraseñas no coinciden.'
+                        );
+
+                        passwordConfirmation.focus();
+
+                        return;
+                    }
                 }
+            );
+        }
 
 
-                if (!passwordValida) {
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN INICIAL
+        |--------------------------------------------------------------------------
+        */
 
-                    e.preventDefault();
+        if (
+            email &&
+            email.value !== ''
+        ) {
+            validarEmail();
+        }
 
-                    alert(
-                        'La contraseña no cumple con todos los requisitos de seguridad.'
-                    );
+        if (
+            password &&
+            password.value !== ''
+        ) {
+            validarPassword();
+        }
 
-                    password.focus();
+        if (
+            passwordConfirmation &&
+            passwordConfirmation.value !== ''
+        ) {
+            validarCoincidencia();
+        }
 
-                    return;
-                }
-
-
-                if (!passwordCoincide) {
-
-                    e.preventDefault();
-
-                    alert(
-                        'Las contraseñas no coinciden.'
-                    );
-
-                    passwordConfirmation.focus();
-
-                    return;
-                }
-            }
-        );
     }
-
-
-    /* =========================================================
-       VALIDACIÓN INICIAL
-    ========================================================= */
-
-    if (email && email.value !== '') {
-        validarEmail();
-    }
-
-    if (password && password.value !== '') {
-        validarPassword();
-    }
-
-    if (
-        passwordConfirmation &&
-        passwordConfirmation.value !== ''
-    ) {
-        validarCoincidencia();
-    }
-
-});
+);
 </script>
+
 @endsection

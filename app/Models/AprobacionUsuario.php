@@ -5,30 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ObjetivoOperario extends Model
+class AprobacionUsuario extends Model
 {
     /*
     |--------------------------------------------------------------------------
-    | TABLA Y LLAVE PRIMARIA
+    | TABLA
     |--------------------------------------------------------------------------
     */
 
-    protected $table = 'objetivos_operarios';
+    protected $table = 'aprobaciones_usuario';
 
-    protected $primaryKey = 'id_objetivo';
+    protected $primaryKey = 'id_aprobacion';
 
     public $incrementing = true;
 
     protected $keyType = 'int';
 
-
     /*
     |--------------------------------------------------------------------------
-    | TIMESTAMPS
+    | LA TABLA NO TIENE created_at / updated_at
     |--------------------------------------------------------------------------
     */
 
-    public $timestamps = true;
+    public $timestamps = false;
 
 
     /*
@@ -39,11 +38,15 @@ class ObjetivoOperario extends Model
 
     protected $fillable = [
         'id_usuario',
-        'objetivo_llamadas',
-        'periodo',
-        'fecha_inicio',
-        'fecha_fin',
         'estado',
+
+        'solicitado_por',
+        'fecha_solicitud',
+
+        'revisado_por',
+        'fecha_revision',
+
+        'motivo_rechazo',
     ];
 
 
@@ -56,15 +59,14 @@ class ObjetivoOperario extends Model
     protected function casts(): array
     {
         return [
-            'id_objetivo' => 'integer',
+            'id_aprobacion' => 'integer',
             'id_usuario' => 'integer',
-            'objetivo_llamadas' => 'integer',
 
-            'fecha_inicio' => 'date',
-            'fecha_fin' => 'date',
+            'solicitado_por' => 'integer',
+            'revisado_por' => 'integer',
 
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
+            'fecha_solicitud' => 'datetime',
+            'fecha_revision' => 'datetime',
         ];
     }
 
@@ -75,11 +77,43 @@ class ObjetivoOperario extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function operario(): BelongsTo
+    public function usuario(): BelongsTo
     {
         return $this->belongsTo(
             User::class,
             'id_usuario',
+            'id_usuario'
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN QUE SOLICITÓ
+    |--------------------------------------------------------------------------
+    */
+
+    public function solicitante(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'solicitado_por',
+            'id_usuario'
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SUPER ADMIN QUE REVISÓ
+    |--------------------------------------------------------------------------
+    */
+
+    public function revisor(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'revisado_por',
             'id_usuario'
         );
     }

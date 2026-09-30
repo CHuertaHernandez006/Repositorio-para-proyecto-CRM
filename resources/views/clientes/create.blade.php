@@ -406,34 +406,141 @@
                         </div>
 
                         <!-- Fuente -->
-                        <div>
-                            <label for="fuente" class="cf-label">Fuente (Origen)</label>
-                            <div class="cf-field">
-                                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                                <input type="text" name="fuente" id="fuente" class="cf-input" placeholder="Ej. Facebook, Referido" value="{{ old('fuente') }}" maxlength="100">
-                            </div>
-                        </div>
+<div>
+    <label for="fuente" class="cf-label">
+        Fuente (Origen)
+    </label>
 
+    <div class="cf-field">
+        <i
+            class="bi bi-box-arrow-in-right"
+            aria-hidden="true"
+        ></i>
+
+        <input
+            type="text"
+            name="fuente"
+            id="fuente"
+            class="cf-input"
+            placeholder="Ej. Facebook, Referido"
+            value="{{ old('fuente') }}"
+            maxlength="100"
+            list="lista-fuentes"
+        >
+
+        <datalist id="lista-fuentes">
+            @foreach ($fuentes as $fuente)
+                <option value="{{ $fuente->nombre }}"></option>
+            @endforeach
+        </datalist>
+    </div>
+
+    <p class="cf-help">
+        Puedes seleccionar una fuente existente
+        o escribir una nueva.
+    </p>
+</div>
                         <!-- Tipo de Cliente -->
-                        <div>
-                            <label for="id_tipo_cliente" class="cf-label">Tipo de cliente <span class="cf-required" aria-hidden="true">*</span></label>
-                            <select name="id_tipo_cliente" id="id_tipo_cliente" class="cf-input cf-select" required>
-                                <option value="1" {{ old('id_tipo_cliente', '1') == '1' ? 'selected' : '' }}>B2B (Empresa)</option>
-                                <option value="2" {{ old('id_tipo_cliente') == '2' ? 'selected' : '' }}>B2C (Consumidor final)</option>
-                                <option value="3" {{ old('id_tipo_cliente') == '3' ? 'selected' : '' }}>Socio Comercial</option>
-                            </select>
-                        </div>
+<div>
+    <label
+        for="id_tipo_cliente"
+        class="cf-label"
+    >
+        Tipo de cliente
+        <span
+            class="cf-required"
+            aria-hidden="true"
+        >*</span>
+    </label>
 
-                        <!-- Estado Lead -->
-                        <div>
-                            <label for="id_estado_lead" class="cf-label">Estado Lead <span class="cf-required" aria-hidden="true">*</span></label>
-                            <select name="id_estado_lead" id="id_estado_lead" class="cf-input cf-select" required>
-                                <option value="1" {{ old('id_estado_lead', '1') == '1' ? 'selected' : '' }}>Nuevo</option>
-                                <option value="2" {{ old('id_estado_lead') == '2' ? 'selected' : '' }}>Contactado</option>
-                                <option value="3" {{ old('id_estado_lead') == '3' ? 'selected' : '' }}>Interesado</option>
-                                <option value="4" {{ old('id_estado_lead') == '4' ? 'selected' : '' }}>Cliente</option>
-                            </select>
-                        </div>
+    <select
+        name="id_tipo_cliente"
+        id="id_tipo_cliente"
+        class="cf-input cf-select"
+        required
+    >
+        <option value="">
+            Selecciona un tipo de cliente...
+        </option>
+
+        @forelse ($tiposCliente as $tipo)
+            <option
+                value="{{ $tipo->id_tipo_cliente }}"
+                {{
+                    (string) old('id_tipo_cliente')
+                    ===
+                    (string) $tipo->id_tipo_cliente
+                        ? 'selected'
+                        : ''
+                }}
+            >
+                {{ $tipo->nombre }}
+            </option>
+        @empty
+            <option value="" disabled>
+                No hay tipos de cliente disponibles
+            </option>
+        @endforelse
+    </select>
+
+    @error('id_tipo_cliente')
+        <p class="cf-error">
+            <i class="bi bi-exclamation-circle"></i>
+            {{ $message }}
+        </p>
+    @enderror
+</div>
+
+                       <!-- Estado Lead -->
+<div>
+    <label
+        for="id_estado_lead"
+        class="cf-label"
+    >
+        Estado Lead
+        <span
+            class="cf-required"
+            aria-hidden="true"
+        >*</span>
+    </label>
+
+    <select
+        name="id_estado_lead"
+        id="id_estado_lead"
+        class="cf-input cf-select"
+        required
+    >
+        <option value="">
+            Selecciona un estado...
+        </option>
+
+        @forelse ($estadosLead as $estadoLead)
+            <option
+                value="{{ $estadoLead->id_estado_lead }}"
+                {{
+                    (string) old('id_estado_lead')
+                    ===
+                    (string) $estadoLead->id_estado_lead
+                        ? 'selected'
+                        : ''
+                }}
+            >
+                {{ $estadoLead->nombre }}
+            </option>
+        @empty
+            <option value="" disabled>
+                No hay estados de lead disponibles
+            </option>
+        @endforelse
+    </select>
+
+    @error('id_estado_lead')
+        <p class="cf-error">
+            <i class="bi bi-exclamation-circle"></i>
+            {{ $message }}
+        </p>
+    @enderror
+</div>
                     </div>
                 </fieldset>
 

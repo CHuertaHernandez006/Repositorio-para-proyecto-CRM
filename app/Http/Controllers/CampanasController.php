@@ -7,6 +7,8 @@ use App\Models\Cliente;
 use App\Models\EstadoCampana;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CampanasController extends Controller
 {
@@ -18,17 +20,26 @@ class CampanasController extends Controller
 
     public function index(Request $request)
     {
+        $usuario = auth()->user();
+
+        $this->autorizarAdministracion($usuario);
+
         /*
         |--------------------------------------------------------------------------
-        | Antes de mostrar las campañas actualizamos automáticamente
-        | su estado de acuerdo con las fechas.
+        | SINCRONIZAR ESTADOS AUTOMÁTICOS
         |--------------------------------------------------------------------------
         */
 
-        $this->sincronizarEstadosAutomaticos();
+        $this->sincronizarEstadosAutomaticos($usuario);
 
+        /*
+        |--------------------------------------------------------------------------
+        | CONSULTA BASE
+        |--------------------------------------------------------------------------
+        */
 
-        $consulta = Campana::query()
+        $consulta = $this
+            ->consultaCampanasVisibles($usuario)
             ->with([
                 'estadoCampana',
 
@@ -40,7 +51,6 @@ class CampanasController extends Controller
             ])
             ->withCount('clientes');
 
-
         /*
         |--------------------------------------------------------------------------
         | BÚSQUEDA
@@ -48,30 +58,31 @@ class CampanasController extends Controller
         */
 
         if ($request->filled('buscar')) {
+            $buscar = trim((string) $request->buscar);
 
-            $buscar = trim($request->buscar);
+            $termino =
+                '%' .
+                mb_strtolower($buscar, 'UTF-8') .
+                '%';
 
-            $consulta->where(function ($query) use ($buscar) {
-
-                $query
-                    ->where(
-                        'nombre',
-                        'like',
-                        '%' . $buscar . '%'
-                    )
-                    ->orWhere(
-                        'descripcion',
-                        'like',
-                        '%' . $buscar . '%'
-                    )
-                    ->orWhere(
-                        'objetivo',
-                        'like',
-                        '%' . $buscar . '%'
-                    );
-            });
+            $consulta->where(
+                function ($query) use ($termino) {
+                    $query
+                        ->whereRaw(
+                            'LOWER(nombre) LIKE ?',
+                            [$termino]
+                        )
+                        ->orWhereRaw(
+                            "LOWER(COALESCE(descripcion, '')) LIKE ?",
+                            [$termino]
+                        )
+                        ->orWhereRaw(
+                            "LOWER(COALESCE(objetivo, '')) LIKE ?",
+                            [$termino]
+                        );
+                }
+            );
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -80,13 +91,11 @@ class CampanasController extends Controller
         */
 
         if ($request->filled('estado')) {
-
             $consulta->where(
                 'id_estado_campana',
                 $request->estado
             );
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -95,64 +104,44 @@ class CampanasController extends Controller
         */
 
         switch ($request->get('orden')) {
-
             case 'nombre_desc':
-
                 $consulta->orderByDesc('nombre');
-
                 break;
 
-
             case 'inicio_asc':
-
                 $consulta->orderBy(
                     'fecha_inicio',
                     'asc'
                 );
-
                 break;
 
-
             case 'inicio_desc':
-
                 $consulta->orderByDesc(
                     'fecha_inicio'
                 );
-
                 break;
 
-
             case 'fin_asc':
-
                 $consulta->orderBy(
                     'fecha_fin',
                     'asc'
                 );
-
                 break;
 
-
             case 'fin_desc':
-
                 $consulta->orderByDesc(
                     'fecha_fin'
                 );
-
                 break;
 
-
             case 'nombre_asc':
-
             default:
-
                 $consulta->orderBy(
                     'nombre',
                     'asc'
                 );
-
                 break;
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -164,7 +153,6 @@ class CampanasController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-
         /*
         |--------------------------------------------------------------------------
         | CATÁLOGO DE ESTADOS
@@ -172,10 +160,9 @@ class CampanasController extends Controller
         */
 
         $estados = EstadoCampana::query()
-            ->where('estado', true)
+            ->where('activo', true)
             ->orderBy('nombre')
             ->get();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -185,28 +172,34 @@ class CampanasController extends Controller
 
         $hoy = now()->toDateString();
 
+        $baseEstadisticas =
+            $this->consultaCampanasVisibles(
+                $usuario
+            );
 
         $totalCampanas =
-            Campana::count();
-
+            (clone $baseEstadisticas)->count();
 
         $campanasEnCurso =
-            Campana::query()
+            (clone $baseEstadisticas)
                 ->whereDate(
                     'fecha_inicio',
                     '<=',
                     $hoy
                 )
-                ->whereDate(
-                    'fecha_fin',
-                    '>=',
-                    $hoy
-                )
+                ->where(function ($query) use ($hoy) {
+                    $query
+                        ->whereNull('fecha_fin')
+                        ->orWhereDate(
+                            'fecha_fin',
+                            '>=',
+                            $hoy
+                        );
+                })
                 ->count();
 
-
         $campanasProximas =
-            Campana::query()
+            (clone $baseEstadisticas)
                 ->whereDate(
                     'fecha_inicio',
                     '>',
@@ -214,16 +207,15 @@ class CampanasController extends Controller
                 )
                 ->count();
 
-
         $campanasFinalizadas =
-            Campana::query()
+            (clone $baseEstadisticas)
+                ->whereNotNull('fecha_fin')
                 ->whereDate(
                     'fecha_fin',
                     '<',
                     $hoy
                 )
                 ->count();
-
 
         return view(
             'campanas.index',
@@ -247,11 +239,14 @@ class CampanasController extends Controller
 
     public function create()
     {
+        $usuario = auth()->user();
+
+        $this->autorizarAdministracion($usuario);
+
         $estados = EstadoCampana::query()
-            ->where('estado', true)
+            ->where('activo', true)
             ->orderBy('nombre')
             ->get();
-
 
         return view(
             'campanas.create',
@@ -262,19 +257,15 @@ class CampanasController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | GUARDAR
+    | GUARDAR CAMPAÑA
     |--------------------------------------------------------------------------
     */
 
     public function store(Request $request)
     {
-        /*
-        |--------------------------------------------------------------------------
-        | Ya NO recibimos el estado como una decisión del usuario.
-        |
-        | Laravel solamente recibe las fechas y calcula el estado real.
-        |--------------------------------------------------------------------------
-        */
+        $usuario = auth()->user();
+
+        $this->autorizarAdministracion($usuario);
 
         $datos = $request->validate(
             [
@@ -306,6 +297,19 @@ class CampanasController extends Controller
                     'date',
                     'after_or_equal:fecha_inicio',
                 ],
+
+                /*
+                |--------------------------------------------------------------------------
+                | Super Admin puede mandar explícitamente la empresa.
+                | Admin Cliente siempre queda forzado a su propia empresa.
+                |--------------------------------------------------------------------------
+                */
+
+                'id_empresa' => [
+                    'nullable',
+                    'integer',
+                    'exists:empresas,id_empresa',
+                ],
             ],
             [
                 'nombre.required' =>
@@ -331,12 +335,16 @@ class CampanasController extends Controller
             ]
         );
 
+        $idEmpresa =
+            $this->resolverEmpresaParaNuevaCampana(
+                $usuario,
+                $datos['id_empresa'] ?? null
+            );
 
-        /*
-        |--------------------------------------------------------------------------
-        | CALCULAR ESTADO
-        |--------------------------------------------------------------------------
-        */
+        $this->validarNombreUnico(
+            $datos['nombre'],
+            $idEmpresa
+        );
 
         $estado =
             $this->obtenerEstadoAutomatico(
@@ -344,13 +352,13 @@ class CampanasController extends Controller
                 $datos['fecha_fin']
             );
 
+        $datos['id_empresa'] =
+            $idEmpresa;
 
         $datos['id_estado_campana'] =
             $estado->id_estado_campana;
 
-
         Campana::create($datos);
-
 
         return redirect()
             ->route('campanas.index')
@@ -369,27 +377,23 @@ class CampanasController extends Controller
 
     public function show($id)
     {
-        $campana = Campana::query()
+        $usuario = auth()->user();
+
+        $this->autorizarAdministracion($usuario);
+
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
             ->with('estadoCampana')
             ->withCount('clientes')
             ->findOrFail($id);
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Actualizamos su estado antes de mostrarla.
-        |--------------------------------------------------------------------------
-        */
 
         $this->sincronizarEstadoAutomatico(
             $campana
         );
 
-
         $campana->load(
             'estadoCampana'
         );
-
 
         return view(
             'campanas.show',
@@ -406,34 +410,27 @@ class CampanasController extends Controller
 
     public function edit($id)
     {
-        $campana =
-            Campana::query()
-                ->with('estadoCampana')
-                ->findOrFail($id);
+        $usuario = auth()->user();
 
+        $this->autorizarAdministracion($usuario);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Antes de editar comprobamos cuál es su estado actual.
-        |--------------------------------------------------------------------------
-        */
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
+            ->with('estadoCampana')
+            ->findOrFail($id);
 
         $this->sincronizarEstadoAutomatico(
             $campana
         );
 
-
         $campana->load(
             'estadoCampana'
         );
 
-
-        $estados =
-            EstadoCampana::query()
-                ->where('estado', true)
-                ->orderBy('nombre')
-                ->get();
-
+        $estados = EstadoCampana::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
 
         return view(
             'campanas.edit',
@@ -447,7 +444,7 @@ class CampanasController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | ACTUALIZAR
+    | ACTUALIZAR CAMPAÑA
     |--------------------------------------------------------------------------
     */
 
@@ -455,17 +452,14 @@ class CampanasController extends Controller
         Request $request,
         $id
     ) {
-        $campana =
-            Campana::query()
-                ->with('estadoCampana')
-                ->findOrFail($id);
+        $usuario = auth()->user();
 
+        $this->autorizarAdministracion($usuario);
 
-        /*
-        |--------------------------------------------------------------------------
-        | El estado tampoco se recibe manualmente al editar.
-        |--------------------------------------------------------------------------
-        */
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
+            ->with('estadoCampana')
+            ->findOrFail($id);
 
         $datos = $request->validate(
             [
@@ -522,15 +516,22 @@ class CampanasController extends Controller
             ]
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | El tenant de una campaña no se cambia desde edición.
+        |--------------------------------------------------------------------------
+        */
+
+        $this->validarNombreUnico(
+            $datos['nombre'],
+            (int) $campana->id_empresa,
+            (int) $campana->id_campana
+        );
 
         /*
         |--------------------------------------------------------------------------
         | CANCELADA ES UNA EXCEPCIÓN
         |--------------------------------------------------------------------------
-        |
-        | Si una campaña fue cancelada explícitamente,
-        | editar el nombre, descripción o fechas no la reactiva.
-        |
         */
 
         if (
@@ -538,32 +539,20 @@ class CampanasController extends Controller
                 $campana
             )
         ) {
-
             $datos['id_estado_campana'] =
                 $campana->id_estado_campana;
-
         } else {
-
-            /*
-            |--------------------------------------------------------------------------
-            | CÁLCULO AUTOMÁTICO NORMAL
-            |--------------------------------------------------------------------------
-            */
-
             $estado =
                 $this->obtenerEstadoAutomatico(
                     $datos['fecha_inicio'],
                     $datos['fecha_fin']
                 );
 
-
             $datos['id_estado_campana'] =
                 $estado->id_estado_campana;
         }
 
-
         $campana->update($datos);
-
 
         return redirect()
             ->route(
@@ -585,30 +574,21 @@ class CampanasController extends Controller
 
     public function clientes($campana)
     {
-        $campana =
-            Campana::query()
-                ->with([
-                    'estadoCampana',
-                    'clientes',
-                ])
-                ->findOrFail($campana);
+        $usuario = auth()->user();
 
+        $this->autorizarAdministracion($usuario);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Antes de mostrar los clientes también actualizamos
-        | el estado temporal de la campaña.
-        |--------------------------------------------------------------------------
-        */
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
+            ->with([
+                'estadoCampana',
+                'clientes',
+            ])
+            ->findOrFail($campana);
 
         $this->sincronizarEstadoAutomatico(
             $campana
         );
-
-
-        $usuario =
-            auth()->user();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -616,71 +596,47 @@ class CampanasController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $consultaAsignados =
+        $clientesAsignados =
             $campana
                 ->clientes()
-                ->orderBy('nombre');
-
-
-        if (
-            $usuario &&
-            $usuario->id_rol == 2 &&
-            $usuario->id_empresa
-        ) {
-
-            $consultaAsignados->where(
-                'clientes.id_empresa',
-                $usuario->id_empresa
-            );
-        }
-
-
-        $clientesAsignados =
-            $consultaAsignados->get();
-
+                ->where(
+                    'clientes.id_empresa',
+                    $campana->id_empresa
+                )
+                ->orderBy('nombre')
+                ->orderBy('apellido_paterno')
+                ->get();
 
         $idsAsignados =
             $clientesAsignados
                 ->pluck('id_cliente');
 
-
         /*
         |--------------------------------------------------------------------------
         | CLIENTES DISPONIBLES
         |--------------------------------------------------------------------------
+        |
+        | Siempre deben pertenecer al MISMO tenant que la campaña.
+        |--------------------------------------------------------------------------
         */
 
-        $consultaDisponibles =
+        $clientesDisponibles =
             Cliente::query()
+                ->where(
+                    'id_empresa',
+                    $campana->id_empresa
+                )
                 ->whereNotIn(
                     'id_cliente',
                     $idsAsignados
-                );
-
-
-        if (
-            $usuario &&
-            $usuario->id_rol == 2 &&
-            $usuario->id_empresa
-        ) {
-
-            $consultaDisponibles->where(
-                'id_empresa',
-                $usuario->id_empresa
-            );
-        }
-
-
-        $clientesDisponibles =
-            $consultaDisponibles
+                )
                 ->orderBy('nombre')
+                ->orderBy('apellido_paterno')
                 ->get();
-
 
         $campana->load(
             'estadoCampana'
         );
-
 
         return view(
             'campanas.clientes',
@@ -695,7 +651,7 @@ class CampanasController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | ASIGNAR CLIENTES A CAMPAÑA
+    | ASIGNAR CLIENTES
     |--------------------------------------------------------------------------
     */
 
@@ -703,102 +659,145 @@ class CampanasController extends Controller
         Request $request,
         $campana
     ) {
-        $campana =
-            Campana::findOrFail(
-                $campana
-            );
+        $usuario = auth()->user();
 
+        $this->autorizarAdministracion($usuario);
 
-        $datos =
-            $request->validate(
-                [
-                    'clientes' => [
-                        'required',
-                        'array',
-                        'min:1',
-                    ],
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
+            ->findOrFail($campana);
 
-                    'clientes.*' => [
-                        'required',
-                        'integer',
-                        'exists:clientes,id_cliente',
-                    ],
+        $datos = $request->validate(
+            [
+                'clientes' => [
+                    'required',
+                    'array',
+                    'min:1',
                 ],
-                [
-                    'clientes.required' =>
-                        'Selecciona al menos un cliente.',
 
-                    'clientes.min' =>
-                        'Selecciona al menos un cliente.',
+                'clientes.*' => [
+                    'required',
+                    'integer',
+                ],
+            ],
+            [
+                'clientes.required' =>
+                    'Selecciona al menos un cliente.',
 
-                    'clientes.*.exists' =>
-                        'Uno de los clientes seleccionados no existe.',
-                ]
-            );
+                'clientes.min' =>
+                    'Selecciona al menos un cliente.',
+            ]
+        );
 
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR QUE TODOS LOS CLIENTES PERTENEZCAN AL TENANT
+        |--------------------------------------------------------------------------
+        */
 
-        foreach (
-            $datos['clientes']
-            as $idCliente
+        $idsSolicitados =
+            collect($datos['clientes'])
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+        $clientesValidos =
+            Cliente::query()
+                ->where(
+                    'id_empresa',
+                    $campana->id_empresa
+                )
+                ->whereIn(
+                    'id_cliente',
+                    $idsSolicitados
+                )
+                ->pluck('id_cliente')
+                ->map(fn ($id) => (int) $id);
+
+        if (
+            $clientesValidos->count() !==
+            $idsSolicitados->count()
         ) {
-
-            /*
-            |--------------------------------------------------------------------------
-            | Revisamos si el cliente ya estuvo relacionado anteriormente.
-            |--------------------------------------------------------------------------
-            */
-
-            $relacionExistente =
-                $campana
-                    ->todosLosClientes()
-                    ->wherePivot(
-                        'id_cliente',
-                        $idCliente
-                    )
-                    ->first();
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | REACTIVAR RELACIÓN
-            |--------------------------------------------------------------------------
-            */
-
-            if ($relacionExistente) {
-
-                $campana
-                    ->todosLosClientes()
-                    ->updateExistingPivot(
-                        $idCliente,
-                        [
-                            'estado' => true,
-                            'fecha_asignacion' => now(),
-                        ]
-                    );
-
-
-                continue;
-            }
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | NUEVA RELACIÓN
-            |--------------------------------------------------------------------------
-            */
-
-            $campana
-                ->todosLosClientes()
-                ->attach(
-                    $idCliente,
-                    [
-                        'fecha_asignacion' => now(),
-                        'estado' => true,
-                        'intentos' => 0,
-                    ]
-                );
+            throw ValidationException::withMessages([
+                'clientes' =>
+                    'Uno o más clientes no existen o no pertenecen a la empresa de esta campaña.',
+            ]);
         }
 
+        DB::transaction(
+            function () use (
+                $campana,
+                $idsSolicitados
+            ) {
+                foreach (
+                    $idsSolicitados as $idCliente
+                ) {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | La nueva tabla campana_cliente tiene UNIQUE(id_campana,id_cliente).
+                    | Si ya existió la relación, se reactiva.
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $relacionExistente =
+                        DB::table('campana_cliente')
+                            ->where(
+                                'id_campana',
+                                $campana->id_campana
+                            )
+                            ->where(
+                                'id_cliente',
+                                $idCliente
+                            )
+                            ->first();
+
+                    if ($relacionExistente) {
+                        DB::table('campana_cliente')
+                            ->where(
+                                'id_campana_cliente',
+                                $relacionExistente
+                                    ->id_campana_cliente
+                            )
+                            ->update([
+                                'id_empresa' =>
+                                    $campana->id_empresa,
+
+                                'activo' =>
+                                    true,
+
+                                'updated_at' =>
+                                    now(),
+                            ]);
+
+                        continue;
+                    }
+
+                    DB::table('campana_cliente')
+                        ->insert([
+                            'id_empresa' =>
+                                $campana->id_empresa,
+
+                            'id_campana' =>
+                                $campana->id_campana,
+
+                            'id_cliente' =>
+                                $idCliente,
+
+                            'activo' =>
+                                true,
+
+                            'intentos' =>
+                                0,
+
+                            'created_at' =>
+                                now(),
+
+                            'updated_at' =>
+                                now(),
+                        ]);
+                }
+            }
+        );
 
         return redirect()
             ->route(
@@ -807,9 +806,9 @@ class CampanasController extends Controller
             )
             ->with(
                 'success',
-                count($datos['clientes']) === 1
+                $idsSolicitados->count() === 1
                     ? 'Cliente agregado a la campaña correctamente.'
-                    : count($datos['clientes'])
+                    : $idsSolicitados->count()
                         . ' clientes agregados a la campaña correctamente.'
             );
     }
@@ -825,34 +824,50 @@ class CampanasController extends Controller
         $campana,
         $cliente
     ) {
-        $campana =
-            Campana::findOrFail(
-                $campana
-            );
+        $usuario = auth()->user();
 
+        $this->autorizarAdministracion($usuario);
 
-        $cliente =
-            Cliente::findOrFail(
-                $cliente
-            );
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
+            ->findOrFail($campana);
 
+        $cliente = Cliente::query()
+            ->where(
+                'id_empresa',
+                $campana->id_empresa
+            )
+            ->findOrFail($cliente);
 
-        /*
-        |--------------------------------------------------------------------------
-        | No eliminamos físicamente la relación.
-        | La desactivamos para conservar historial.
-        |--------------------------------------------------------------------------
-        */
+        $actualizados =
+            DB::table('campana_cliente')
+                ->where(
+                    'id_empresa',
+                    $campana->id_empresa
+                )
+                ->where(
+                    'id_campana',
+                    $campana->id_campana
+                )
+                ->where(
+                    'id_cliente',
+                    $cliente->id_cliente
+                )
+                ->update([
+                    'activo' =>
+                        false,
 
-        $campana
-            ->todosLosClientes()
-            ->updateExistingPivot(
-                $cliente->id_cliente,
-                [
-                    'estado' => false,
-                ]
-            );
+                    'updated_at' =>
+                        now(),
+                ]);
 
+        if ($actualizados === 0) {
+            return back()
+                ->withErrors([
+                    'cliente' =>
+                        'El cliente no está asignado a esta campaña.',
+                ]);
+        }
 
         return redirect()
             ->route(
@@ -868,22 +883,30 @@ class CampanasController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | ELIMINAR
+    | ELIMINAR CAMPAÑA
     |--------------------------------------------------------------------------
     */
 
     public function destroy($id)
     {
-        $campana =
-            Campana::findOrFail($id);
+        $usuario = auth()->user();
 
+        $this->autorizarAdministracion($usuario);
+
+        $campana = $this
+            ->consultaCampanasVisibles($usuario)
+            ->findOrFail($id);
 
         $nombre =
             $campana->nombre;
 
+        /*
+        |--------------------------------------------------------------------------
+        | Campana usa SoftDeletes.
+        |--------------------------------------------------------------------------
+        */
 
         $campana->delete();
-
 
         return redirect()
             ->route('campanas.index')
@@ -898,27 +921,163 @@ class CampanasController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    |--------------------------------------------------------------------------
-    | MÉTODOS INTERNOS PARA ESTADOS AUTOMÁTICOS
-    |--------------------------------------------------------------------------
+    | MÉTODOS INTERNOS
     |--------------------------------------------------------------------------
     */
+
+    private function autorizarAdministracion(
+        $usuario
+    ): void {
+        if (
+            !$usuario ||
+            !in_array(
+                (int) $usuario->id_rol,
+                [1, 2],
+                true
+            )
+        ) {
+            abort(403);
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAMPAÑAS VISIBLES SEGÚN ROL
+    |--------------------------------------------------------------------------
+    */
+
+    private function consultaCampanasVisibles(
+        $usuario
+    ) {
+        $consulta =
+            Campana::query();
+
+        if ((int) $usuario->id_rol === 2) {
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
+        }
+
+        return $consulta;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | EMPRESA PARA UNA CAMPAÑA NUEVA
+    |--------------------------------------------------------------------------
+    */
+
+    private function resolverEmpresaParaNuevaCampana(
+        $usuario,
+        $idEmpresaSolicitada = null
+    ): int {
+        if ((int) $usuario->id_rol === 2) {
+            if (!$usuario->id_empresa) {
+                throw ValidationException::withMessages([
+                    'id_empresa' =>
+                        'Tu cuenta no tiene una empresa asociada.',
+                ]);
+            }
+
+            return (int) $usuario->id_empresa;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Super Admin
+        |--------------------------------------------------------------------------
+        |
+        | Si la vista todavía no tiene selector de empresa, usamos su empresa
+        | asociada como compatibilidad.
+        |--------------------------------------------------------------------------
+        */
+
+        $idEmpresa =
+            $idEmpresaSolicitada
+            ?: $usuario->id_empresa;
+
+        if (!$idEmpresa) {
+            throw ValidationException::withMessages([
+                'id_empresa' =>
+                    'Debes seleccionar una empresa para crear la campaña.',
+            ]);
+        }
+
+        $existe =
+            DB::table('empresas')
+                ->where(
+                    'id_empresa',
+                    $idEmpresa
+                )
+                ->exists();
+
+        if (!$existe) {
+            throw ValidationException::withMessages([
+                'id_empresa' =>
+                    'La empresa seleccionada no existe.',
+            ]);
+        }
+
+        return (int) $idEmpresa;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDAR NOMBRE ÚNICO POR EMPRESA
+    |--------------------------------------------------------------------------
+    |
+    | PostgreSQL tiene una restricción única por:
+    |
+    | id_empresa + LOWER(nombre)
+    |
+    | mientras deleted_at sea NULL.
+    |--------------------------------------------------------------------------
+    */
+
+    private function validarNombreUnico(
+        string $nombre,
+        int $idEmpresa,
+        ?int $ignorarCampana = null
+    ): void {
+        $consulta =
+            DB::table('campanas')
+                ->where(
+                    'id_empresa',
+                    $idEmpresa
+                )
+                ->whereNull(
+                    'deleted_at'
+                )
+                ->whereRaw(
+                    'LOWER(nombre) = LOWER(?)',
+                    [trim($nombre)]
+                );
+
+        if ($ignorarCampana !== null) {
+            $consulta->where(
+                'id_campana',
+                '!=',
+                $ignorarCampana
+            );
+        }
+
+        if ($consulta->exists()) {
+            throw ValidationException::withMessages([
+                'nombre' =>
+                    'Ya existe una campaña con este nombre dentro de la empresa.',
+            ]);
+        }
+    }
 
 
     /*
     |--------------------------------------------------------------------------
     | OBTENER ESTADO SEGÚN FECHAS
     |--------------------------------------------------------------------------
-    |
-    | Fecha actual < inicio
-    |     => Planeada
-    |
-    | inicio <= fecha actual <= final
-    |     => En proceso
-    |
-    | fecha actual > final
-    |     => Finalizada
-    |
     */
 
     private function obtenerEstadoAutomatico(
@@ -928,18 +1087,17 @@ class CampanasController extends Controller
         $hoy =
             Carbon::today();
 
-
         $inicio =
             Carbon::parse(
                 $fechaInicio
             )->startOfDay();
 
-
         $fin =
-            Carbon::parse(
-                $fechaFin
-            )->startOfDay();
-
+            $fechaFin
+                ? Carbon::parse(
+                    $fechaFin
+                )->startOfDay()
+                : null;
 
         /*
         |--------------------------------------------------------------------------
@@ -947,15 +1105,12 @@ class CampanasController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if (
-            $hoy->lt($inicio)
-        ) {
-
-            return $this->buscarEstadoPorNombre([
-                'Planeada',
-            ]);
+        if ($hoy->lt($inicio)) {
+            return $this
+                ->buscarEstadoPorNombre([
+                    'Planeada',
+                ]);
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -964,29 +1119,30 @@ class CampanasController extends Controller
         */
 
         if (
+            $fin !== null &&
             $hoy->gt($fin)
         ) {
-
-            return $this->buscarEstadoPorNombre([
-                'Finalizada',
-            ]);
+            return $this
+                ->buscarEstadoPorNombre([
+                    'Finalizada',
+                ]);
         }
-
 
         /*
         |--------------------------------------------------------------------------
         | EN PROCESO
         |--------------------------------------------------------------------------
         |
-        | Permitimos "Activa" porque actualmente tu catálogo
-        | todavía puede tener ese nombre.
+        | Se mantiene compatibilidad con "Activa" porque el catálogo migrado
+        | puede conservar ese nombre.
         |--------------------------------------------------------------------------
         */
 
-        return $this->buscarEstadoPorNombre([
-            'En proceso',
-            'Activa',
-        ]);
+        return $this
+            ->buscarEstadoPorNombre([
+                'En proceso',
+                'Activa',
+            ]);
     }
 
 
@@ -1000,38 +1156,26 @@ class CampanasController extends Controller
         array $nombres
     ): EstadoCampana {
         foreach ($nombres as $nombre) {
-
             $estado =
                 EstadoCampana::query()
-                    ->where('estado', true)
+                    ->where(
+                        'activo',
+                        true
+                    )
                     ->whereRaw(
-                        'LOWER(nombre) = ?',
-                        [
-                            mb_strtolower(
-                                trim($nombre)
-                            ),
-                        ]
+                        'LOWER(nombre) = LOWER(?)',
+                        [trim($nombre)]
                     )
                     ->first();
 
-
             if ($estado) {
-
                 return $estado;
             }
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Si llegamos aquí significa que falta un estado
-        | necesario en estado_campanas.
-        |--------------------------------------------------------------------------
-        */
-
         abort(
             500,
-            'No se encontró en estado_campanas uno de los estados requeridos: '
+            'No se encontró en estados_campana uno de los estados requeridos: '
             . implode(
                 ', ',
                 $nombres
@@ -1054,27 +1198,22 @@ class CampanasController extends Controller
                 'estadoCampana'
             )
         ) {
-
             $campana->load(
                 'estadoCampana'
             );
         }
 
-
-        if (
-            !$campana->estadoCampana
-        ) {
-
+        if (!$campana->estadoCampana) {
             return false;
         }
-
 
         return mb_strtolower(
             trim(
                 $campana
                     ->estadoCampana
                     ->nombre
-            )
+            ),
+            'UTF-8'
         ) === 'cancelada';
     }
 
@@ -1088,21 +1227,13 @@ class CampanasController extends Controller
     private function sincronizarEstadoAutomatico(
         Campana $campana
     ): void {
-        /*
-        |--------------------------------------------------------------------------
-        | Una campaña cancelada permanece cancelada.
-        |--------------------------------------------------------------------------
-        */
-
         if (
             $this->campanaEstaCancelada(
                 $campana
             )
         ) {
-
             return;
         }
-
 
         $estadoCorrecto =
             $this->obtenerEstadoAutomatico(
@@ -1110,30 +1241,21 @@ class CampanasController extends Controller
                 $campana->fecha_fin
             );
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Solo hacemos UPDATE si realmente cambió el estado.
-        |--------------------------------------------------------------------------
-        */
-
         if (
             (int) $campana->id_estado_campana
             !==
-            (int) $estadoCorrecto->id_estado_campana
+            (int) $estadoCorrecto
+                ->id_estado_campana
         ) {
-
             $campana->updateQuietly([
                 'id_estado_campana' =>
                     $estadoCorrecto
                         ->id_estado_campana,
             ]);
 
-
             $campana->id_estado_campana =
                 $estadoCorrecto
                     ->id_estado_campana;
-
 
             $campana->setRelation(
                 'estadoCampana',
@@ -1145,35 +1267,19 @@ class CampanasController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | SINCRONIZAR TODAS LAS CAMPAÑAS
-    |--------------------------------------------------------------------------
-    |
-    | Se ejecuta al entrar al listado de campañas.
-    |
-    | De esta manera:
-    |
-    | Planeada
-    |      ↓ llega fecha_inicio
-    | En proceso
-    |      ↓ pasa fecha_fin
-    | Finalizada
-    |
+    | SINCRONIZAR CAMPAÑAS VISIBLES
     |--------------------------------------------------------------------------
     */
 
-    private function sincronizarEstadosAutomaticos(): void
-    {
-        $campanas =
-            Campana::query()
-                ->with('estadoCampana')
-                ->get();
+    private function sincronizarEstadosAutomaticos(
+        $usuario
+    ): void {
+        $campanas = $this
+            ->consultaCampanasVisibles($usuario)
+            ->with('estadoCampana')
+            ->get();
 
-
-        foreach (
-            $campanas
-            as $campana
-        ) {
-
+        foreach ($campanas as $campana) {
             $this->sincronizarEstadoAutomatico(
                 $campana
             );

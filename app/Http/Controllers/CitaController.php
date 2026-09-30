@@ -4,15 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\Cita;
 use App\Models\Cliente;
-use App\Models\User;
 use App\Models\EstadoCita;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class CitaController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | LISTADO
+    |--------------------------------------------------------------------------
+    */
+
     public function index(Request $request)
     {
         $usuario = auth()->user();
+
+        if (!$usuario) {
+            abort(403);
+        }
 
         $datos = $request->validate([
             'buscar' => 'nullable|string|max:100',
@@ -24,28 +36,36 @@ class CitaController extends Controller
 
         $buscar = trim($datos['buscar'] ?? '');
 
-        $consulta = Cita::query()->with([
-            'cliente',
-            'usuario',
-            'estadoCita',
-        ]);
+        $consulta = Cita::query()
+            ->with([
+                'cliente',
+                'usuario',
+                'estadoCita',
+            ]);
 
         /*
         |--------------------------------------------------------------------------
-        | PERMISOS
+        | PERMISOS / TENANT
         |--------------------------------------------------------------------------
         */
 
-        if ($usuario->id_rol == 2) {
-
-            $consulta->whereHas('usuario', function ($query) use ($usuario) {
-                $query->where('id_empresa', $usuario->id_empresa);
-            });
-
-        } elseif ($usuario->id_rol == 3) {
-
-            $consulta->where('id_usuario', $usuario->id);
-
+        if ((int) $usuario->id_rol === 2) {
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
+        } elseif ((int) $usuario->id_rol === 3) {
+            $consulta
+                ->where(
+                    'id_empresa',
+                    $usuario->id_empresa
+                )
+                ->where(
+                    'id_usuario',
+                    $usuario->id_usuario
+                );
+        } elseif ((int) $usuario->id_rol !== 1) {
+            abort(403);
         }
 
         /*
@@ -55,91 +75,95 @@ class CitaController extends Controller
         */
 
         if ($buscar !== '') {
+            $termino =
+                '%' .
+                mb_strtolower($buscar, 'UTF-8') .
+                '%';
 
-            $termino = '%' . mb_strtolower($buscar, 'UTF-8') . '%';
-
-            $consulta->whereHas('cliente', function ($query) use ($termino) {
-
-                $query->where(function ($cliente) use ($termino) {
-
-                    $cliente
-                        ->whereRaw('LOWER(nombre) LIKE ?', [$termino])
-                        ->orWhereRaw('LOWER(apellido_paterno) LIKE ?', [$termino])
-                        ->orWhereRaw('LOWER(apellido_materno) LIKE ?', [$termino])
-                        ->orWhereRaw('LOWER(empresa) LIKE ?', [$termino])
-                        ->orWhereRaw('LOWER(correo) LIKE ?', [$termino])
-                        ->orWhereRaw('LOWER(telefono_principal) LIKE ?', [$termino]);
-
-                });
-
-            });
-
+            $consulta->whereHas(
+                'cliente',
+                function ($query) use ($termino) {
+                    $query->where(
+                        function ($cliente) use ($termino) {
+                            $cliente
+                                ->whereRaw(
+                                    'LOWER(nombre) LIKE ?',
+                                    [$termino]
+                                )
+                                ->orWhereRaw(
+                                    'LOWER(apellido_paterno) LIKE ?',
+                                    [$termino]
+                                )
+                                ->orWhereRaw(
+                                    "LOWER(COALESCE(apellido_materno, '')) LIKE ?",
+                                    [$termino]
+                                )
+                                ->orWhereRaw(
+                                    "LOWER(COALESCE(organizacion, '')) LIKE ?",
+                                    [$termino]
+                                )
+                                ->orWhereRaw(
+                                    "LOWER(COALESCE(correo, '')) LIKE ?",
+                                    [$termino]
+                                )
+                                ->orWhereRaw(
+                                    'LOWER(telefono_principal) LIKE ?',
+                                    [$termino]
+                                );
+                        }
+                    );
+                }
+            );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | FILTRO POR ESTADO
+        | FILTROS
         |--------------------------------------------------------------------------
         */
 
         if (!empty($datos['estado'])) {
-
             $consulta->where(
                 'id_estado_cita',
                 $datos['estado']
             );
-
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | FILTRO POR OPERARIO
-        |--------------------------------------------------------------------------
-        */
-
-        if (!empty($datos['operario']) && $usuario->id_rol == 2) {
-
+        if (
+            !empty($datos['operario']) &&
+            in_array(
+                (int) $usuario->id_rol,
+                [1, 2],
+                true
+            )
+        ) {
             $consulta->where(
                 'id_usuario',
                 $datos['operario']
             );
-
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | FILTRO POR FECHA
-        |--------------------------------------------------------------------------
-        */
-
         if (!empty($datos['fecha_desde'])) {
-
             $consulta->whereDate(
                 'fecha_hora_inicio',
                 '>=',
                 $datos['fecha_desde']
             );
-
         }
 
         if (!empty($datos['fecha_hasta'])) {
-
             $consulta->whereDate(
                 'fecha_hora_inicio',
                 '<=',
                 $datos['fecha_hasta']
             );
-
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | RESULTADOS
-        |--------------------------------------------------------------------------
-        */
-
         $citas = $consulta
-            ->orderBy('fecha_hora_inicio', 'asc')
+            ->orderBy(
+                'fecha_hora_inicio',
+                'asc'
+            )
             ->paginate(10)
             ->withQueryString();
 
@@ -151,29 +175,39 @@ class CitaController extends Controller
 
         $operarios = collect();
 
-        if ($usuario->id_rol == 2) {
-
-            $operarios = User::query()
-                ->where('id_empresa', $usuario->id_empresa)
-                ->where('id_rol', 3)
-                ->orderBy('name')
+        if ((int) $usuario->id_rol === 2) {
+            $operarios = $this
+                ->consultaOperariosDisponibles(
+                    $usuario->id_empresa
+                )
                 ->get();
-
+        } elseif ((int) $usuario->id_rol === 1) {
+            $operarios = User::query()
+                ->with([
+                    'empresa',
+                    'aprobacionActual',
+                ])
+                ->where('id_rol', 3)
+                ->where('activo', true)
+                ->whereHas(
+                    'aprobacionActual',
+                    fn ($query) =>
+                    $query->where(
+                        'estado',
+                        'aprobado'
+                    )
+                )
+                ->orderBy('nombre')
+                ->orderBy('apellido_paterno')
+                ->get();
         }
 
         $estados = EstadoCita::query()
-            ->where('estado', true)
+            ->where('activo', true)
             ->orderBy('nombre')
             ->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | VISTAS SEGÚN ROL
-        |--------------------------------------------------------------------------
-        */
-
-        if ($usuario->id_rol == 3) {
-
+        if ((int) $usuario->id_rol === 3) {
             return view(
                 'citas.mis-citas',
                 compact(
@@ -182,7 +216,6 @@ class CitaController extends Controller
                     'estados'
                 )
             );
-
         }
 
         return view(
@@ -197,28 +230,40 @@ class CitaController extends Controller
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | FORMULARIO CREAR
+    |--------------------------------------------------------------------------
+    */
+
     public function create()
     {
         $usuario = auth()->user();
 
-        if ($usuario->id_rol != 2) {
+        if (
+            !$usuario ||
+            (int) $usuario->id_rol !== 2
+        ) {
             abort(403);
         }
 
         $clientes = Cliente::query()
-            ->where('id_empresa', $usuario->id_empresa)
+            ->where(
+                'id_empresa',
+                $usuario->id_empresa
+            )
             ->orderBy('nombre')
             ->orderBy('apellido_paterno')
             ->get();
 
-        $operarios = User::query()
-            ->where('id_empresa', $usuario->id_empresa)
-            ->where('id_rol', 3)
-            ->orderBy('name')
+        $operarios = $this
+            ->consultaOperariosDisponibles(
+                $usuario->id_empresa
+            )
             ->get();
 
         $estados = EstadoCita::query()
-            ->where('estado', true)
+            ->where('activo', true)
             ->orderBy('nombre')
             ->get();
 
@@ -233,45 +278,120 @@ class CitaController extends Controller
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR CITA
+    |--------------------------------------------------------------------------
+    */
+
     public function store(Request $request)
     {
         $usuario = auth()->user();
 
-        if ($usuario->id_rol != 2) {
+        if (
+            !$usuario ||
+            (int) $usuario->id_rol !== 2
+        ) {
             abort(403);
         }
 
+        $idEmpresa =
+            (int) $usuario->id_empresa;
+
         $datos = $request->validate([
-            'id_cliente' => 'required|integer',
-            'id_usuario' => 'required|integer',
-            'id_llamada' => 'nullable|integer',
-            'fecha_hora_inicio' => 'required|date',
-            'motivo' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string|max:1000',
+            'id_cliente' => [
+                'required',
+                'integer',
+            ],
+
+            'id_usuario' => [
+                'required',
+                'integer',
+            ],
+
+            'id_llamada' => [
+                'nullable',
+                'integer',
+            ],
+
+            'fecha_hora_inicio' => [
+                'required',
+                'date',
+            ],
+
+            'motivo' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'observaciones' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
         ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDAR CLIENTE DEL MISMO TENANT
+        |--------------------------------------------------------------------------
+        */
+
+        Cliente::query()
+            ->where(
+                'id_cliente',
+                $datos['id_cliente']
+            )
+            ->where(
+                'id_empresa',
+                $idEmpresa
+            )
+            ->firstOrFail();
 
         /*
         |--------------------------------------------------------------------------
         | VALIDAR OPERARIO
         |--------------------------------------------------------------------------
+        |
+        | Debe pertenecer a la misma empresa, estar activo, tener tipo y estar
+        | aprobado.
+        |--------------------------------------------------------------------------
         */
 
-        User::query()
-            ->where('id', $datos['id_usuario'])
-            ->where('id_empresa', $usuario->id_empresa)
-            ->where('id_rol', 3)
+        $this
+            ->consultaOperariosDisponibles(
+                $idEmpresa
+            )
+            ->where(
+                'id_usuario',
+                $datos['id_usuario']
+            )
             ->firstOrFail();
 
         /*
         |--------------------------------------------------------------------------
-        | VALIDAR CLIENTE
+        | VALIDAR LLAMADA, SI EXISTE
         |--------------------------------------------------------------------------
         */
 
-        Cliente::query()
-            ->where('id_cliente', $datos['id_cliente'])
-            ->where('id_empresa', $usuario->id_empresa)
-            ->firstOrFail();
+        if (!empty($datos['id_llamada'])) {
+            $existeLlamada = DB::table('llamadas')
+                ->where(
+                    'id_llamada',
+                    $datos['id_llamada']
+                )
+                ->where(
+                    'id_empresa',
+                    $idEmpresa
+                )
+                ->exists();
+
+            abort_unless(
+                $existeLlamada,
+                404
+            );
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -280,27 +400,53 @@ class CitaController extends Controller
         */
 
         $estadoPendiente = EstadoCita::query()
-            ->whereRaw('LOWER(nombre) = ?', ['pendiente'])
-            ->where('estado', true)
-            ->firstOrFail();
+            ->whereRaw(
+                'LOWER(nombre) = LOWER(?)',
+                ['pendiente']
+            )
+            ->where(
+                'activo',
+                true
+            )
+            ->first();
 
-        $datos['id_estado_cita'] = $estadoPendiente->id_estado_cita;
+        if (!$estadoPendiente) {
+            return back()
+                ->withErrors([
+                    'id_estado_cita' =>
+                        'No existe un estado de cita activo llamado "Pendiente".',
+                ])
+                ->withInput();
+        }
 
-        /*
-        |--------------------------------------------------------------------------
-        | LA CITA TODAVÍA NO TERMINA
-        |--------------------------------------------------------------------------
-        */
+        Cita::create([
+            'id_empresa' =>
+                $idEmpresa,
 
-        $datos['fecha_hora_fin'] = null;
+            'id_cliente' =>
+                (int) $datos['id_cliente'],
 
-        /*
-        |--------------------------------------------------------------------------
-        | CREAR CITA
-        |--------------------------------------------------------------------------
-        */
+            'id_usuario' =>
+                (int) $datos['id_usuario'],
 
-        Cita::create($datos);
+            'id_llamada' =>
+                $datos['id_llamada'] ?? null,
+
+            'id_estado_cita' =>
+                $estadoPendiente->id_estado_cita,
+
+            'fecha_hora_inicio' =>
+                $datos['fecha_hora_inicio'],
+
+            'fecha_hora_fin' =>
+                null,
+
+            'motivo' =>
+                $datos['motivo'] ?? null,
+
+            'observaciones' =>
+                $datos['observaciones'] ?? null,
+        ]);
 
         return redirect()
             ->route('citas.index')
@@ -311,46 +457,49 @@ class CitaController extends Controller
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | DETALLE
+    |--------------------------------------------------------------------------
+    */
+
     public function show($id_cita)
     {
         $usuario = auth()->user();
+
+        if (!$usuario) {
+            abort(403);
+        }
 
         $consulta = Cita::query()
             ->with([
                 'cliente',
                 'usuario',
                 'estadoCita',
+                'llamada',
             ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | PERMISOS
-        |--------------------------------------------------------------------------
-        */
-
-        if ($usuario->id_rol == 2) {
-
-            $consulta->whereHas('usuario', function ($query) use ($usuario) {
-                $query->where(
+        if ((int) $usuario->id_rol === 2) {
+            $consulta->where(
+                'id_empresa',
+                $usuario->id_empresa
+            );
+        } elseif ((int) $usuario->id_rol === 3) {
+            $consulta
+                ->where(
                     'id_empresa',
                     $usuario->id_empresa
+                )
+                ->where(
+                    'id_usuario',
+                    $usuario->id_usuario
                 );
-            });
-
-        } elseif ($usuario->id_rol == 3) {
-
-            $consulta->where(
-                'id_usuario',
-                $usuario->id
-            );
-
-        } else {
-
+        } elseif ((int) $usuario->id_rol !== 1) {
             abort(403);
-
         }
 
-        $cita = $consulta->findOrFail($id_cita);
+        $cita = $consulta
+            ->findOrFail($id_cita);
 
         return view(
             'citas.show',
@@ -359,19 +508,22 @@ class CitaController extends Controller
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | FORMULARIO EDITAR
+    |--------------------------------------------------------------------------
+    */
+
     public function edit($id_cita)
     {
         $usuario = auth()->user();
 
-        if ($usuario->id_rol != 2) {
+        if (
+            !$usuario ||
+            (int) $usuario->id_rol !== 2
+        ) {
             abort(403);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | OBTENER CITA
-        |--------------------------------------------------------------------------
-        */
 
         $cita = Cita::query()
             ->with([
@@ -379,45 +531,39 @@ class CitaController extends Controller
                 'usuario',
                 'estadoCita',
             ])
-            ->whereHas('usuario', function ($query) use ($usuario) {
-
-                $query->where(
-                    'id_empresa',
-                    $usuario->id_empresa
-                );
-
-            })
-            ->findOrFail($id_cita);
-
-        /*
-        |--------------------------------------------------------------------------
-        | OPERARIOS DE LA EMPRESA
-        |--------------------------------------------------------------------------
-        */
-
-        $operarios = User::query()
             ->where(
                 'id_empresa',
                 $usuario->id_empresa
             )
-            ->where(
-                'id_rol',
-                3
+            ->findOrFail($id_cita);
+
+        $operarios = $this
+            ->consultaOperariosDisponibles(
+                $usuario->id_empresa
             )
-            ->orderBy('name')
             ->get();
 
         /*
         |--------------------------------------------------------------------------
-        | ESTADOS DISPONIBLES
+        | Si la cita ya tenía un operario que ahora está inactivo o dejó de
+        | estar disponible, se conserva en la lista para no romper la edición.
         |--------------------------------------------------------------------------
         */
 
-        $estados = EstadoCita::query()
-            ->where(
-                'estado',
-                true
+        if (
+            $cita->usuario &&
+            !$operarios->contains(
+                'id_usuario',
+                $cita->id_usuario
             )
+        ) {
+            $operarios->push(
+                $cita->usuario
+            );
+        }
+
+        $estados = EstadoCita::query()
+            ->where('activo', true)
             ->orderBy('nombre')
             ->get();
 
@@ -432,73 +578,73 @@ class CitaController extends Controller
     }
 
 
-    public function update(Request $request, $id_cita)
-    {
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZAR
+    |--------------------------------------------------------------------------
+    */
+
+    public function update(
+        Request $request,
+        $id_cita
+    ) {
         $usuario = auth()->user();
 
-        if ($usuario->id_rol != 2) {
+        if (
+            !$usuario ||
+            (int) $usuario->id_rol !== 2
+        ) {
             abort(403);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | VALIDACIÓN
-        |--------------------------------------------------------------------------
-        */
+        $idEmpresa =
+            (int) $usuario->id_empresa;
 
         $datos = $request->validate([
-            'id_cliente' => 'required|integer',
-            'id_usuario' => 'required|integer',
-            'id_llamada' => 'nullable|integer',
-            'id_estado_cita' => 'required|integer',
-            'fecha_hora_inicio' => 'required|date',
-            'motivo' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string|max:1000',
+            'id_cliente' => [
+                'required',
+                'integer',
+            ],
+
+            'id_usuario' => [
+                'required',
+                'integer',
+            ],
+
+            'id_llamada' => [
+                'nullable',
+                'integer',
+            ],
+
+            'id_estado_cita' => [
+                'required',
+                'integer',
+            ],
+
+            'fecha_hora_inicio' => [
+                'required',
+                'date',
+            ],
+
+            'motivo' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'observaciones' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | OBTENER CITA
-        |--------------------------------------------------------------------------
-        */
-
         $cita = Cita::query()
-            ->whereHas('usuario', function ($query) use ($usuario) {
-
-                $query->where(
-                    'id_empresa',
-                    $usuario->id_empresa
-                );
-
-            })
-            ->findOrFail($id_cita);
-
-        /*
-        |--------------------------------------------------------------------------
-        | VALIDAR OPERARIO
-        |--------------------------------------------------------------------------
-        */
-
-        User::query()
-            ->where(
-                'id',
-                $datos['id_usuario']
-            )
             ->where(
                 'id_empresa',
-                $usuario->id_empresa
+                $idEmpresa
             )
-            ->where(
-                'id_rol',
-                3
-            )
-            ->firstOrFail();
-
-        /*
-        |--------------------------------------------------------------------------
-        | VALIDAR CLIENTE
-        |--------------------------------------------------------------------------
-        */
+            ->findOrFail($id_cita);
 
         Cliente::query()
             ->where(
@@ -507,15 +653,47 @@ class CitaController extends Controller
             )
             ->where(
                 'id_empresa',
-                $usuario->id_empresa
+                $idEmpresa
             )
             ->firstOrFail();
 
         /*
         |--------------------------------------------------------------------------
-        | VALIDAR ESTADO
+        | Permitir conservar el operario actual incluso si fue desactivado
+        | después de crearse la cita. Para cambiarlo, el nuevo sí debe estar
+        | disponible.
         |--------------------------------------------------------------------------
         */
+
+        if (
+            (int) $datos['id_usuario'] !==
+            (int) $cita->id_usuario
+        ) {
+            $this
+                ->consultaOperariosDisponibles(
+                    $idEmpresa
+                )
+                ->where(
+                    'id_usuario',
+                    $datos['id_usuario']
+                )
+                ->firstOrFail();
+        } else {
+            User::query()
+                ->where(
+                    'id_usuario',
+                    $datos['id_usuario']
+                )
+                ->where(
+                    'id_empresa',
+                    $idEmpresa
+                )
+                ->where(
+                    'id_rol',
+                    3
+                )
+                ->firstOrFail();
+        }
 
         EstadoCita::query()
             ->where(
@@ -523,24 +701,51 @@ class CitaController extends Controller
                 $datos['id_estado_cita']
             )
             ->where(
-                'estado',
+                'activo',
                 true
             )
             ->firstOrFail();
 
-        /*
-        |--------------------------------------------------------------------------
-        | ACTUALIZAR
-        |--------------------------------------------------------------------------
-        |
-        | IMPORTANTE:
-        | fecha_hora_fin NO viene del formulario.
-        | Por lo tanto, editar una cita nunca modifica
-        | su hora real de finalización.
-        |
-        */
+        if (!empty($datos['id_llamada'])) {
+            $existeLlamada = DB::table('llamadas')
+                ->where(
+                    'id_llamada',
+                    $datos['id_llamada']
+                )
+                ->where(
+                    'id_empresa',
+                    $idEmpresa
+                )
+                ->exists();
 
-        $cita->update($datos);
+            abort_unless(
+                $existeLlamada,
+                404
+            );
+        }
+
+        $cita->update([
+            'id_cliente' =>
+                (int) $datos['id_cliente'],
+
+            'id_usuario' =>
+                (int) $datos['id_usuario'],
+
+            'id_llamada' =>
+                $datos['id_llamada'] ?? null,
+
+            'id_estado_cita' =>
+                (int) $datos['id_estado_cita'],
+
+            'fecha_hora_inicio' =>
+                $datos['fecha_hora_inicio'],
+
+            'motivo' =>
+                $datos['motivo'] ?? null,
+
+            'observaciones' =>
+                $datos['observaciones'] ?? null,
+        ]);
 
         return redirect()
             ->route('citas.index')
@@ -551,23 +756,28 @@ class CitaController extends Controller
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | ELIMINAR
+    |--------------------------------------------------------------------------
+    */
+
     public function destroy($id_cita)
     {
         $usuario = auth()->user();
 
-        if ($usuario->id_rol != 2) {
+        if (
+            !$usuario ||
+            (int) $usuario->id_rol !== 2
+        ) {
             abort(403);
         }
 
         $cita = Cita::query()
-            ->whereHas('usuario', function ($query) use ($usuario) {
-
-                $query->where(
-                    'id_empresa',
-                    $usuario->id_empresa
-                );
-
-            })
+            ->where(
+                'id_empresa',
+                $usuario->id_empresa
+            )
             ->findOrFail($id_cita);
 
         $cita->delete();
@@ -578,5 +788,47 @@ class CitaController extends Controller
                 'exito',
                 'Cita eliminada correctamente.'
             );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | OPERARIOS DISPONIBLES
+    |--------------------------------------------------------------------------
+    */
+
+    private function consultaOperariosDisponibles(
+        int $idEmpresa
+    ) {
+        return User::query()
+            ->with([
+                'tipoOperario',
+                'aprobacionActual',
+            ])
+            ->where(
+                'id_empresa',
+                $idEmpresa
+            )
+            ->where(
+                'id_rol',
+                3
+            )
+            ->where(
+                'activo',
+                true
+            )
+            ->whereNotNull(
+                'id_tipo_operario'
+            )
+            ->whereHas(
+                'aprobacionActual',
+                fn ($query) =>
+                $query->where(
+                    'estado',
+                    'aprobado'
+                )
+            )
+            ->orderBy('nombre')
+            ->orderBy('apellido_paterno');
     }
 }

@@ -6,14 +6,33 @@ use Illuminate\Http\Request;
 
 class RegistroOperadorController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | FORMULARIO DE REGISTRO DE OPERADOR
+    |--------------------------------------------------------------------------
+    */
+
     public function create()
     {
-        // Nota el punto para acceder a la subcarpeta 'seleccion'
-        return view('seleccion.registro_operador');
+        return view(
+            'seleccion.registro_operador'
+        );
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | GUARDAR REGISTRO
+    |--------------------------------------------------------------------------
+    |
+    | Este flujo todavía no tiene lógica de persistencia implementada en el
+    | proyecto original. Se conserva así para no inventar un alta paralela al
+    | flujo oficial de operarios y aprobaciones del CRM.
+    |--------------------------------------------------------------------------
+    */
 
     public function store(Request $request)
     {
-        // Aquí procesarás el formulario cuando lo tengas listo
+        //
     }
 }

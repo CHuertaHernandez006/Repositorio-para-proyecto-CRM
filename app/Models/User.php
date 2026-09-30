@@ -6,13 +6,30 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
+
+    /*
+    |--------------------------------------------------------------------------
+    | TABLA
+    |--------------------------------------------------------------------------
+    */
+
+    protected $table = 'usuarios';
+
+    protected $primaryKey = 'id_usuario';
+
+    public $incrementing = true;
+
+    protected $keyType = 'int';
 
 
     /*
@@ -22,41 +39,30 @@ class User extends Authenticatable
     */
 
     protected $fillable = [
+        // Campos reales
+        'id_empresa',
+        'id_rol',
+        'id_tipo_operario',
+
+        'nombre',
+        'apellido_paterno',
+        'apellido_materno',
+
+        'correo',
+        'correo_verificado_at',
+        'telefono',
+
+        'password_hash',
+        'remember_token',
+
+        'activo',
+        'ultimo_acceso',
+
+        // Compatibilidad con código anterior
         'name',
         'email',
         'password',
-
-        'id_empresa',
-        'id_rol',
-
-        /*
-        |--------------------------------------------------------------------------
-        | TIPO DE OPERARIO
-        |--------------------------------------------------------------------------
-        */
-
-        'id_tipo_operario',
-
-        /*
-        |--------------------------------------------------------------------------
-        | ESTADO GENERAL
-        |--------------------------------------------------------------------------
-        */
-
         'estado',
-
-        /*
-        |--------------------------------------------------------------------------
-        | APROBACIÓN DE OPERARIOS
-        |--------------------------------------------------------------------------
-        */
-
-        'estado_aprobacion',
-        'solicitado_por',
-        'fecha_solicitud',
-        'revisado_por',
-        'fecha_revision',
-        'motivo_rechazo',
     ];
 
 
@@ -67,7 +73,7 @@ class User extends Authenticatable
     */
 
     protected $hidden = [
-        'password',
+        'password_hash',
         'remember_token',
     ];
 
@@ -81,19 +87,175 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-
-            'password' => 'hashed',
-
-            'estado' => 'boolean',
-
+            'id_usuario' => 'integer',
             'id_empresa' => 'integer',
             'id_rol' => 'integer',
             'id_tipo_operario' => 'integer',
 
-            'fecha_solicitud' => 'datetime',
-            'fecha_revision' => 'datetime',
+            'activo' => 'boolean',
+
+            'correo_verificado_at' => 'datetime',
+            'ultimo_acceso' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | AUTENTICACIÓN
+    |--------------------------------------------------------------------------
+    |
+    | Laravel debe usar password_hash en lugar de password.
+    |
+    */
+
+    public function getAuthPasswordName(): string
+    {
+        return 'password_hash';
+    }
+
+    public function getAuthPassword(): string
+    {
+        return $this->password_hash;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPATIBILIDAD: ID
+    |--------------------------------------------------------------------------
+    |
+    | Permite seguir usando:
+    |
+    | $usuario->id
+    |
+    | aunque la PK real sea id_usuario.
+    |
+    */
+
+    public function getIdAttribute(): ?int
+    {
+        return $this->id_usuario;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPATIBILIDAD: NAME
+    |--------------------------------------------------------------------------
+    */
+
+    public function getNameAttribute(): string
+    {
+        return trim(
+            collect([
+                $this->nombre,
+                $this->apellido_paterno,
+                $this->apellido_materno,
+            ])
+                ->filter(fn ($valor) => $valor !== null && $valor !== '')
+                ->implode(' ')
+        );
+    }
+
+    public function setNameAttribute($value): void
+    {
+        $partes = preg_split(
+            '/\s+/',
+            trim((string) $value),
+            -1,
+            PREG_SPLIT_NO_EMPTY
+        );
+
+        if (!$partes) {
+            return;
+        }
+
+        if (count($partes) === 1) {
+            $this->attributes['nombre'] = $partes[0];
+            $this->attributes['apellido_paterno'] = '';
+            $this->attributes['apellido_materno'] = null;
+
+            return;
+        }
+
+        if (count($partes) === 2) {
+            $this->attributes['nombre'] = $partes[0];
+            $this->attributes['apellido_paterno'] = $partes[1];
+            $this->attributes['apellido_materno'] = null;
+
+            return;
+        }
+
+        $apellidoMaterno = array_pop($partes);
+        $apellidoPaterno = array_pop($partes);
+
+        $this->attributes['nombre'] = implode(' ', $partes);
+        $this->attributes['apellido_paterno'] = $apellidoPaterno;
+        $this->attributes['apellido_materno'] = $apellidoMaterno;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPATIBILIDAD: EMAIL
+    |--------------------------------------------------------------------------
+    */
+
+    public function getEmailAttribute(): ?string
+    {
+        return $this->correo;
+    }
+
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['correo'] = $value;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPATIBILIDAD: PASSWORD
+    |--------------------------------------------------------------------------
+    */
+
+    public function getPasswordAttribute(): ?string
+    {
+        return $this->password_hash;
+    }
+
+    public function setPasswordAttribute($value): void
+    {
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        $this->attributes['password_hash'] =
+            Hash::needsRehash($value)
+                ? Hash::make($value)
+                : $value;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPATIBILIDAD: ESTADO
+    |--------------------------------------------------------------------------
+    |
+    | Antes: users.estado
+    | Ahora: usuarios.activo
+    |
+    */
+
+    public function getEstadoAttribute(): bool
+    {
+        return (bool) $this->activo;
+    }
+
+    public function setEstadoAttribute($value): void
+    {
+        $this->attributes['activo'] = (bool) $value;
     }
 
 
@@ -117,13 +279,6 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     | TIPO DE OPERARIO
     |--------------------------------------------------------------------------
-    |
-    | Permite utilizar:
-    |
-    | $usuario->tipoOperario
-    | $usuario->tipoOperario->nombre
-    |
-    |--------------------------------------------------------------------------
     */
 
     public function tipoOperario(): BelongsTo
@@ -138,7 +293,7 @@ class User extends Authenticatable
 
     /*
     |--------------------------------------------------------------------------
-    | OBJETIVOS DEL OPERARIO
+    | OBJETIVOS
     |--------------------------------------------------------------------------
     */
 
@@ -147,46 +302,95 @@ class User extends Authenticatable
         return $this->hasMany(
             ObjetivoOperario::class,
             'id_usuario',
-            'id'
+            'id_usuario'
         );
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | USUARIO QUE SOLICITÓ EL ALTA DEL OPERARIO
+    | APROBACIONES
     |--------------------------------------------------------------------------
     */
 
-    public function solicitadoPor(): BelongsTo
+    public function aprobaciones(): HasMany
     {
-        return $this->belongsTo(
-            User::class,
-            'solicitado_por',
-            'id'
+        return $this->hasMany(
+            AprobacionUsuario::class,
+            'id_usuario',
+            'id_usuario'
+        );
+    }
+
+    public function aprobacionActual(): HasOne
+    {
+        return $this->hasOne(
+            AprobacionUsuario::class,
+            'id_usuario',
+            'id_usuario'
+        )->ofMany(
+            'id_aprobacion',
+            'max'
         );
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | SUPER ADMIN QUE REVISÓ LA SOLICITUD
+    | COMPATIBILIDAD: ESTADO DE APROBACIÓN
     |--------------------------------------------------------------------------
     */
 
-    public function revisadoPor(): BelongsTo
+    public function getEstadoAprobacionAttribute(): ?string
     {
-        return $this->belongsTo(
-            User::class,
-            'revisado_por',
-            'id'
-        );
+        return $this->obtenerAprobacionActual()?->estado;
+    }
+
+    public function getFechaSolicitudAttribute()
+    {
+        return $this->obtenerAprobacionActual()?->fecha_solicitud;
+    }
+
+    public function getFechaRevisionAttribute()
+    {
+        return $this->obtenerAprobacionActual()?->fecha_revision;
+    }
+
+    public function getMotivoRechazoAttribute(): ?string
+    {
+        return $this->obtenerAprobacionActual()?->motivo_rechazo;
+    }
+
+    public function getSolicitadoPorAttribute(): ?int
+    {
+        return $this->obtenerAprobacionActual()?->solicitado_por;
+    }
+
+    public function getRevisadoPorAttribute(): ?int
+    {
+        return $this->obtenerAprobacionActual()?->revisado_por;
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | COMPROBAR SI ES OPERARIO
+    | OBTENER APROBACIÓN ACTUAL
+    |--------------------------------------------------------------------------
+    */
+
+    private function obtenerAprobacionActual(): ?AprobacionUsuario
+    {
+        if ($this->relationLoaded('aprobacionActual')) {
+            return $this->getRelation('aprobacionActual');
+        }
+
+        return $this->aprobacionActual()->first();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDACIONES DE OPERARIO
     |--------------------------------------------------------------------------
     */
 
@@ -195,13 +399,6 @@ class User extends Authenticatable
         return (int) $this->id_rol === 3;
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPROBAR SI ESTÁ PENDIENTE
-    |--------------------------------------------------------------------------
-    */
-
     public function aprobacionPendiente(): bool
     {
         return
@@ -209,35 +406,12 @@ class User extends Authenticatable
             $this->estado_aprobacion === 'pendiente';
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPROBAR SI ESTÁ APROBADO
-    |--------------------------------------------------------------------------
-    */
-
     public function estaAprobado(): bool
     {
-        /*
-        |--------------------------------------------------------------------------
-        | NULL sigue aceptándose temporalmente para los operarios antiguos.
-        |--------------------------------------------------------------------------
-        */
-
         return
             $this->esOperario() &&
-            (
-                $this->estado_aprobacion === 'aprobado' ||
-                $this->estado_aprobacion === null
-            );
+            $this->estado_aprobacion === 'aprobado';
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPROBAR SI FUE RECHAZADO
-    |--------------------------------------------------------------------------
-    */
 
     public function fueRechazado(): bool
     {
@@ -246,30 +420,15 @@ class User extends Authenticatable
             $this->estado_aprobacion === 'rechazado';
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPROBAR SI PUEDE OPERAR
-    |--------------------------------------------------------------------------
-    */
-
     public function puedeOperar(): bool
     {
         return
             $this->estaAprobado() &&
-            $this->estado === true;
+            (bool) $this->activo;
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPROBAR SI TIENE TIPO DE OPERARIO ASIGNADO
-    |--------------------------------------------------------------------------
-    */
 
     public function tieneTipoOperario(): bool
     {
-        return
-            $this->id_tipo_operario !== null;
+        return $this->id_tipo_operario !== null;
     }
 }

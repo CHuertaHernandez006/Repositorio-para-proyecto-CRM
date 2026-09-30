@@ -7,19 +7,90 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EstadoCampana extends Model
 {
-    protected $table = 'estado_campanas';
+    /*
+    |--------------------------------------------------------------------------
+    | TABLA Y LLAVE PRIMARIA
+    |--------------------------------------------------------------------------
+    */
+
+    protected $table = 'estados_campana';
 
     protected $primaryKey = 'id_estado_campana';
+
+    public $incrementing = true;
+
+    protected $keyType = 'int';
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TIMESTAMPS
+    |--------------------------------------------------------------------------
+    */
+
+    public $timestamps = false;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAMPOS ASIGNABLES
+    |--------------------------------------------------------------------------
+    */
 
     protected $fillable = [
         'nombre',
         'descripcion',
+        'activo',
+
+        // Compatibilidad temporal con código anterior
         'estado',
     ];
 
-    protected $casts = [
-        'estado' => 'boolean',
-    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | CASTS
+    |--------------------------------------------------------------------------
+    */
+
+    protected function casts(): array
+    {
+        return [
+            'id_estado_campana' => 'integer',
+            'activo' => 'boolean',
+        ];
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COMPATIBILIDAD: ESTADO
+    |--------------------------------------------------------------------------
+    |
+    | Antes:
+    | estado_campanas.estado
+    |
+    | Ahora:
+    | estados_campana.activo
+    |
+    */
+
+    public function getEstadoAttribute(): bool
+    {
+        return (bool) $this->activo;
+    }
+
+    public function setEstadoAttribute($value): void
+    {
+        $this->attributes['activo'] = (bool) $value;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CAMPAÑAS
+    |--------------------------------------------------------------------------
+    */
 
     public function campanas(): HasMany
     {

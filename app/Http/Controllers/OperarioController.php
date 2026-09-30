@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AprobacionUsuario;
 use App\Models\ObjetivoOperario;
 use App\Models\TipoOperario;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +26,7 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array($usuario->id_rol, [1, 2])
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
@@ -34,6 +36,7 @@ class OperarioController extends Controller
             ->with([
                 'empresa',
                 'tipoOperario',
+                'aprobacionActual',
             ]);
 
         /*
@@ -43,19 +46,37 @@ class OperarioController extends Controller
         */
 
         if ($request->filled('buscar')) {
-            $buscar = trim($request->buscar);
+            $buscar = trim((string) $request->buscar);
+            $termino = '%' . mb_strtolower($buscar, 'UTF-8') . '%';
 
-            $consulta->where(function ($query) use ($buscar) {
+            $consulta->where(function ($query) use ($termino) {
                 $query
-                    ->where(
-                        'name',
-                        'like',
-                        '%' . $buscar . '%'
+                    ->whereRaw(
+                        "LOWER(nombre) LIKE ?",
+                        [$termino]
                     )
-                    ->orWhere(
-                        'email',
-                        'like',
-                        '%' . $buscar . '%'
+                    ->orWhereRaw(
+                        "LOWER(apellido_paterno) LIKE ?",
+                        [$termino]
+                    )
+                    ->orWhereRaw(
+                        "LOWER(COALESCE(apellido_materno, '')) LIKE ?",
+                        [$termino]
+                    )
+                    ->orWhereRaw(
+                        "LOWER(correo) LIKE ?",
+                        [$termino]
+                    )
+                    ->orWhereRaw(
+                        "LOWER(
+                            CONCAT_WS(
+                                ' ',
+                                nombre,
+                                apellido_paterno,
+                                apellido_materno
+                            )
+                        ) LIKE ?",
+                        [$termino]
                     );
             });
         }
@@ -69,54 +90,34 @@ class OperarioController extends Controller
         if ($request->filled('estado')) {
             switch ($request->estado) {
                 case 'activo':
-
-                    $consulta->where(
-                        'estado',
-                        true
-                    );
-
-                    $this->filtrarAprobados(
-                        $consulta
-                    );
-
+                    $consulta->where('activo', true);
+                    $this->filtrarAprobados($consulta);
                     break;
 
                 case 'inactivo':
-
-                    $consulta->where(
-                        'estado',
-                        false
-                    );
-
-                    $this->filtrarAprobados(
-                        $consulta
-                    );
-
+                    $consulta->where('activo', false);
+                    $this->filtrarAprobados($consulta);
                     break;
 
                 case 'pendiente':
-
-                    $consulta->where(
-                        'estado_aprobacion',
+                    $this->filtrarPorEstadoAprobacion(
+                        $consulta,
                         'pendiente'
                     );
-
                     break;
 
                 case 'rechazado':
-
-                    $consulta->where(
-                        'estado_aprobacion',
+                    $this->filtrarPorEstadoAprobacion(
+                        $consulta,
                         'rechazado'
                     );
-
                     break;
             }
         }
 
         /*
         |--------------------------------------------------------------------------
-        | FILTRO POR TIPO DE OPERARIO
+        | FILTRO POR TIPO
         |--------------------------------------------------------------------------
         */
 
@@ -128,7 +129,9 @@ class OperarioController extends Controller
         }
 
         $operarios = $consulta
-            ->orderBy('name')
+            ->orderBy('nombre')
+            ->orderBy('apellido_paterno')
+            ->orderBy('apellido_materno')
             ->paginate(10)
             ->withQueryString();
 
@@ -138,65 +141,44 @@ class OperarioController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $base = $this
-            ->consultaOperariosVisibles(
-                $usuario
-            );
+        $base = $this->consultaOperariosVisibles($usuario);
 
-        $totalOperarios =
-            (clone $base)->count();
+        $totalOperarios = (clone $base)->count();
 
-        $consultaActivos =
-            clone $base;
+        $consultaActivos = clone $base;
+        $this->filtrarAprobados($consultaActivos);
 
-        $this->filtrarAprobados(
-            $consultaActivos
+        $operariosActivos = $consultaActivos
+            ->where('activo', true)
+            ->count();
+
+        $consultaInactivos = clone $base;
+        $this->filtrarAprobados($consultaInactivos);
+
+        $operariosInactivos = $consultaInactivos
+            ->where('activo', false)
+            ->count();
+
+        $consultaPendientes = clone $base;
+        $this->filtrarPorEstadoAprobacion(
+            $consultaPendientes,
+            'pendiente'
         );
 
-        $operariosActivos =
-            $consultaActivos
-                ->where('estado', true)
-                ->count();
+        $operariosPendientes = $consultaPendientes->count();
 
-        $consultaInactivos =
-            clone $base;
-
-        $this->filtrarAprobados(
-            $consultaInactivos
+        $consultaRechazados = clone $base;
+        $this->filtrarPorEstadoAprobacion(
+            $consultaRechazados,
+            'rechazado'
         );
 
-        $operariosInactivos =
-            $consultaInactivos
-                ->where('estado', false)
-                ->count();
+        $operariosRechazados = $consultaRechazados->count();
 
-        $operariosPendientes =
-            (clone $base)
-                ->where(
-                    'estado_aprobacion',
-                    'pendiente'
-                )
-                ->count();
-
-        $operariosRechazados =
-            (clone $base)
-                ->where(
-                    'estado_aprobacion',
-                    'rechazado'
-                )
-                ->count();
-
-        /*
-        |--------------------------------------------------------------------------
-        | TIPOS PARA FILTROS DE LA VISTA
-        |--------------------------------------------------------------------------
-        */
-
-        $tiposOperario =
-            TipoOperario::query()
-                ->where('estado', true)
-                ->orderBy('nombre')
-                ->get();
+        $tiposOperario = TipoOperario::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
 
         return view(
             'operarios.index',
@@ -225,40 +207,58 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array($usuario->id_rol, [1, 2])
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
         /*
         |--------------------------------------------------------------------------
-        | SOLO OPERARIOS APROBADOS Y ACTIVOS
+        | ESTADÍSTICAS DE OPERARIOS APROBADOS
+        |--------------------------------------------------------------------------
+        */
+
+        $baseAprobados = $this
+            ->consultaOperariosVisibles($usuario);
+
+        $this->filtrarAprobados($baseAprobados);
+
+        $totalOperarios = (clone $baseAprobados)->count();
+
+        $operariosActivos = (clone $baseAprobados)
+            ->where('activo', true)
+            ->count();
+
+        $operariosInactivos = (clone $baseAprobados)
+            ->where('activo', false)
+            ->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | LISTA DE OPERARIOS DISPONIBLES PARA OBJETIVOS
         |--------------------------------------------------------------------------
         */
 
         $consultaOperarios = $this
-            ->consultaOperariosVisibles(
-                $usuario
-            )
+            ->consultaOperariosVisibles($usuario)
             ->with([
                 'empresa',
                 'tipoOperario',
+                'aprobacionActual',
             ])
-            ->where(
-                'estado',
-                true
-            );
+            ->where('activo', true);
 
-        $this->filtrarAprobados(
-            $consultaOperarios
-        );
+        $this->filtrarAprobados($consultaOperarios);
 
         $operarios = $consultaOperarios
-            ->orderBy('name')
+            ->orderBy('nombre')
+            ->orderBy('apellido_paterno')
             ->get();
 
-        $idsOperarios =
-            $operarios->pluck('id');
+        $idsOperarios = $operarios
+            ->pluck('id_usuario')
+            ->filter()
+            ->values();
 
         /*
         |--------------------------------------------------------------------------
@@ -266,65 +266,97 @@ class OperarioController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        ObjetivoOperario::query()
-            ->whereIn(
-                'id_usuario',
-                $idsOperarios
-            )
-            ->whereIn(
-                'estado',
-                [
-                    'pendiente',
-                    'en_progreso',
-                ]
-            )
-            ->whereDate(
-                'fecha_fin',
-                '<',
-                now()->toDateString()
-            )
-            ->update([
-                'estado' => 'vencido',
-            ]);
+        if ($idsOperarios->isNotEmpty()) {
+            ObjetivoOperario::query()
+                ->whereIn(
+                    'id_usuario',
+                    $idsOperarios
+                )
+                ->whereIn(
+                    'estado',
+                    [
+                        'pendiente',
+                        'en_progreso',
+                    ]
+                )
+                ->whereDate(
+                    'fecha_fin',
+                    '<',
+                    now()->toDateString()
+                )
+                ->update([
+                    'estado' => 'vencido',
+                ]);
+        }
 
         /*
         |--------------------------------------------------------------------------
-        | OBJETIVO ACTUAL DE CADA OPERARIO
+        | OBJETIVO ACTUAL POR OPERARIO
         |--------------------------------------------------------------------------
         */
 
         foreach ($operarios as $operario) {
-            $objetivoActual =
-                ObjetivoOperario::query()
-                    ->where(
-                        'id_usuario',
-                        $operario->id
-                    )
-                    ->whereIn(
-                        'estado',
-                        [
-                            'pendiente',
-                            'en_progreso',
-                        ]
-                    )
-                    ->whereDate(
-                        'fecha_fin',
-                        '>=',
-                        now()->toDateString()
-                    )
-                    ->latest(
-                        'id_objetivo'
-                    )
-                    ->first();
+            $objetivoActual = ObjetivoOperario::query()
+                ->where(
+                    'id_usuario',
+                    $operario->id_usuario
+                )
+                ->whereIn(
+                    'estado',
+                    [
+                        'pendiente',
+                        'en_progreso',
+                    ]
+                )
+                ->whereDate(
+                    'fecha_fin',
+                    '>=',
+                    now()->toDateString()
+                )
+                ->latest('id_objetivo')
+                ->first();
 
-            $operario->objetivo_actual =
-                $objetivoActual;
-
-            $operario->situacion_objetivo =
-                'sin_objetivo';
+            $operario->objetivo_actual = $objetivoActual;
+            $operario->situacion_objetivo = 'sin_objetivo';
+            $operario->llamadas_realizadas = 0;
 
             if ($objetivoActual) {
+                $llamadasRealizadas = DB::table('llamadas')
+                    ->where(
+                        'id_usuario',
+                        $operario->id_usuario
+                    )
+                    ->whereDate(
+                        'fecha_inicio',
+                        '>=',
+                        $objetivoActual->fecha_inicio
+                    )
+                    ->whereDate(
+                        'fecha_inicio',
+                        '<=',
+                        $objetivoActual->fecha_fin
+                    )
+                    ->count();
+
+                $operario->llamadas_realizadas =
+                    $llamadasRealizadas;
+
                 if (
+                    $llamadasRealizadas >=
+                    (int) $objetivoActual->objetivo_llamadas
+                ) {
+                    $operario->situacion_objetivo =
+                        'cumplido';
+
+                    if (
+                        $objetivoActual->estado !==
+                        'cumplido'
+                    ) {
+                        $objetivoActual->update([
+                            'estado' => 'cumplido',
+                        ]);
+                    }
+                } elseif (
                     $objetivoActual->estado === 'pendiente' ||
                     Carbon::parse(
                         $objetivoActual->fecha_inicio
@@ -333,76 +365,42 @@ class OperarioController extends Controller
                     $operario->situacion_objetivo =
                         'pendiente';
                 } else {
-                    $fechaFin =
-                        Carbon::parse(
-                            $objetivoActual->fecha_fin
-                        )->startOfDay();
+                    $fechaFin = Carbon::parse(
+                        $objetivoActual->fecha_fin
+                    )->startOfDay();
 
-                    $diasRestantes =
-                        now()
-                            ->startOfDay()
-                            ->diffInDays(
-                                $fechaFin,
-                                false
-                            );
+                    $diasRestantes = now()
+                        ->startOfDay()
+                        ->diffInDays(
+                            $fechaFin,
+                            false
+                        );
 
-                    if ($diasRestantes <= 2) {
-                        $operario->situacion_objetivo =
-                            'proximo_vencer';
-                    } else {
-                        $operario->situacion_objetivo =
-                            'en_progreso';
-                    }
+                    $operario->situacion_objetivo =
+                        $diasRestantes <= 2
+                            ? 'proximo_vencer'
+                            : 'en_progreso';
                 }
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | ESTADÍSTICAS
-        |--------------------------------------------------------------------------
-        */
-
-        $totalOperarios =
-            $operarios->count();
-
-        $operariosActivos =
-            $operarios
-                ->where(
-                    'estado',
-                    true
-                )
-                ->count();
-
-        $operariosInactivos =
-            $operarios
-                ->where(
-                    'estado',
-                    false
-                )
-                ->count();
-
-        $operariosConObjetivo =
-            $operarios
-                ->filter(function ($operario) {
-                    return
-                        $operario
-                            ->objetivo_actual
-                        !== null;
-                })
-                ->count();
+        $operariosConObjetivo = $operarios
+            ->filter(
+                fn ($operario) =>
+                $operario->objetivo_actual !== null
+            )
+            ->count();
 
         $operariosSinObjetivo =
-            $totalOperarios -
+            $operariosActivos -
             $operariosConObjetivo;
 
-        $objetivosProximosVencer =
-            $operarios
-                ->where(
-                    'situacion_objetivo',
-                    'proximo_vencer'
-                )
-                ->count();
+        $objetivosProximosVencer = $operarios
+            ->where(
+                'situacion_objetivo',
+                'proximo_vencer'
+            )
+            ->count();
 
         return view(
             'operarios.objetivos',
@@ -431,36 +429,19 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | TIPOS DE OPERARIO DISPONIBLES
-        |--------------------------------------------------------------------------
-        */
-
-        $tiposOperario =
-            TipoOperario::query()
-                ->where(
-                    'estado',
-                    true
-                )
-                ->orderBy(
-                    'nombre'
-                )
-                ->get();
+        $tiposOperario = TipoOperario::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
 
         return view(
             'operarios.create',
-            compact(
-                'tiposOperario'
-            )
+            compact('tiposOperario')
         );
     }
 
@@ -477,10 +458,7 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
@@ -496,7 +474,11 @@ class OperarioController extends Controller
                 'email' => [
                     'required',
                     'email',
-                    'unique:users,email',
+                    'max:150',
+                    Rule::unique(
+                        'usuarios',
+                        'correo'
+                    )->whereNull('deleted_at'),
                 ],
 
                 'password' => [
@@ -511,26 +493,19 @@ class OperarioController extends Controller
                     'not_regex:/\s/',
                 ],
 
-                /*
-                |--------------------------------------------------------------------------
-                | TIPO DE OPERARIO
-                |--------------------------------------------------------------------------
-                */
-
                 'id_tipo_operario' => [
                     'required',
                     'integer',
 
                     Rule::exists(
-                        'tipo_operarios',
+                        'tipos_operario',
                         'id_tipo_operario'
                     )->where(
-                        function ($query) {
-                            $query->where(
-                                'estado',
-                                true
-                            );
-                        }
+                        fn ($query) =>
+                        $query->where(
+                            'activo',
+                            true
+                        )
                     ),
                 ],
 
@@ -572,11 +547,11 @@ class OperarioController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | ADMIN CLIENTE
+        | EMPRESA DEL OPERARIO
         |--------------------------------------------------------------------------
         */
 
-        if ($usuario->id_rol == 2) {
+        if ((int) $usuario->id_rol === 2) {
             if (!$usuario->id_empresa) {
                 return back()
                     ->withErrors([
@@ -586,131 +561,133 @@ class OperarioController extends Controller
                     ->withInput();
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | El operario siempre pertenece a la misma empresa
-            | que el Admin Cliente que realiza la solicitud.
-            |--------------------------------------------------------------------------
-            */
-
             $datos['id_empresa'] =
                 $usuario->id_empresa;
         }
 
         /*
         |--------------------------------------------------------------------------
-        | CREAR USUARIO
+        | El nuevo esquema exige id_empresa para todos los usuarios.
         |--------------------------------------------------------------------------
         */
 
-        $operario =
-            new User();
-
-        $operario->name =
-            $datos['name'];
-
-        $operario->email =
-            $datos['email'];
-
-        $operario->password =
-            Hash::make(
-                $datos['password']
-            );
-
-        $operario->id_rol =
-            3;
-
-        $operario->id_empresa =
+        $idEmpresa =
             $datos['id_empresa']
-            ?? null;
+            ?? $usuario->id_empresa;
 
-        /*
-        |--------------------------------------------------------------------------
-        | TIPO DE OPERARIO
-        |--------------------------------------------------------------------------
-        */
-
-        $operario->id_tipo_operario =
-            $datos['id_tipo_operario'];
-
-        /*
-        |--------------------------------------------------------------------------
-        | ADMIN CLIENTE
-        |--------------------------------------------------------------------------
-        |
-        | Genera una solicitud.
-        |--------------------------------------------------------------------------
-        */
-
-        if ($usuario->id_rol == 2) {
-            $operario->estado =
-                false;
-
-            $operario->estado_aprobacion =
-                'pendiente';
-
-            $operario->solicitado_por =
-                $usuario->id;
-
-            $operario->fecha_solicitud =
-                now();
-
-            $operario->revisado_por =
-                null;
-
-            $operario->fecha_revision =
-                null;
-
-            $operario->motivo_rechazo =
-                null;
+        if (!$idEmpresa) {
+            return back()
+                ->withErrors([
+                    'id_empresa' =>
+                        'Debes seleccionar una empresa para el operario.',
+                ])
+                ->withInput();
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | SUPER ADMIN
-        |--------------------------------------------------------------------------
-        |
-        | Si en algún momento el Super Admin crea directamente
-        | un operario, queda aprobado automáticamente.
-        |--------------------------------------------------------------------------
-        */
+        $operario = DB::transaction(
+            function () use (
+                $datos,
+                $usuario,
+                $idEmpresa
+            ) {
+                $operario = new User();
 
-        if ($usuario->id_rol == 1) {
-            $operario->estado =
-                true;
+                /*
+                |--------------------------------------------------------------------------
+                | Estos alias siguen funcionando gracias a User.php:
+                |
+                | name     -> nombre/apellidos
+                | email    -> correo
+                | password -> password_hash
+                |--------------------------------------------------------------------------
+                */
 
-            $operario->estado_aprobacion =
-                'aprobado';
+                $operario->name =
+                    $datos['name'];
 
-            $operario->solicitado_por =
-                $usuario->id;
+                $operario->email =
+                    mb_strtolower(
+                        trim($datos['email']),
+                        'UTF-8'
+                    );
 
-            $operario->fecha_solicitud =
-                now();
+                $operario->password =
+                    $datos['password'];
 
-            $operario->revisado_por =
-                $usuario->id;
+                $operario->id_rol = 3;
+                $operario->id_empresa =
+                    (int) $idEmpresa;
 
-            $operario->fecha_revision =
-                now();
+                $operario->id_tipo_operario =
+                    (int) $datos['id_tipo_operario'];
 
-            $operario->motivo_rechazo =
-                null;
-        }
+                /*
+                |--------------------------------------------------------------------------
+                | Admin Cliente: nace inactivo hasta aprobación.
+                | Super Admin: nace activo y aprobado.
+                |--------------------------------------------------------------------------
+                */
 
-        $operario->save();
+                $operario->activo =
+                    (int) $usuario->id_rol === 1;
 
-        /*
-        |--------------------------------------------------------------------------
-        | RESPUESTA
-        |--------------------------------------------------------------------------
-        */
+                $operario->save();
 
-        if ($usuario->id_rol == 2) {
+                if ((int) $usuario->id_rol === 2) {
+                    AprobacionUsuario::create([
+                        'id_usuario' =>
+                            $operario->id_usuario,
+
+                        'estado' =>
+                            'pendiente',
+
+                        'solicitado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_solicitud' =>
+                            now(),
+
+                        'revisado_por' =>
+                            null,
+
+                        'fecha_revision' =>
+                            null,
+
+                        'motivo_rechazo' =>
+                            null,
+                    ]);
+                } else {
+                    AprobacionUsuario::create([
+                        'id_usuario' =>
+                            $operario->id_usuario,
+
+                        'estado' =>
+                            'aprobado',
+
+                        'solicitado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_solicitud' =>
+                            now(),
+
+                        'revisado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_revision' =>
+                            now(),
+
+                        'motivo_rechazo' =>
+                            null,
+                    ]);
+                }
+
+                return $operario;
+            }
+        );
+
+        if ((int) $usuario->id_rol === 2) {
             return redirect()
-                ->route(
-                    'operarios.index'
-                )
+                ->route('operarios.index')
                 ->with(
                     'success',
                     'Solicitud enviada correctamente. El nuevo operario deberá ser aprobado por un Super Administrador antes de poder acceder al sistema.'
@@ -718,9 +695,7 @@ class OperarioController extends Controller
         }
 
         return redirect()
-            ->route(
-                'operarios.index'
-            )
+            ->route('operarios.index')
             ->with(
                 'success',
                 'Operario registrado y aprobado correctamente.'
@@ -734,104 +709,114 @@ class OperarioController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function solicitudes(
-        Request $request
-    ) {
+    public function solicitudes(Request $request)
+    {
         $usuario = auth()->user();
 
         if (
             !$usuario ||
-            $usuario->id_rol != 1
+            (int) $usuario->id_rol !== 1
         ) {
             abort(403);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Incluimos empresa y tipo de operario.
-        |--------------------------------------------------------------------------
-        */
-
-        $consulta =
-            User::query()
-                ->with([
-                    'empresa',
-                    'tipoOperario',
-                ])
-                ->where(
-                    'id_rol',
-                    3
-                )
-                ->where(
-                    'estado_aprobacion',
+        $consulta = User::query()
+            ->with([
+                'empresa',
+                'tipoOperario',
+                'aprobacionActual',
+            ])
+            ->where('id_rol', 3)
+            ->whereHas(
+                'aprobacionActual',
+                fn ($query) =>
+                $query->where(
+                    'estado',
                     'pendiente'
-                );
+                )
+            );
 
-        /*
-        |--------------------------------------------------------------------------
-        | BÚSQUEDA
-        |--------------------------------------------------------------------------
-        */
+        if ($request->filled('buscar')) {
+            $buscar = trim(
+                (string) $request->buscar
+            );
 
-        if (
-            $request->filled(
-                'buscar'
-            )
-        ) {
-            $buscar =
-                trim(
-                    $request->buscar
-                );
+            $termino =
+                '%' .
+                mb_strtolower(
+                    $buscar,
+                    'UTF-8'
+                ) .
+                '%';
 
             $consulta->where(
-                function ($query) use ($buscar) {
+                function ($query) use ($termino) {
                     $query
-                        ->where(
-                            'name',
-                            'like',
-                            '%' . $buscar . '%'
+                        ->whereRaw(
+                            "LOWER(nombre) LIKE ?",
+                            [$termino]
                         )
-                        ->orWhere(
-                            'email',
-                            'like',
-                            '%' . $buscar . '%'
+                        ->orWhereRaw(
+                            "LOWER(apellido_paterno) LIKE ?",
+                            [$termino]
+                        )
+                        ->orWhereRaw(
+                            "LOWER(COALESCE(apellido_materno, '')) LIKE ?",
+                            [$termino]
+                        )
+                        ->orWhereRaw(
+                            "LOWER(correo) LIKE ?",
+                            [$termino]
+                        )
+                        ->orWhereRaw(
+                            "LOWER(
+                                CONCAT_WS(
+                                    ' ',
+                                    nombre,
+                                    apellido_paterno,
+                                    apellido_materno
+                                )
+                            ) LIKE ?",
+                            [$termino]
                         );
                 }
             );
         }
 
-        $solicitudes =
-            $consulta
-                ->orderBy(
-                    'fecha_solicitud',
-                    'asc'
-                )
-                ->paginate(10)
-                ->withQueryString();
-
         /*
         |--------------------------------------------------------------------------
-        | USUARIOS QUE REALIZARON LA SOLICITUD
+        | Ordenar por la fecha de la aprobación más reciente.
         |--------------------------------------------------------------------------
         */
 
-        $idsSolicitantes =
-            $solicitudes
-                ->getCollection()
-                ->pluck(
-                    'solicitado_por'
-                )
-                ->filter()
-                ->unique();
+        $solicitudes = $consulta
+            ->orderByRaw(
+                "(
+                    SELECT au.fecha_solicitud
+                    FROM aprobaciones_usuario au
+                    WHERE au.id_usuario =
+                        usuarios.id_usuario
+                    ORDER BY au.id_aprobacion DESC
+                    LIMIT 1
+                ) ASC"
+            )
+            ->paginate(10)
+            ->withQueryString();
 
-        $solicitantes =
-            User::query()
-                ->whereIn(
-                    'id',
-                    $idsSolicitantes
-                )
-                ->get()
-                ->keyBy('id');
+        $idsSolicitantes = $solicitudes
+            ->getCollection()
+            ->pluck('solicitado_por')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $solicitantes = User::query()
+            ->whereIn(
+                'id_usuario',
+                $idsSolicitantes
+            )
+            ->get()
+            ->keyBy('id_usuario');
 
         return view(
             'operarios.solicitudes',
@@ -855,28 +840,17 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            $usuario->id_rol != 1
+            (int) $usuario->id_rol !== 1
         ) {
             abort(403);
         }
 
-        $operario =
-            User::query()
-                ->where(
-                    'id_rol',
-                    3
-                )
-                ->findOrFail($id);
+        $operario = User::query()
+            ->with('aprobacionActual')
+            ->where('id_rol', 3)
+            ->findOrFail($id);
 
-        /*
-        |--------------------------------------------------------------------------
-        | EVITAR APROBACIÓN SIN TIPO
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !$operario->id_tipo_operario
-        ) {
+        if (!$operario->id_tipo_operario) {
             return back()
                 ->withErrors([
                     'operario' =>
@@ -884,9 +858,12 @@ class OperarioController extends Controller
                 ]);
         }
 
+        $aprobacion =
+            $operario->aprobacionActual;
+
         if (
-            $operario->estado_aprobacion
-            === 'aprobado'
+            $aprobacion &&
+            $aprobacion->estado === 'aprobado'
         ) {
             return back()
                 ->with(
@@ -895,25 +872,57 @@ class OperarioController extends Controller
                 );
         }
 
-        $operario->estado_aprobacion =
-            'aprobado';
+        DB::transaction(
+            function () use (
+                $operario,
+                $usuario,
+                $aprobacion
+            ) {
+                if ($aprobacion) {
+                    $aprobacion->update([
+                        'estado' =>
+                            'aprobado',
 
-        $operario->estado =
-            true;
+                        'revisado_por' =>
+                            $usuario->id_usuario,
 
-        $operario->revisado_por =
-            $usuario->id;
+                        'fecha_revision' =>
+                            now(),
 
-        $operario->fecha_revision =
-            now();
+                        'motivo_rechazo' =>
+                            null,
+                    ]);
+                } else {
+                    AprobacionUsuario::create([
+                        'id_usuario' =>
+                            $operario->id_usuario,
 
-        $operario->motivo_rechazo =
-            null;
+                        'estado' =>
+                            'aprobado',
 
-        $operario->save();
+                        'solicitado_por' =>
+                            $usuario->id_usuario,
 
-        return redirect()
-            ->back()
+                        'fecha_solicitud' =>
+                            now(),
+
+                        'revisado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_revision' =>
+                            now(),
+
+                        'motivo_rechazo' =>
+                            null,
+                    ]);
+                }
+
+                $operario->activo = true;
+                $operario->save();
+            }
+        );
+
+        return back()
             ->with(
                 'success',
                 'Solicitud aprobada correctamente. El operario ya puede acceder al sistema.'
@@ -935,58 +944,88 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            $usuario->id_rol != 1
+            (int) $usuario->id_rol !== 1
         ) {
             abort(403);
         }
 
-        $datos =
-            $request->validate(
-                [
-                    'motivo_rechazo' => [
-                        'required',
-                        'string',
-                        'max:1000',
-                    ],
+        $datos = $request->validate(
+            [
+                'motivo_rechazo' => [
+                    'required',
+                    'string',
+                    'max:1000',
                 ],
-                [
-                    'motivo_rechazo.required' =>
-                        'Debes indicar el motivo del rechazo.',
+            ],
+            [
+                'motivo_rechazo.required' =>
+                    'Debes indicar el motivo del rechazo.',
 
-                    'motivo_rechazo.max' =>
-                        'El motivo no puede exceder 1000 caracteres.',
-                ]
-            );
+                'motivo_rechazo.max' =>
+                    'El motivo no puede exceder 1000 caracteres.',
+            ]
+        );
 
-        $operario =
-            User::query()
-                ->where(
-                    'id_rol',
-                    3
-                )
-                ->findOrFail($id);
+        $operario = User::query()
+            ->with('aprobacionActual')
+            ->where('id_rol', 3)
+            ->findOrFail($id);
 
-        $operario->estado_aprobacion =
-            'rechazado';
+        $aprobacion =
+            $operario->aprobacionActual;
 
-        $operario->estado =
-            false;
+        DB::transaction(
+            function () use (
+                $operario,
+                $usuario,
+                $aprobacion,
+                $datos
+            ) {
+                if ($aprobacion) {
+                    $aprobacion->update([
+                        'estado' =>
+                            'rechazado',
 
-        $operario->revisado_por =
-            $usuario->id;
+                        'revisado_por' =>
+                            $usuario->id_usuario,
 
-        $operario->fecha_revision =
-            now();
+                        'fecha_revision' =>
+                            now(),
 
-        $operario->motivo_rechazo =
-            $datos[
-                'motivo_rechazo'
-            ];
+                        'motivo_rechazo' =>
+                            $datos['motivo_rechazo'],
+                    ]);
+                } else {
+                    AprobacionUsuario::create([
+                        'id_usuario' =>
+                            $operario->id_usuario,
 
-        $operario->save();
+                        'estado' =>
+                            'rechazado',
 
-        return redirect()
-            ->back()
+                        'solicitado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_solicitud' =>
+                            now(),
+
+                        'revisado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_revision' =>
+                            now(),
+
+                        'motivo_rechazo' =>
+                            $datos['motivo_rechazo'],
+                    ]);
+                }
+
+                $operario->activo = false;
+                $operario->save();
+            }
+        );
+
+        return back()
             ->with(
                 'success',
                 'La solicitud del operario fue rechazada.'
@@ -996,7 +1035,7 @@ class OperarioController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | REENVIAR SOLICITUD RECHAZADA
+    | REENVIAR SOLICITUD
     |--------------------------------------------------------------------------
     */
 
@@ -1006,24 +1045,19 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->findOrFail($id);
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->with('aprobacionActual')
+            ->findOrFail($id);
 
         if (
-            $operario->estado_aprobacion
-            === 'aprobado'
+            $operario->estado_aprobacion ===
+            'aprobado'
         ) {
             return back()
                 ->withErrors([
@@ -1033,8 +1067,17 @@ class OperarioController extends Controller
         }
 
         if (
-            !$operario->id_tipo_operario
+            $operario->estado_aprobacion ===
+            'pendiente'
         ) {
+            return back()
+                ->with(
+                    'success',
+                    'La solicitud de este operario ya se encuentra pendiente de revisión.'
+                );
+        }
+
+        if (!$operario->id_tipo_operario) {
             return back()
                 ->withErrors([
                     'operario' =>
@@ -1042,28 +1085,38 @@ class OperarioController extends Controller
                 ]);
         }
 
-        $operario->estado_aprobacion =
-            'pendiente';
+        DB::transaction(
+            function () use (
+                $operario,
+                $usuario
+            ) {
+                $operario->activo = false;
+                $operario->save();
 
-        $operario->estado =
-            false;
+                AprobacionUsuario::create([
+                    'id_usuario' =>
+                        $operario->id_usuario,
 
-        $operario->solicitado_por =
-            $usuario->id;
+                    'estado' =>
+                        'pendiente',
 
-        $operario->fecha_solicitud =
-            now();
+                    'solicitado_por' =>
+                        $usuario->id_usuario,
 
-        $operario->revisado_por =
-            null;
+                    'fecha_solicitud' =>
+                        now(),
 
-        $operario->fecha_revision =
-            null;
+                    'revisado_por' =>
+                        null,
 
-        $operario->motivo_rechazo =
-            null;
+                    'fecha_revision' =>
+                        null,
 
-        $operario->save();
+                    'motivo_rechazo' =>
+                        null,
+                ]);
+            }
+        );
 
         return back()
             ->with(
@@ -1083,31 +1136,32 @@ class OperarioController extends Controller
     {
         $usuario = auth()->user();
 
-        if (!$usuario) {
+        if (
+            !$usuario ||
+            !in_array((int) $usuario->id_rol, [1, 2], true)
+        ) {
             abort(403);
         }
 
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->with([
-                    'empresa',
-                    'tipoOperario',
-                ])
-                ->findOrFail($id);
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->with([
+                'empresa',
+                'tipoOperario',
+                'aprobacionActual',
+            ])
+            ->findOrFail($id);
 
         /*
         |--------------------------------------------------------------------------
-        | VENCIMIENTO AUTOMÁTICO DE OBJETIVOS
+        | VENCIMIENTO AUTOMÁTICO
         |--------------------------------------------------------------------------
         */
 
         ObjetivoOperario::query()
             ->where(
                 'id_usuario',
-                $operario->id
+                $operario->id_usuario
             )
             ->whereIn(
                 'estado',
@@ -1127,69 +1181,77 @@ class OperarioController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | LLAMADAS REALIZADAS
-        |--------------------------------------------------------------------------
-        */
-
-        $llamadasRealizadas = 0;
-
-        /*
-        |--------------------------------------------------------------------------
         | OBJETIVO ACTUAL
         |--------------------------------------------------------------------------
         */
 
-        $objetivoActual =
-            null;
+        $objetivoActual = null;
+        $llamadasRealizadas = 0;
 
         if (
             $this->operarioEstaAprobado(
                 $operario
             ) &&
-            $operario->estado
+            $operario->activo
         ) {
-            $objetivoActual =
-                ObjetivoOperario::query()
+            $objetivoActual = ObjetivoOperario::query()
+                ->where(
+                    'id_usuario',
+                    $operario->id_usuario
+                )
+                ->whereIn(
+                    'estado',
+                    [
+                        'pendiente',
+                        'en_progreso',
+                    ]
+                )
+                ->whereDate(
+                    'fecha_inicio',
+                    '<=',
+                    now()->toDateString()
+                )
+                ->whereDate(
+                    'fecha_fin',
+                    '>=',
+                    now()->toDateString()
+                )
+                ->latest('id_objetivo')
+                ->first();
+
+            if ($objetivoActual) {
+                $llamadasRealizadas = DB::table(
+                    'llamadas'
+                )
                     ->where(
                         'id_usuario',
-                        $operario->id
+                        $operario->id_usuario
                     )
-                    ->whereIn(
-                        'estado',
-                        [
-                            'pendiente',
-                            'en_progreso',
-                        ]
+                    ->whereDate(
+                        'fecha_inicio',
+                        '>=',
+                        $objetivoActual->fecha_inicio
                     )
                     ->whereDate(
                         'fecha_inicio',
                         '<=',
-                        now()->toDateString()
+                        $objetivoActual->fecha_fin
                     )
-                    ->whereDate(
-                        'fecha_fin',
-                        '>=',
-                        now()->toDateString()
-                    )
-                    ->latest(
-                        'id_objetivo'
-                    )
-                    ->first();
+                    ->count();
+            }
         }
 
         /*
         |--------------------------------------------------------------------------
-        | SITUACIÓN DEL OBJETIVO
+        | SITUACIÓN
         |--------------------------------------------------------------------------
         */
 
-        $situacionObjetivo =
-            null;
+        $situacionObjetivo = null;
 
         if ($objetivoActual) {
             $objetivo =
-                (int)
-                $objetivoActual
+                (int) $objetivoActual
                     ->objetivo_llamadas;
 
             if (
@@ -1200,14 +1262,13 @@ class OperarioController extends Controller
                     'cumplido';
 
                 if (
-                    $objetivoActual->estado
-                    !== 'cumplido'
+                    $objetivoActual->estado !==
+                    'cumplido'
                 ) {
-                    $objetivoActual
-                        ->update([
-                            'estado' =>
-                                'cumplido',
-                        ]);
+                    $objetivoActual->update([
+                        'estado' =>
+                            'cumplido',
+                    ]);
                 }
             } else {
                 $hoy =
@@ -1225,15 +1286,10 @@ class OperarioController extends Controller
                         false
                     );
 
-                if (
+                $situacionObjetivo =
                     $diasRestantes <= 2
-                ) {
-                    $situacionObjetivo =
-                        'proximo_vencer';
-                } else {
-                    $situacionObjetivo =
-                        'en_progreso';
-                }
+                        ? 'proximo_vencer'
+                        : 'en_progreso';
             }
         }
 
@@ -1243,25 +1299,22 @@ class OperarioController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $objetivoVencido =
-            ObjetivoOperario::query()
-                ->where(
-                    'id_usuario',
-                    $operario->id
-                )
-                ->where(
-                    'estado',
-                    'vencido'
-                )
-                ->whereDate(
-                    'fecha_fin',
-                    '<',
-                    now()->toDateString()
-                )
-                ->latest(
-                    'fecha_fin'
-                )
-                ->first();
+        $objetivoVencido = ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id_usuario
+            )
+            ->where(
+                'estado',
+                'vencido'
+            )
+            ->whereDate(
+                'fecha_fin',
+                '<',
+                now()->toDateString()
+            )
+            ->latest('fecha_fin')
+            ->first();
 
         if (
             !$objetivoActual &&
@@ -1277,19 +1330,14 @@ class OperarioController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $objetivos =
-            ObjetivoOperario::query()
-                ->where(
-                    'id_usuario',
-                    $operario->id
-                )
-                ->orderByDesc(
-                    'fecha_inicio'
-                )
-                ->orderByDesc(
-                    'id_objetivo'
-                )
-                ->get();
+        $objetivos = ObjetivoOperario::query()
+            ->where(
+                'id_usuario',
+                $operario->id_usuario
+            )
+            ->orderByDesc('fecha_inicio')
+            ->orderByDesc('id_objetivo')
+            ->get();
 
         return view(
             'operarios.show',
@@ -1317,40 +1365,23 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->with(
-                    'tipoOperario'
-                )
-                ->findOrFail($id);
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->with([
+                'tipoOperario',
+                'aprobacionActual',
+            ])
+            ->findOrFail($id);
 
-        /*
-        |--------------------------------------------------------------------------
-        | TIPOS DISPONIBLES
-        |--------------------------------------------------------------------------
-        */
-
-        $tiposOperario =
-            TipoOperario::query()
-                ->where(
-                    'estado',
-                    true
-                )
-                ->orderBy(
-                    'nombre'
-                )
-                ->get();
+        $tiposOperario = TipoOperario::query()
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
 
         return view(
             'operarios.edit',
@@ -1376,135 +1407,99 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->findOrFail($id);
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->with('aprobacionActual')
+            ->findOrFail($id);
 
-        $datos =
-            $request->validate(
-                [
-                    'name' => [
-                        'required',
-                        'string',
-                        'max:255',
-                    ],
-
-                    'email' => [
-                        'required',
-                        'email',
-
-                        Rule::unique(
-                            'users',
-                            'email'
-                        )->ignore(
-                            $operario->id
-                        ),
-                    ],
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | TIPO DE OPERARIO
-                    |--------------------------------------------------------------------------
-                    */
-
-                    'id_tipo_operario' => [
-                        'required',
-                        'integer',
-
-                        Rule::exists(
-                            'tipo_operarios',
-                            'id_tipo_operario'
-                        )->where(
-                            function ($query) {
-                                $query->where(
-                                    'estado',
-                                    true
-                                );
-                            }
-                        ),
-                    ],
-
-                    'current_password' => [
-                        'nullable',
-                        'string',
-                    ],
-
-                    'password' => [
-                        'nullable',
-                        'string',
-                        'min:8',
-                        'confirmed',
-                        'regex:/[A-Z]/',
-                        'regex:/[a-z]/',
-                        'regex:/[0-9]/',
-                        'regex:/[^A-Za-z0-9]/',
-                        'not_regex:/\s/',
-                    ],
+        $datos = $request->validate(
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    'max:255',
                 ],
-                [
-                    'id_tipo_operario.required' =>
-                        'Debes seleccionar un tipo de operario.',
 
-                    'id_tipo_operario.exists' =>
-                        'El tipo de operario seleccionado no es válido.',
-                ]
-            );
+                'email' => [
+                    'required',
+                    'email',
+                    'max:150',
 
-        /*
-        |--------------------------------------------------------------------------
-        | COMPROBAR SI CAMBIÓ EL TIPO
-        |--------------------------------------------------------------------------
-        */
+                    Rule::unique(
+                        'usuarios',
+                        'correo'
+                    )
+                        ->whereNull(
+                            'deleted_at'
+                        )
+                        ->ignore(
+                            $operario->id_usuario,
+                            'id_usuario'
+                        ),
+                ],
+
+                'id_tipo_operario' => [
+                    'required',
+                    'integer',
+
+                    Rule::exists(
+                        'tipos_operario',
+                        'id_tipo_operario'
+                    )->where(
+                        fn ($query) =>
+                        $query->where(
+                            'activo',
+                            true
+                        )
+                    ),
+                ],
+
+                'current_password' => [
+                    'nullable',
+                    'string',
+                ],
+
+                'password' => [
+                    'nullable',
+                    'string',
+                    'min:8',
+                    'confirmed',
+                    'regex:/[A-Z]/',
+                    'regex:/[a-z]/',
+                    'regex:/[0-9]/',
+                    'regex:/[^A-Za-z0-9]/',
+                    'not_regex:/\s/',
+                ],
+            ],
+            [
+                'id_tipo_operario.required' =>
+                    'Debes seleccionar un tipo de operario.',
+
+                'id_tipo_operario.exists' =>
+                    'El tipo de operario seleccionado no es válido.',
+            ]
+        );
 
         $cambioTipo =
-            (int)
-            $operario->id_tipo_operario
+            (int) $operario->id_tipo_operario
             !==
-            (int)
-            $datos['id_tipo_operario'];
+            (int) $datos['id_tipo_operario'];
 
         /*
         |--------------------------------------------------------------------------
-        | DATOS GENERALES
+        | CONTRASEÑA
         |--------------------------------------------------------------------------
         */
 
-        $operario->name =
-            $datos['name'];
-
-        $operario->email =
-            $datos['email'];
-
-        $operario->id_tipo_operario =
-            $datos['id_tipo_operario'];
-
-        /*
-        |--------------------------------------------------------------------------
-        | CAMBIAR CONTRASEÑA
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !empty(
-                $datos['password']
-            )
-        ) {
+        if (!empty($datos['password'])) {
             if (
                 empty(
-                    $datos[
-                        'current_password'
-                    ]
+                    $datos['current_password']
                 )
             ) {
                 return back()
@@ -1517,10 +1512,8 @@ class OperarioController extends Controller
 
             if (
                 !Hash::check(
-                    $datos[
-                        'current_password'
-                    ],
-                    $operario->password
+                    $datos['current_password'],
+                    $operario->password_hash
                 )
             ) {
                 return back()
@@ -1530,66 +1523,73 @@ class OperarioController extends Controller
                     ])
                     ->withInput();
             }
-
-            $operario->password =
-                Hash::make(
-                    $datos['password']
-                );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | SI CAMBIA EL TIPO DE UN OPERARIO APROBADO
-        |--------------------------------------------------------------------------
-        |
-        | El tipo determina lo que podrá hacer dentro del sistema.
-        |
-        | Por eso, si un Admin Cliente cambia el tipo de un operario
-        | que ya estaba aprobado, la modificación vuelve a requerir
-        | autorización del Super Admin.
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            $usuario->id_rol == 2 &&
+        $requiereNuevaAprobacion =
+            (int) $usuario->id_rol === 2 &&
             $cambioTipo &&
-            $operario->estado_aprobacion === 'aprobado'
-        ) {
-            $operario->estado =
-                false;
+            $operario->estado_aprobacion ===
+                'aprobado';
 
-            $operario->estado_aprobacion =
-                'pendiente';
+        DB::transaction(
+            function () use (
+                $operario,
+                $usuario,
+                $datos,
+                $requiereNuevaAprobacion
+            ) {
+                $operario->name =
+                    $datos['name'];
 
-            $operario->solicitado_por =
-                $usuario->id;
+                $operario->email =
+                    mb_strtolower(
+                        trim($datos['email']),
+                        'UTF-8'
+                    );
 
-            $operario->fecha_solicitud =
-                now();
+                $operario->id_tipo_operario =
+                    (int)
+                    $datos['id_tipo_operario'];
 
-            $operario->revisado_por =
-                null;
+                if (!empty($datos['password'])) {
+                    $operario->password =
+                        $datos['password'];
+                }
 
-            $operario->fecha_revision =
-                null;
+                if ($requiereNuevaAprobacion) {
+                    $operario->activo = false;
+                }
 
-            $operario->motivo_rechazo =
-                null;
-        }
+                $operario->save();
 
-        $operario->save();
+                if ($requiereNuevaAprobacion) {
+                    AprobacionUsuario::create([
+                        'id_usuario' =>
+                            $operario->id_usuario,
 
-        /*
-        |--------------------------------------------------------------------------
-        | RESPUESTA
-        |--------------------------------------------------------------------------
-        */
+                        'estado' =>
+                            'pendiente',
 
-        if (
-            $usuario->id_rol == 2 &&
-            $cambioTipo &&
-            $operario->estado_aprobacion === 'pendiente'
-        ) {
+                        'solicitado_por' =>
+                            $usuario->id_usuario,
+
+                        'fecha_solicitud' =>
+                            now(),
+
+                        'revisado_por' =>
+                            null,
+
+                        'fecha_revision' =>
+                            null,
+
+                        'motivo_rechazo' =>
+                            null,
+                    ]);
+                }
+            }
+        );
+
+        if ($requiereNuevaAprobacion) {
             return redirect()
                 ->route(
                     'operarios.show',
@@ -1627,63 +1627,45 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        $datos =
-            $request->validate([
-                'objetivo_llamadas' => [
-                    'required',
-                    'integer',
-                    'min:1',
-                    'max:100000',
-                ],
+        $datos = $request->validate([
+            'objetivo_llamadas' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:100000',
+            ],
 
-                'periodo' => [
-                    'required',
+            'periodo' => [
+                'required',
 
-                    Rule::in([
-                        'semanal',
-                        'mensual',
-                        'personalizado',
-                    ]),
-                ],
+                Rule::in([
+                    'semanal',
+                    'mensual',
+                    'personalizado',
+                ]),
+            ],
 
-                'fecha_inicio' => [
-                    'required',
-                    'date',
-                ],
+            'fecha_inicio' => [
+                'required',
+                'date',
+            ],
 
-                'fecha_fin' => [
-                    'required',
-                    'date',
-                    'after_or_equal:fecha_inicio',
-                ],
-            ]);
+            'fecha_fin' => [
+                'required',
+                'date',
+                'after_or_equal:fecha_inicio',
+            ],
+        ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | BUSCAR OPERARIO
-        |--------------------------------------------------------------------------
-        */
-
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->findOrFail($id);
-
-        /*
-        |--------------------------------------------------------------------------
-        | APROBACIÓN
-        |--------------------------------------------------------------------------
-        */
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->with('aprobacionActual')
+            ->findOrFail($id);
 
         if (
             !$this->operarioEstaAprobado(
@@ -1697,7 +1679,7 @@ class OperarioController extends Controller
                 ]);
         }
 
-        if (!$operario->estado) {
+        if (!$operario->activo) {
             return back()
                 ->withErrors([
                     'operario' =>
@@ -1714,7 +1696,7 @@ class OperarioController extends Controller
         ObjetivoOperario::query()
             ->where(
                 'id_usuario',
-                $operario->id
+                $operario->id_usuario
             )
             ->whereIn(
                 'estado',
@@ -1728,40 +1710,23 @@ class OperarioController extends Controller
                     'vencido',
             ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | ESTADO INICIAL
-        |--------------------------------------------------------------------------
-        */
+        $fechaInicio = Carbon::parse(
+            $datos['fecha_inicio']
+        )->startOfDay();
 
-        $fechaInicio =
-            Carbon::parse(
-                $datos['fecha_inicio']
-            )->startOfDay();
-
-        $hoy =
-            now()->startOfDay();
+        $hoy = now()->startOfDay();
 
         $estadoInicial =
-            $fechaInicio
-                ->greaterThan($hoy)
+            $fechaInicio->greaterThan($hoy)
                 ? 'pendiente'
                 : 'en_progreso';
 
-        /*
-        |--------------------------------------------------------------------------
-        | CREAR OBJETIVO
-        |--------------------------------------------------------------------------
-        */
-
         ObjetivoOperario::create([
             'id_usuario' =>
-                $operario->id,
+                $operario->id_usuario,
 
             'objetivo_llamadas' =>
-                $datos[
-                    'objetivo_llamadas'
-                ],
+                $datos['objetivo_llamadas'],
 
             'periodo' =>
                 $datos['periodo'],
@@ -1790,7 +1755,7 @@ class OperarioController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | ACTIVAR / DESACTIVAR OPERARIO
+    | ACTIVAR / DESACTIVAR
     |--------------------------------------------------------------------------
     */
 
@@ -1800,26 +1765,15 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->findOrFail($id);
-
-        /*
-        |--------------------------------------------------------------------------
-        | SOLICITUD NO APROBADA
-        |--------------------------------------------------------------------------
-        */
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->with('aprobacionActual')
+            ->findOrFail($id);
 
         if (
             !$this->operarioEstaAprobado(
@@ -1833,15 +1787,7 @@ class OperarioController extends Controller
                 ]);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | OPERARIO SIN TIPO
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            !$operario->id_tipo_operario
-        ) {
+        if (!$operario->id_tipo_operario) {
             return back()
                 ->withErrors([
                     'operario' =>
@@ -1849,16 +1795,15 @@ class OperarioController extends Controller
                 ]);
         }
 
-        $operario->estado =
-            !$operario->estado;
+        $operario->activo =
+            !$operario->activo;
 
         $operario->save();
 
-        return redirect()
-            ->back()
+        return back()
             ->with(
                 'success',
-                $operario->estado
+                $operario->activo
                     ? 'Operario activado correctamente.'
                     : 'Operario desactivado correctamente.'
             );
@@ -1877,27 +1822,25 @@ class OperarioController extends Controller
 
         if (
             !$usuario ||
-            !in_array(
-                $usuario->id_rol,
-                [1, 2]
-            )
+            !in_array((int) $usuario->id_rol, [1, 2], true)
         ) {
             abort(403);
         }
 
-        $operario =
-            $this
-                ->consultaOperariosVisibles(
-                    $usuario
-                )
-                ->findOrFail($id);
+        $operario = $this
+            ->consultaOperariosVisibles($usuario)
+            ->findOrFail($id);
+
+        /*
+        |--------------------------------------------------------------------------
+        | User utiliza SoftDeletes porque usuarios tiene deleted_at.
+        |--------------------------------------------------------------------------
+        */
 
         $operario->delete();
 
         return redirect()
-            ->route(
-                'operarios.index'
-            )
+            ->route('operarios.index')
             ->with(
                 'success',
                 'Operario eliminado correctamente.'
@@ -1907,36 +1850,17 @@ class OperarioController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    |--------------------------------------------------------------------------
     | MÉTODOS INTERNOS
-    |--------------------------------------------------------------------------
-    |--------------------------------------------------------------------------
-    */
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | OPERARIOS VISIBLES SEGÚN EL USUARIO
     |--------------------------------------------------------------------------
     */
 
     private function consultaOperariosVisibles(
         User $usuario
     ) {
-        $consulta =
-            User::query()
-                ->where(
-                    'id_rol',
-                    3
-                );
+        $consulta = User::query()
+            ->where('id_rol', 3);
 
-        /*
-        |--------------------------------------------------------------------------
-        | ADMIN CLIENTE
-        |--------------------------------------------------------------------------
-        */
-
-        if ($usuario->id_rol == 2) {
+        if ((int) $usuario->id_rol === 2) {
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa
@@ -1947,47 +1871,40 @@ class OperarioController extends Controller
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | FILTRAR OPERARIOS APROBADOS
-    |--------------------------------------------------------------------------
-    */
-
     private function filtrarAprobados(
         $consulta
     ) {
-        return $consulta
-            ->where(
-                function ($query) {
-                    $query
-                        ->where(
-                            'estado_aprobacion',
-                            'aprobado'
-                        )
-                        ->orWhereNull(
-                            'estado_aprobacion'
-                        );
-                }
-            );
+        return $consulta->whereHas(
+            'aprobacionActual',
+            fn ($query) =>
+            $query->where(
+                'estado',
+                'aprobado'
+            )
+        );
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPROBAR APROBACIÓN
-    |--------------------------------------------------------------------------
-    */
+    private function filtrarPorEstadoAprobacion(
+        $consulta,
+        string $estado
+    ) {
+        return $consulta->whereHas(
+            'aprobacionActual',
+            fn ($query) =>
+            $query->where(
+                'estado',
+                $estado
+            )
+        );
+    }
+
 
     private function operarioEstaAprobado(
         User $operario
     ): bool {
         return
-            $operario
-                ->estado_aprobacion
-                === 'aprobado'
-            ||
-            $operario
-                ->estado_aprobacion
-                === null;
+            $operario->estado_aprobacion ===
+            'aprobado';
     }
 }

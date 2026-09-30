@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Cita extends Model
 {
@@ -10,19 +11,24 @@ class Cita extends Model
 
     protected $primaryKey = 'id_cita';
 
-    /*
-    |--------------------------------------------------------------------------
-    | La tabla CITAS del proyecto no maneja created_at / updated_at
-    |--------------------------------------------------------------------------
-    */
-    public $timestamps = false;
+    public $incrementing = true;
+
+    protected $keyType = 'int';
 
     /*
     |--------------------------------------------------------------------------
-    | Campos que pueden asignarse
+    | TIMESTAMPS
     |--------------------------------------------------------------------------
+    |
+    | En la nueva base PostgreSQL la tabla citas SÍ utiliza:
+    | created_at y updated_at.
+    |
     */
+
+    public $timestamps = true;
+
     protected $fillable = [
+        'id_empresa',
         'id_cliente',
         'id_usuario',
         'id_llamada',
@@ -33,22 +39,33 @@ class Cita extends Model
         'observaciones',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Conversión de tipos
-    |--------------------------------------------------------------------------
-    */
-    protected $casts = [
-        'fecha_hora_inicio' => 'datetime',
-        'fecha_hora_fin' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'id_cita' => 'integer',
+            'id_empresa' => 'integer',
+            'id_cliente' => 'integer',
+            'id_usuario' => 'integer',
+            'id_llamada' => 'integer',
+            'id_estado_cita' => 'integer',
 
-    /*
-    |--------------------------------------------------------------------------
-    | Cliente relacionado con la cita
-    |--------------------------------------------------------------------------
-    */
-    public function cliente()
+            'fecha_hora_inicio' => 'datetime',
+            'fecha_hora_fin' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(
+            Empresa::class,
+            'id_empresa',
+            'id_empresa'
+        );
+    }
+
+    public function cliente(): BelongsTo
     {
         return $this->belongsTo(
             Cliente::class,
@@ -57,26 +74,16 @@ class Cita extends Model
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Usuario / Operario responsable de la cita
-    |--------------------------------------------------------------------------
-    */
-    public function usuario()
+    public function usuario(): BelongsTo
     {
         return $this->belongsTo(
             User::class,
             'id_usuario',
-            'id'
+            'id_usuario'
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Estado de la cita
-    |--------------------------------------------------------------------------
-    */
-    public function estadoCita()
+    public function estadoCita(): BelongsTo
     {
         return $this->belongsTo(
             EstadoCita::class,
@@ -85,12 +92,7 @@ class Cita extends Model
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Llamada relacionada con la cita
-    |--------------------------------------------------------------------------
-    */
-    public function llamada()
+    public function llamada(): BelongsTo
     {
         return $this->belongsTo(
             Llamada::class,

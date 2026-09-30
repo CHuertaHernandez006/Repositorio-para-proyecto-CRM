@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
-use App\Models\Empresa;
 use App\Models\Cliente;
+use App\Models\Empresa;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
@@ -12,29 +12,65 @@ class DashboardController extends Controller
     {
         $usuario = Auth::user();
 
-        // 1. KPIs exclusivos para Súper Admin (Rol 1)
-        if ($usuario->id_rol == 1) {
-            
-            $totalEmpresas = Empresa::count();
-            $empresasActivas = Empresa::where('estado', true)->count();
-            $totalLeads = Cliente::count();
-            $ultimasEmpresas = Empresa::orderBy('created_at', 'desc')->take(5)->get();
-
-            return view('dashboard', compact('totalEmpresas', 'empresasActivas', 'totalLeads', 'ultimasEmpresas'));
+        if (!$usuario) {
+            return redirect()->route('login');
         }
 
-        // 2. Espacio reservado para Admin Cliente (Rol 2)
-        elseif ($usuario->id_rol == 2) {
-            // Aquí tu equipo agregará sus variables (ej. $totalMisClientes)
-            
+        /*
+        |--------------------------------------------------------------------------
+        | SÚPER ADMIN
+        |--------------------------------------------------------------------------
+        */
+
+        if ((int) $usuario->id_rol === 1) {
+            $totalEmpresas =
+                Empresa::query()->count();
+
+            $empresasActivas =
+                Empresa::query()
+                    ->where('activo', true)
+                    ->count();
+
+            $totalLeads =
+                Cliente::query()->count();
+
+            $ultimasEmpresas =
+                Empresa::query()
+                    ->orderByDesc('created_at')
+                    ->take(5)
+                    ->get();
+
+            return view(
+                'dashboard',
+                compact(
+                    'totalEmpresas',
+                    'empresasActivas',
+                    'totalLeads',
+                    'ultimasEmpresas'
+                )
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN CLIENTE
+        |--------------------------------------------------------------------------
+        */
+
+        if ((int) $usuario->id_rol === 2) {
             return view('dashboard');
         }
 
-        // 3. Espacio reservado para Operarios / Agentes (Rol 3)
-        else {
-            // Aquí tu equipo agregará sus variables (ej. $misLlamadasHoy)
-            
+        /*
+        |--------------------------------------------------------------------------
+        | OPERARIO
+        |--------------------------------------------------------------------------
+        */
+
+        if ((int) $usuario->id_rol === 3) {
             return view('dashboard');
         }
+
+        abort(403);
     }
 }

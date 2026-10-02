@@ -22,7 +22,7 @@ class CampanasController extends Controller
     {
         $usuario = auth()->user();
 
-        $this->autorizarAdministracion($usuario);
+        $this->autorizarConsulta($usuario);
 
         /*
         |--------------------------------------------------------------------------
@@ -379,7 +379,7 @@ class CampanasController extends Controller
     {
         $usuario = auth()->user();
 
-        $this->autorizarAdministracion($usuario);
+        $this->autorizarConsulta($usuario);
 
         $campana = $this
             ->consultaCampanasVisibles($usuario)
@@ -576,7 +576,7 @@ class CampanasController extends Controller
     {
         $usuario = auth()->user();
 
-        $this->autorizarAdministracion($usuario);
+        $this->autorizarConsulta($usuario);
 
         $campana = $this
             ->consultaCampanasVisibles($usuario)
@@ -925,6 +925,22 @@ class CampanasController extends Controller
     |--------------------------------------------------------------------------
     */
 
+    private function autorizarConsulta(
+        $usuario
+    ): void {
+        if (
+            !$usuario ||
+            !in_array(
+                (int) $usuario->id_rol,
+                [1, 2, 3],
+                true
+            )
+        ) {
+            abort(403);
+        }
+    }
+
+
     private function autorizarAdministracion(
         $usuario
     ): void {
@@ -953,7 +969,13 @@ class CampanasController extends Controller
         $consulta =
             Campana::query();
 
-        if ((int) $usuario->id_rol === 2) {
+        if (
+            in_array(
+                (int) $usuario->id_rol,
+                [2, 3],
+                true
+            )
+        ) {
             $consulta->where(
                 'id_empresa',
                 $usuario->id_empresa

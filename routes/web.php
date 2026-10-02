@@ -17,7 +17,7 @@ use App\Http\Controllers\CitaController;
 
 /*
 |--------------------------------------------------------------------------
-| AUTENTICACIÓN Y PÚBLICAS
+| AUTENTICACIÓN
 |--------------------------------------------------------------------------
 */
 
@@ -26,11 +26,13 @@ Route::get('/', function () {
     return view('welcome');
 })->name('login');
 
+
 // Verificar credenciales
 Route::post('/login-verificar', [
     AuthController::class,
     'verificarAcceso',
 ])->name('login.verificar');
+
 
 // Cerrar sesión
 Route::post('/logout', [
@@ -49,6 +51,7 @@ Route::get('/registro_seleccion', [
     RegistroSeleccionController::class,
     'registroseleccion',
 ])->name('registro_seleccion');
+
 
 Route::get('/registro-operador', [
     RegistroOperadorController::class,
@@ -78,22 +81,25 @@ Route::get('/dashboard', [
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:2'])->group(function () {
+Route::middleware(['rol:2'])->group(function () {
 
     Route::get('/clientes', [
         ClienteController::class,
         'index',
     ])->name('clientes.index');
 
+
     Route::get('/clientes/crear', [
         ClienteController::class,
         'create',
     ])->name('clientes.create');
 
+
     Route::post('/clientes', [
         ClienteController::class,
         'store',
     ])->name('clientes.store');
+
 
     Route::get('/clientes/{id_cliente}/editar', [
         ClienteController::class,
@@ -102,12 +108,14 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('id_cliente')
         ->name('clientes.edit');
 
+
     Route::put('/clientes/{id_cliente}', [
         ClienteController::class,
         'update',
     ])
         ->whereNumber('id_cliente')
         ->name('clientes.update');
+
 
     Route::delete('/clientes/{id_cliente}', [
         ClienteController::class,
@@ -121,21 +129,72 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| CAMPAÑAS (CONSULTA Y DETALLE)
+| CAMPAÑAS
 |--------------------------------------------------------------------------
-| Admin Cliente (Rol 2) y Operario (Rol 3)
+| Admin Cliente y Operario pueden consultar campañas.
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:2,3'])->group(function () {
+Route::middleware(['rol:2,3'])->group(function () {
 
-    // Listado principal de campañas
+    /*
+    |--------------------------------------------------------------------------
+    | LISTADO
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/campanas', [
         CampanasController::class,
         'index',
     ])->name('campanas.index');
 
-    // Malla/Lista de clientes asignados a la campaña (Lectura)
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| ADMINISTRACIÓN DE CAMPAÑAS
+|--------------------------------------------------------------------------
+| Exclusivo para Admin Cliente (Rol 2)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['rol:2'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR CAMPAÑA
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/campanas/crear', [
+        CampanasController::class,
+        'create',
+    ])->name('campanas.create');
+
+
+    Route::post('/campanas', [
+        CampanasController::class,
+        'store',
+    ])->name('campanas.store');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CLIENTES DE CAMPAÑA
+    |--------------------------------------------------------------------------
+    |
+    | GET:
+    | Muestra los clientes disponibles y los que ya están asignados.
+    |
+    | POST:
+    | Agrega uno o varios clientes a una campaña.
+    |
+    | DELETE:
+    | Retira un cliente de una campaña.
+    |
+    */
+
     Route::get('/campanas/{campana}/clientes', [
         CampanasController::class,
         'clientes',
@@ -143,37 +202,14 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
         ->whereNumber('campana')
         ->name('campanas.clientes');
 
-});
 
-
-/*
-|--------------------------------------------------------------------------
-| ADMINISTRACIÓN DE CAMPAÑAS (ACCIONES CUD)
-|--------------------------------------------------------------------------
-| Exclusivo para Admin Cliente (Rol 2)
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['auth', 'rol:2'])->group(function () {
-
-    // Crear Campaña
-    Route::get('/campanas/crear', [
-        CampanasController::class,
-        'create',
-    ])->name('campanas.create');
-
-    Route::post('/campanas', [
-        CampanasController::class,
-        'store',
-    ])->name('campanas.store');
-
-    // Gestión de Clientes en Campaña (Asignar y Quitar)
     Route::post('/campanas/{campana}/clientes', [
         CampanasController::class,
         'asignarClientes',
     ])
         ->whereNumber('campana')
         ->name('campanas.clientes.asignar');
+
 
     Route::delete(
         '/campanas/{campana}/clientes/{cliente}',
@@ -186,13 +222,20 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('cliente')
         ->name('campanas.clientes.quitar');
 
-    // Editar Campaña
+
+    /*
+    |--------------------------------------------------------------------------
+    | EDITAR CAMPAÑA
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/campanas/{campana}/editar', [
         CampanasController::class,
         'edit',
     ])
         ->whereNumber('campana')
         ->name('campanas.edit');
+
 
     Route::put('/campanas/{campana}', [
         CampanasController::class,
@@ -201,7 +244,13 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('campana')
         ->name('campanas.update');
 
-    // Eliminar Campaña
+
+    /*
+    |--------------------------------------------------------------------------
+    | ELIMINAR CAMPAÑA
+    |--------------------------------------------------------------------------
+    */
+
     Route::delete('/campanas/{campana}', [
         CampanasController::class,
         'destroy',
@@ -214,14 +263,22 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| VER DETALLE DE CAMPAÑA
+| VER CAMPAÑA
 |--------------------------------------------------------------------------
-| Admin Cliente (Rol 2) y Operario (Rol 3)
-| Colocado al final de /campanas/ para evitar colisiones de rutas.
+| Admin Cliente y Operario
 |--------------------------------------------------------------------------
+|
+| Esta ruta va después de:
+|
+| /campanas/crear
+| /campanas/{campana}/clientes
+| /campanas/{campana}/editar
+|
+| Así evitamos conflictos con /campanas/{campana}.
+|
 */
 
-Route::middleware(['auth', 'rol:2,3'])->group(function () {
+Route::middleware(['rol:2,3'])->group(function () {
 
     Route::get('/campanas/{campana}', [
         CampanasController::class,
@@ -237,11 +294,11 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
 |--------------------------------------------------------------------------
 | LLAMADAS
 |--------------------------------------------------------------------------
-| Acceso para Admin Cliente (Rol 2) y Operario (Rol 3)
+| Acceso para Admin Cliente y Operario (Roles 2 y 3)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:2,3'])->group(function () {
+Route::middleware(['rol:2,3'])->group(function () {
 
     Route::get('/llamadas', [
         LlamadasController::class,
@@ -259,22 +316,25 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:1'])->group(function () {
+Route::middleware(['rol:1'])->group(function () {
 
     Route::get('/empresas', [
         EmpresaController::class,
         'index',
     ])->name('empresas.index');
 
+
     Route::get('/empresas/crear', [
         EmpresaController::class,
         'create',
     ])->name('empresas.create');
 
+
     Route::post('/empresas', [
         EmpresaController::class,
         'store',
     ])->name('empresas.store');
+
 
     Route::get('/empresas/{id_empresa}/editar', [
         EmpresaController::class,
@@ -283,12 +343,14 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         ->whereNumber('id_empresa')
         ->name('empresas.edit');
 
+
     Route::put('/empresas/{id_empresa}', [
         EmpresaController::class,
         'update',
     ])
         ->whereNumber('id_empresa')
         ->name('empresas.update');
+
 
     Route::delete('/empresas/{id_empresa}', [
         EmpresaController::class,
@@ -297,13 +359,20 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         ->whereNumber('id_empresa')
         ->name('empresas.destroy');
 
-    // Administración de la empresa
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMINISTRADOR DE EMPRESA
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/empresas/{id_empresa}/admin/editar', [
         EmpresaController::class,
         'editAdmin',
     ])
         ->whereNumber('id_empresa')
         ->name('empresas.admin.edit');
+
 
     Route::put('/empresas/{id_empresa}/admin', [
         EmpresaController::class,
@@ -314,36 +383,77 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
 });
 
-
 /*
 |--------------------------------------------------------------------------
 | OPERARIOS - ADMIN CLIENTE
 |--------------------------------------------------------------------------
-| Exclusivo para Admin Cliente (Rol 2)
+| El Admin Cliente puede:
+|
+| - Consultar sus operarios
+| - Crear solicitudes de nuevos operarios
+| - Editar operarios de su empresa
+| - Reenviar solicitudes rechazadas
+| - Activar/desactivar únicamente operarios ya aprobados
+| - Eliminar operarios
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:2'])->group(function () {
+Route::middleware(['rol:2'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | LISTADO
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/operarios', [
         OperarioController::class,
         'index',
     ])->name('operarios.index');
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | OBJETIVOS
+    |--------------------------------------------------------------------------
+    |
+    | Debe ir antes de /operarios/{operario}.
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/operarios/objetivos', [
         OperarioController::class,
         'objetivos',
     ])->name('operarios.objetivos');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREAR SOLICITUD DE OPERARIO
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/operarios/create', [
         OperarioController::class,
         'create',
     ])->name('operarios.create');
 
+
     Route::post('/operarios', [
         OperarioController::class,
         'store',
     ])->name('operarios.store');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | REENVIAR SOLICITUD
+    |--------------------------------------------------------------------------
+    |
+    | Se utiliza cuando el Super Admin rechazó una solicitud
+    | y el Admin Cliente desea enviarla nuevamente.
+    |--------------------------------------------------------------------------
+    */
 
     Route::patch(
         '/operarios/{operario}/solicitud/reenviar',
@@ -355,12 +465,26 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('operario')
         ->name('operarios.solicitud.reenviar');
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | VER
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/operarios/{operario}', [
         OperarioController::class,
         'show',
     ])
         ->whereNumber('operario')
         ->name('operarios.show');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | EDITAR
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/operarios/{operario}/edit', [
         OperarioController::class,
@@ -369,6 +493,7 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('operario')
         ->name('operarios.edit');
 
+
     Route::put('/operarios/{operario}', [
         OperarioController::class,
         'update',
@@ -376,12 +501,30 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('operario')
         ->name('operarios.update');
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTIVAR / DESACTIVAR
+    |--------------------------------------------------------------------------
+    |
+    | El controlador valida que el operario ya haya sido
+    | aprobado por un Super Administrador.
+    |--------------------------------------------------------------------------
+    */
+
     Route::patch('/operarios/{operario}/estado', [
         OperarioController::class,
         'toggleEstado',
     ])
         ->whereNumber('operario')
         ->name('operarios.toggleEstado');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ELIMINAR
+    |--------------------------------------------------------------------------
+    */
 
     Route::delete('/operarios/{operario}', [
         OperarioController::class,
@@ -399,14 +542,35 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 |--------------------------------------------------------------------------
 | Acceso exclusivo para Super Administrador (Rol 1)
 |--------------------------------------------------------------------------
+|
+| Desde aquí el Super Admin podrá:
+|
+| - Consultar solicitudes pendientes
+| - Aprobar operarios
+| - Rechazar operarios
+|
+|--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:1'])->group(function () {
+Route::middleware(['rol:1'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | LISTADO DE SOLICITUDES
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/operarios/solicitudes', [
         OperarioController::class,
         'solicitudes',
     ])->name('operarios.solicitudes');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | APROBAR SOLICITUD
+    |--------------------------------------------------------------------------
+    */
 
     Route::patch(
         '/operarios/{operario}/solicitud/aprobar',
@@ -417,6 +581,13 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
     )
         ->whereNumber('operario')
         ->name('operarios.solicitud.aprobar');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RECHAZAR SOLICITUD
+    |--------------------------------------------------------------------------
+    */
 
     Route::patch(
         '/operarios/{operario}/solicitud/rechazar',
@@ -439,7 +610,7 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:1,2'])->group(function () {
+Route::middleware(['rol:1,2'])->group(function () {
 
     Route::post('/operarios/{operario}/objetivo', [
         OperarioController::class,
@@ -449,8 +620,6 @@ Route::middleware(['auth', 'rol:1,2'])->group(function () {
         ->name('operarios.asignarObjetivo');
 
 });
-
-
 /*
 |--------------------------------------------------------------------------
 | CALENDARIO
@@ -466,15 +635,18 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
         'index',
     ])->name('calendario.index');
 
+
     Route::get('/calendario/crear', [
         CalendarioController::class,
         'create',
     ])->name('calendario.create');
 
+
     Route::post('/calendario', [
         CalendarioController::class,
         'store',
     ])->name('calendario.store');
+
 
     Route::get('/calendario/{id_cita}/editar', [
         CalendarioController::class,
@@ -483,12 +655,14 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
         ->whereNumber('id_cita')
         ->name('calendario.edit');
 
+
     Route::put('/calendario/{id_cita}', [
         CalendarioController::class,
         'update',
     ])
         ->whereNumber('id_cita')
         ->name('calendario.update');
+
 
     Route::delete('/calendario/{id_cita}', [
         CalendarioController::class,
@@ -508,22 +682,25 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'rol:2'])->group(function () {
+Route::middleware(['rol:2'])->group(function () {
 
     Route::get('/citas', [
         CitaController::class,
         'index',
     ])->name('citas.index');
 
+
     Route::get('/citas/crear', [
         CitaController::class,
         'create',
     ])->name('citas.create');
 
+
     Route::post('/citas', [
         CitaController::class,
         'store',
     ])->name('citas.store');
+
 
     Route::get('/citas/{id_cita}', [
         CitaController::class,
@@ -532,6 +709,7 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('id_cita')
         ->name('citas.show');
 
+
     Route::get('/citas/{id_cita}/editar', [
         CitaController::class,
         'edit',
@@ -539,12 +717,14 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('id_cita')
         ->name('citas.edit');
 
+
     Route::put('/citas/{id_cita}', [
         CitaController::class,
         'update',
     ])
         ->whereNumber('id_cita')
         ->name('citas.update');
+
 
     Route::delete('/citas/{id_cita}', [
         CitaController::class,

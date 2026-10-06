@@ -36,6 +36,28 @@
         ->copy()
         ->addDays(7)
         ->toDateString();
+
+
+    $objetivosCumplidosVista =
+        $objetivosCumplidos ?? 0;
+
+    $llamadasObjetivoGlobalVista =
+        $llamadasObjetivoGlobal ?? 0;
+
+    $llamadasRealizadasGlobalVista =
+        $llamadasRealizadasGlobal ?? 0;
+
+    $porcentajeGlobalVista =
+        $porcentajeGlobal ?? 0;
+
+    $porcentajeGlobalBarra =
+        min(
+            max(
+                $porcentajeGlobalVista,
+                0
+            ),
+            100
+        );
 @endphp
 
 
@@ -662,6 +684,18 @@
         background: #a78bfa;
     }
 
+    .objective-status.success {
+        border: 1px solid rgba(52, 211, 153, .18);
+        background: rgba(52, 211, 153, .07);
+        color: #6ee7b7;
+    }
+
+    .objective-status.success .dot {
+        background: #34d399;
+        box-shadow: 0 0 7px rgba(52, 211, 153, .45);
+    }
+
+
     .objective-status.none {
         border: 1px solid rgba(148, 163, 184, .12);
         background: rgba(148, 163, 184, .05);
@@ -740,6 +774,158 @@
         height: 13px;
         color: #506078;
     }
+
+    .objective-progress {
+        margin-top: 15px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(255, 255, 255, .045);
+    }
+
+    .objective-progress-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+    }
+
+    .objective-progress-title {
+        color: #8c9bb0;
+        font-size: 9px;
+        font-weight: 750;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
+    .objective-progress-percent {
+        color: #eaf4ff;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .objective-progress-track {
+        height: 7px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, .10);
+    }
+
+    .objective-progress-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(
+            90deg,
+            #0ea5e9,
+            #35c6ff
+        );
+        transition: width .35s ease;
+    }
+
+    .objective-progress-fill.complete {
+        background: linear-gradient(
+            90deg,
+            #059669,
+            #34d399
+        );
+    }
+
+    .objective-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 11px;
+    }
+
+    .objective-metric {
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid rgba(148, 163, 184, .07);
+        border-radius: 8px;
+        background: rgba(8, 17, 30, .28);
+    }
+
+    .objective-metric-value {
+        color: #edf6ff;
+        font-size: 14px;
+        font-weight: 800;
+    }
+
+    .objective-metric-label {
+        margin-top: 3px;
+        color: #627189;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    .objective-progress-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+        color: #5f6f85;
+        font-size: 9px;
+    }
+
+    .team-progress-panel {
+        margin-bottom: 24px;
+        padding: 17px 19px;
+        border: 1px solid rgba(53, 198, 255, .10);
+        border-radius: 14px;
+        background:
+            linear-gradient(
+                120deg,
+                rgba(53, 198, 255, .045),
+                rgba(17, 28, 48, .96)
+            );
+    }
+
+    .team-progress-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .team-progress-title {
+        color: #f1f5f9;
+        font-size: 12px;
+        font-weight: 750;
+    }
+
+    .team-progress-sub {
+        margin-top: 4px;
+        color: #63738a;
+        font-size: 10px;
+    }
+
+    .team-progress-number {
+        color: #67d5ff;
+        font-size: 18px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .team-progress-track {
+        height: 7px;
+        margin-top: 13px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, .10);
+    }
+
+    .team-progress-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(
+            90deg,
+            #0ea5e9,
+            #35c6ff
+        );
+    }
+
 
     .objective-empty {
         margin-top: 17px;
@@ -1126,6 +1312,11 @@
             grid-template-columns: 1fr;
         }
 
+        .objective-metrics {
+            grid-template-columns: 1fr;
+        }
+
+
         .form-actions {
             grid-column: 1;
         }
@@ -1320,6 +1511,39 @@
 
     </div>
 
+    @if($llamadasObjetivoGlobalVista > 0)
+        <div class="team-progress-panel">
+            <div class="team-progress-top">
+
+                <div>
+                    <div class="team-progress-title">
+                        Avance automático del equipo
+                    </div>
+
+                    <div class="team-progress-sub">
+                        Solo cuentan llamadas salientes con cierre registrado dentro del periodo de cada objetivo.
+                    </div>
+                </div>
+
+                <div class="team-progress-number">
+                    {{ number_format($llamadasRealizadasGlobalVista) }}
+                    /
+                    {{ number_format($llamadasObjetivoGlobalVista) }}
+                    ·
+                    {{ $porcentajeGlobalVista }}%
+                </div>
+
+            </div>
+
+            <div class="team-progress-track">
+                <div
+                    class="team-progress-fill"
+                    style="width: {{ $porcentajeGlobalBarra }}%;"
+                ></div>
+            </div>
+        </div>
+    @endif
+
 
     {{-- =========================================================
          FILTROS
@@ -1447,6 +1671,10 @@
                             Próximos a vencer
                         </option>
 
+                        <option value="cumplido">
+                            Cumplidos
+                        </option>
+
                         <option value="sin_objetivo">
                             Sin objetivo
                         </option>
@@ -1509,6 +1737,14 @@
 
                         <option value="objetivo_asc">
                             Menor objetivo
+                        </option>
+
+                        <option value="progreso_desc">
+                            Mayor progreso
+                        </option>
+
+                        <option value="progreso_asc">
+                            Menor progreso
                         </option>
 
                         <option value="vence_primero">
@@ -1596,7 +1832,7 @@
                             : 'sin_objetivo');
 
                     $activo =
-                        (bool) ($operario->estado ?? true);
+                        (bool) ($operario->activo ?? true);
 
                     $inicial =
                         strtoupper(
@@ -1617,6 +1853,13 @@
                         ) {
                             $estadoClase = 'pending';
                             $estadoTexto = 'Pendiente';
+                        } elseif (
+                            $situacion
+                            === 'cumplido'
+                        ) {
+                            $estadoClase = 'success';
+                            $estadoTexto =
+                                'Cumplido';
                         } elseif (
                             $situacion
                             === 'proximo_vencer'
@@ -1647,6 +1890,47 @@
                                 $objetivoActual->fecha_fin
                             )->timestamp
                             : 9999999999;
+
+
+                    $llamadasRealizadas =
+                        (int) (
+                            $operario->llamadas_realizadas
+                            ?? 0
+                        );
+
+                    $llamadasPendientes =
+                        (int) (
+                            $operario->llamadas_pendientes
+                            ?? 0
+                        );
+
+                    $llamadasIntentadas =
+                        (int) (
+                            $operario->llamadas_intentadas
+                            ?? 0
+                        );
+
+                    $llamadasClasificadas =
+                        (int) (
+                            $operario->llamadas_clasificadas
+                            ?? 0
+                        );
+
+                    $porcentajeObjetivo =
+                        (int) (
+                            $operario->porcentaje_objetivo
+                            ?? 0
+                        );
+
+                    $porcentajeBarra =
+                        (int) (
+                            $operario->porcentaje_barra
+                            ?? 0
+                        );
+
+                    $diasRestantes =
+                        $operario->dias_restantes_objetivo
+                        ?? null;
                 @endphp
 
 
@@ -1674,6 +1958,8 @@
                     data-goal="{{ $cantidadObjetivo }}"
 
                     data-end-date="{{ $fechaFinOrden }}"
+
+                    data-progress="{{ $porcentajeObjetivo }}"
                 >
 
                     <div class="objective-card-main">
@@ -1806,6 +2092,104 @@
                                             $objetivoActual->fecha_fin
                                         )->format('d/m/Y') }}
                                     </span>
+
+                                </div>
+
+
+                                <div class="objective-progress">
+
+                                    <div class="objective-progress-head">
+
+                                        <div class="objective-progress-title">
+                                            Progreso automático
+                                        </div>
+
+                                        <div class="objective-progress-percent">
+                                            {{ $porcentajeObjetivo }}%
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="objective-progress-track">
+
+                                        <div
+                                            class="objective-progress-fill {{ $situacion === 'cumplido' ? 'complete' : '' }}"
+                                            style="width: {{ $porcentajeBarra }}%;"
+                                        ></div>
+
+                                    </div>
+
+
+                                    <div class="objective-metrics">
+
+                                        <div class="objective-metric">
+
+                                            <div class="objective-metric-value">
+                                                {{ number_format($llamadasRealizadas) }}
+                                            </div>
+
+                                            <div class="objective-metric-label">
+                                                Realizadas
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="objective-metric">
+
+                                            <div class="objective-metric-value">
+                                                {{ number_format($llamadasPendientes) }}
+                                            </div>
+
+                                            <div class="objective-metric-label">
+                                                Restantes
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="objective-metric">
+
+                                            <div class="objective-metric-value">
+                                                {{ number_format($llamadasClasificadas) }}
+                                            </div>
+
+                                            <div class="objective-metric-label">
+                                                Con resultado
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="objective-progress-foot">
+
+                                        <span>
+                                            {{ number_format($llamadasIntentadas) }}
+                                            intentos salientes registrados
+                                        </span>
+
+                                        @if($diasRestantes !== null)
+
+                                            <span>
+                                                @if($situacion === 'cumplido')
+                                                    Meta alcanzada
+                                                @elseif($diasRestantes < 0)
+                                                    Periodo vencido
+                                                @elseif($diasRestantes === 0)
+                                                    Vence hoy
+                                                @elseif($diasRestantes === 1)
+                                                    1 día restante
+                                                @else
+                                                    {{ $diasRestantes }} días restantes
+                                                @endif
+                                            </span>
+
+                                        @endif
+
+                                    </div>
 
                                 </div>
 
@@ -2370,6 +2754,16 @@ document.addEventListener('DOMContentLoaded', function () {
                             9999999999
                         );
 
+                    const progresoA =
+                        Number(
+                            a.dataset.progress || 0
+                        );
+
+                    const progresoB =
+                        Number(
+                            b.dataset.progress || 0
+                        );
+
                     const tieneObjetivoA =
                         a.dataset.objective ===
                         'con_objetivo';
@@ -2417,6 +2811,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                 objetivoA -
                                 objetivoB
                             );
+
+
+                        case 'progreso_desc':
+
+                            return progresoB - progresoA;
+
+
+                        case 'progreso_asc':
+
+                            return progresoA - progresoB;
 
 
                         case 'vence_primero':

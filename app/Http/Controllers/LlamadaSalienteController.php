@@ -21,6 +21,12 @@ class LlamadaSalienteController extends Controller
     ): RedirectResponse {
         $usuario = $request->user();
 
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN DEL OPERARIO
+        |--------------------------------------------------------------------------
+        */
+
         if (!$usuario || (int) $usuario->id_rol !== 3) {
             abort(403, 'Solo los operarios pueden iniciar llamadas.');
         }
@@ -28,6 +34,12 @@ class LlamadaSalienteController extends Controller
         if (!$usuario->activo) {
             abort(403, 'Tu cuenta no está activa.');
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDACIÓN DEL CLIENTE
+        |--------------------------------------------------------------------------
+        */
 
         if ((int) $cliente->id_empresa !== (int) $usuario->id_empresa) {
             abort(403, 'El cliente no pertenece a tu empresa.');
@@ -37,7 +49,86 @@ class LlamadaSalienteController extends Controller
             abort(404);
         }
 
-        $extension = trim((string) ($usuario->extension_asterisk ?? ''));
+        /*
+        |--------------------------------------------------------------------------
+        | CITA / CONTACTO PROGRAMADO
+        |--------------------------------------------------------------------------
+        | id_cita es opcional:
+        | - Si la llamada se hace desde Clientes, puede venir vacío.
+        | - Si la llamada se hace desde Agenda, debe pertenecer al mismo
+        |   cliente, empresa y operario autenticado.
+        |--------------------------------------------------------------------------
+        */
+
+        $datos = $request->validate([
+            'id_cita' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $cita = null;
+
+        if (!empty($datos['id_cita'])) {
+            $cita = DB::table('citas')
+                ->leftJoin(
+                    'estados_cita',
+                    'estados_cita.id_estado_cita',
+                    '=',
+                    'citas.id_estado_cita'
+                )
+                ->where(
+                    'citas.id_cita',
+                    $datos['id_cita']
+                )
+                ->where(
+                    'citas.id_empresa',
+                    $usuario->id_empresa
+                )
+                ->where(
+                    'citas.id_cliente',
+                    $cliente->id_cliente
+                )
+                ->where(
+                    'citas.id_usuario',
+                    $usuario->id_usuario
+                )
+                ->select([
+                    'citas.*',
+                    'estados_cita.nombre as estado_cita_nombre',
+                ])
+                ->first();
+
+            if (!$cita) {
+                return back()->with(
+                    'error',
+                    'El contacto programado no existe o no está asignado a tu usuario.'
+                );
+            }
+
+            $estadoCita = mb_strtolower(
+                trim((string) ($cita->estado_cita_nombre ?? '')),
+                'UTF-8'
+            );
+
+            if (in_array(
+                $estadoCita,
+                ['realizada', 'cancelada'],
+                true
+            )) {
+                return back()->with(
+                    'error',
+                    'Este contacto ya está cerrado y no puede iniciar una nueva llamada desde la agenda.'
+                );
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXTENSIÓN DEL OPERARIO
+        |--------------------------------------------------------------------------
+        */
+
+        $extension = trim(
+            (string) ($usuario->extension_asterisk ?? '')
+        );
 
         if ($extension === '') {
             return back()->with(
@@ -45,6 +136,12 @@ class LlamadaSalienteController extends Controller
                 'Tu usuario todavía no tiene una extensión de Asterisk asignada.'
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | TELÉFONO DEL CLIENTE
+        |--------------------------------------------------------------------------
+        */
 
         $telefono = $this->normalizarTelefono(
             $cliente->telefono_principal
@@ -58,9 +155,18 @@ class LlamadaSalienteController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | ESTADO INICIAL DE LA LLAMADA
+        |--------------------------------------------------------------------------
+        */
+
         $estado = DB::table('estados_llamada')
             ->where('activo', true)
-            ->whereRaw('LOWER(nombre) = LOWER(?)', ['En curso'])
+            ->whereRaw(
+                'LOWER(nombre) = LOWER(?)',
+                ['En curso']
+            )
             ->first();
 
         if (!$estado) {
@@ -77,6 +183,12 @@ class LlamadaSalienteController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | IDENTIFICADOR DE ASTERISK / AMI
+        |--------------------------------------------------------------------------
+        */
+
         $actionId = 'CRM-'
             . $usuario->id_usuario
             . '-'
@@ -84,54 +196,157 @@ class LlamadaSalienteController extends Controller
             . '-'
             . now()->format('YmdHis')
             . '-'
-            . Str::lower(Str::random(6));
+            . Str::lower(
+                Str::random(6)
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | VARIABLES PARA ASTERISK
+        |--------------------------------------------------------------------------
+        */
+
+        $variablesAsterisk = [
+            'CRM_ID_EMPRESA' => $usuario->id_empresa,
+            'CRM_ID_USUARIO' => $usuario->id_usuario,
+            'CRM_ID_CLIENTE' => $cliente->id_cliente,
+            'CRM_ACTION_ID'  => $actionId,
+        ];
+
+        if ($cita) {
+            $variablesAsterisk['CRM_ID_CITA'] = $cita->id_cita;
+        }
 
         try {
+            /*
+            |--------------------------------------------------------------------------
+            | SOLICITAR ORIGINATE A ASTERISK
+            |--------------------------------------------------------------------------
+            */
+
             $response = $asterisk->originate(
                 $extension,
                 $telefono,
                 $actionId,
-                [
-                    'CRM_ID_EMPRESA' => $usuario->id_empresa,
-                    'CRM_ID_USUARIO' => $usuario->id_usuario,
-                    'CRM_ID_CLIENTE' => $cliente->id_cliente,
-                    'CRM_ACTION_ID'  => $actionId,
-                ]
+                $variablesAsterisk
             );
 
-            $llamada = Llamada::create([
-                'id_empresa'             => $usuario->id_empresa,
-                'id_cliente'             => $cliente->id_cliente,
-                'id_usuario'             => $usuario->id_usuario,
-                'id_campana'             => null,
-                'id_resultado'            => null,
-                'id_estado_llamada'      => $estado->id_estado_llamada,
-                'tipo_llamada'           => 'saliente',
-                'fecha_inicio'            => now(),
-                'fecha_fin'               => null,
-                'duracion'                => null,
-                'numero_origen'           => $extension,
-                'numero_destino'          => $telefono,
-                'identificador_asterisk'  => $actionId,
-                'grabacion_url'           => null,
-                'observaciones'           => 'Llamada saliente solicitada desde el CRM. '
-                    . ($response['Message'] ?? 'Originate aceptado por Asterisk.'),
-            ]);
+            /*
+            |--------------------------------------------------------------------------
+            | REGISTRAR LLAMADA Y VINCULARLA CON LA AGENDA
+            |--------------------------------------------------------------------------
+            | Un "Originate aceptado" significa que Asterisk aceptó intentar
+            | la llamada. Todavía NO se marca la cita como Realizada.
+            |--------------------------------------------------------------------------
+            */
+
+            $llamada = DB::transaction(
+                function () use (
+                    $usuario,
+                    $cliente,
+                    $estado,
+                    $extension,
+                    $telefono,
+                    $actionId,
+                    $response,
+                    $cita
+                ) {
+                    $observaciones = 'Llamada saliente solicitada desde el CRM. '
+                        . ($response['Message']
+                            ?? 'Originate aceptado por Asterisk.');
+
+                    if ($cita) {
+                        $observaciones .= ' Contacto programado #'
+                            . $cita->id_cita
+                            . '.';
+                    }
+
+                    $llamada = Llamada::create([
+                        'id_empresa'            => $usuario->id_empresa,
+                        'id_cliente'            => $cliente->id_cliente,
+                        'id_usuario'            => $usuario->id_usuario,
+                        'id_campana'            => null,
+                        'id_resultado'          => null,
+                        'id_estado_llamada'     => $estado->id_estado_llamada,
+                        'tipo_llamada'          => 'saliente',
+                        'fecha_inicio'           => now(),
+                        'fecha_fin'              => null,
+                        'duracion'               => null,
+                        'numero_origen'          => $extension,
+                        'numero_destino'         => $telefono,
+                        'identificador_asterisk' => $actionId,
+                        'grabacion_url'          => null,
+                        'observaciones'          => $observaciones,
+                    ]);
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | ENLACE CITA -> LLAMADA
+                    |--------------------------------------------------------------------------
+                    | Solo se actualiza id_llamada.
+                    | El estado de la cita sigue Pendiente/Confirmada hasta conocer
+                    | el resultado real de la llamada.
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if ($cita) {
+                        DB::table('citas')
+                            ->where(
+                                'id_cita',
+                                $cita->id_cita
+                            )
+                            ->where(
+                                'id_empresa',
+                                $usuario->id_empresa
+                            )
+                            ->where(
+                                'id_cliente',
+                                $cliente->id_cliente
+                            )
+                            ->where(
+                                'id_usuario',
+                                $usuario->id_usuario
+                            )
+                            ->update([
+                                'id_llamada' => $llamada->id_llamada,
+                                'updated_at' => now(),
+                            ]);
+                    }
+
+                    return $llamada;
+                }
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | RESPUESTA
+            |--------------------------------------------------------------------------
+            */
+
+            $mensaje = 'Asterisk aceptó la llamada. Primero sonará la extensión '
+                . $extension
+                . ' del operario.';
+
+            if ($cita) {
+                $mensaje .= ' La llamada quedó vinculada con el contacto programado de la agenda.';
+            }
 
             return redirect()
-                ->route('llamadas.show', $llamada->id_llamada)
+                ->route(
+                    'llamadas.show',
+                    $llamada->id_llamada
+                )
                 ->with(
                     'success',
-                    'Asterisk aceptó la llamada. Primero sonará la extensión '
-                    . $extension
-                    . ' del operario.'
+                    $mensaje
                 );
         } catch (RuntimeException $e) {
             report($e);
 
             return back()->with(
                 'error',
-                'No se pudo iniciar la llamada: ' . $e->getMessage()
+                'No se pudo iniciar la llamada: '
+                . $e->getMessage()
             );
         } catch (Throwable $e) {
             report($e);
@@ -143,22 +358,36 @@ class LlamadaSalienteController extends Controller
         }
     }
 
-    private function normalizarTelefono(?string $telefono): ?string
-    {
+    private function normalizarTelefono(
+        ?string $telefono
+    ): ?string {
         if (!$telefono) {
             return null;
         }
 
         $telefono = trim($telefono);
 
-        $prefijo = str_starts_with($telefono, '+') ? '+' : '';
-        $digitos = preg_replace('/\D+/', '', $telefono);
+        $prefijo = str_starts_with(
+            $telefono,
+            '+'
+        )
+            ? '+'
+            : '';
+
+        $digitos = preg_replace(
+            '/\D+/',
+            '',
+            $telefono
+        );
 
         if (!$digitos) {
             return null;
         }
 
-        if (strlen($digitos) < 7 || strlen($digitos) > 15) {
+        if (
+            strlen($digitos) < 7
+            || strlen($digitos) > 15
+        ) {
             return null;
         }
 

@@ -1055,3 +1055,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 });
 
 require __DIR__.'/llamadas_salientes.php';
+
+// Módulo comercial interno: permisos propios, sin modificar rutas de los inquilinos.
+require __DIR__.'/comercial.php';

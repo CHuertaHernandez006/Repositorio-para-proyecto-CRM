@@ -71,6 +71,11 @@ class DashboardController extends Controller
             return view('dashboard');
         }
 
+        if (\App\Support\Comercial::asesor($usuario)) {
+            abort_unless($usuario->activo && !$usuario->deleted_at, 403);
+            return redirect()->route('comercial.prospectos.index');
+        }
+
         abort(403);
     }
 }

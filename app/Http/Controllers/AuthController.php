@@ -237,6 +237,7 @@ class AuthController extends Controller
                 ->route('login');
         }
 
+        /** @var \App\Models\User $usuario */
         $usuario = Auth::user();
 
 

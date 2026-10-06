@@ -1994,6 +1994,12 @@
 
 
 
+    $esAsesorComercial = \App\Support\Comercial::asesor($usuarioActual);
+    if ($esAsesorComercial) {
+        $rolEtiqueta = 'Asesor comercial interno';
+        $insigniaRol = ['nombre' => 'Asesor comercial', 'clase' => 'agente'];
+    }
+
     $tituloSeccion = 'Dashboard';
 
 
@@ -2135,6 +2141,28 @@
             'visible' => true,
 
         ],
+        [
+            'ruta' => 'comercial.prospectos.index',
+            'patron' => 'comercial.prospectos.*',
+            'texto' => $esAsesorComercial ? 'Mis prospectos' : 'Prospectos COMI',
+            'icono' => 'messages-square',
+            'visible' => $rolActual === 1 || $esAsesorComercial,
+        ],
+        [
+            'ruta' => 'comercial.agenda',
+            'patron' => 'comercial.agenda',
+            'texto' => 'Agenda comercial',
+            'icono' => 'calendar-check',
+            'visible' => $esAsesorComercial,
+        ],
+        [
+            'ruta' => 'comercial.equipo',
+            'patron' => 'comercial.equipo*',
+            'texto' => 'Equipo comercial',
+            'icono' => 'contact-round',
+            'visible' => $rolActual === 1,
+        ],
+
 
 
 

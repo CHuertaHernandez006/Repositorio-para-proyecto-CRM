@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| LLAMADAS SALIENTES / RESULTADO DEL OPERARIO
+| LLAMADAS SALIENTES Y RESULTADO
 |--------------------------------------------------------------------------
 */
 
@@ -15,6 +15,7 @@ Route::middleware([
     'auth',
     'rol:3',
 ])->group(function () {
+
     Route::post(
         '/clientes/{cliente}/llamar',
         [
@@ -38,26 +39,39 @@ Route::middleware([
         ->name(
             'llamadas.resultado.update'
         );
+
 });
 
 
 /*
 |--------------------------------------------------------------------------
-| WEBHOOK ASTERISK - FIN DE LLAMADA
+| AUDIO PROTEGIDO DE LLAMADA
 |--------------------------------------------------------------------------
-|
-| Lo invoca Asterisk al colgar.
-|
-| POST /api/asterisk/llamadas/finalizar
-|
-| Header:
-| X-Asterisk-Token: <ASTERISK_WEBHOOK_TOKEN>
-|
-| Body:
-| action_id=<CRM_ACTION_ID>
-|
-| También acepta:
-| record_filename=<RECORD_FILENAME>
+*/
+
+Route::middleware([
+    'auth',
+    'rol:1,2,3',
+])->group(function () {
+
+    Route::get(
+        '/llamadas/{id_llamada}/audio',
+        [
+            LlamadasController::class,
+            'audio',
+        ]
+    )
+        ->whereNumber('id_llamada')
+        ->name(
+            'llamadas.audio'
+        );
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| WEBHOOK ASTERISK - HANGUP
 |--------------------------------------------------------------------------
 */
 

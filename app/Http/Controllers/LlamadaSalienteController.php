@@ -393,29 +393,6 @@ class LlamadaSalienteController extends Controller
 
         }
 
-        /**
-
-*        |--------------------------------------------------------------------------*
-
-*        | URL PÚBLICA ESPERADA DE LA GRABACIÓN*
-
-*        |--------------------------------------------------------------------------*
-
-*        |*
-
-*        | Nginx publicará /recordings/ y Asterisk guardará:*
-
-*        | {identificador_asterisk}.wav*
-
-*        |--------------------------------------------------------------------------*
-
-*        */
-
-        $grabacionUrl = '/recordings/'
-
-            . rawurlencode($actionId)
-
-            . '.wav';
 
         try {
 
@@ -473,8 +450,6 @@ class LlamadaSalienteController extends Controller
 
                     $actionId,
 
-                    $grabacionUrl,
-
                     $response,
 
                     $cita
@@ -525,11 +500,33 @@ class LlamadaSalienteController extends Controller
 
                         'identificador_asterisk' => $actionId,
 
-                        'grabacion_url'             => $grabacionUrl,
+                        'grabacion_url'             => null,
 
                         'observaciones'          => $observaciones,
 
                     ]);
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | RUTA PROTEGIDA DE LA GRABACIÓN
+                    |--------------------------------------------------------------------------
+                    |
+                    | El archivo no se expone directamente por Nginx.
+                    | Laravel valida permisos en llamadas.audio.
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $llamada->grabacion_url = route(
+                        'llamadas.audio',
+                        [
+                            'id_llamada' =>
+                                $llamada->id_llamada,
+                        ],
+                        false
+                    );
+
+                    $llamada->save();
+
 
                     /**
 
@@ -837,9 +834,14 @@ class LlamadaSalienteController extends Controller
 
         $grabacionUrl =
             $llamada->grabacion_url
-            ?: '/recordings/'
-                . rawurlencode($actionId)
-                . '.wav';
+            ?: route(
+                'llamadas.audio',
+                [
+                    'id_llamada' =>
+                        $llamada->id_llamada,
+                ],
+                false
+            );
 
         /*
         |--------------------------------------------------------------------------

@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 
 
@@ -791,12 +792,30 @@ class LlamadasController extends Controller
             && $llamada->id_resultado === null
             && $llamada->fecha_fin !== null;
 
+        $grabacionUrl =
+            $llamada->identificador_asterisk
+                ? route(
+                    'llamadas.audio',
+                    [
+                        'id_llamada' =>
+                            $llamada->id_llamada,
+                    ]
+                )
+                : null;
+
+        $grabacionDisponible =
+            $this->grabacionDisponible(
+                $llamada
+            );
+
         return view(
             'llamadas.show',
             compact(
                 'llamada',
                 'resultadosDisponibles',
-                'puedeRegistrarResultado'
+                'puedeRegistrarResultado',
+                'grabacionUrl',
+                'grabacionDisponible'
             )
         );
 
@@ -1118,6 +1137,131 @@ class LlamadasController extends Controller
                 'success',
                 $mensaje
             );
+    }
+
+
+    /**
+     * Entrega la grabación WAV únicamente a usuarios que pueden ver
+     * la llamada correspondiente.
+     */
+    public function audio(
+        $id_llamada
+    ): BinaryFileResponse {
+        $usuario = Auth::user();
+
+        if (!$usuario) {
+            abort(401);
+        }
+
+        $this->autorizarRol(
+            $usuario
+        );
+
+        $llamada = $this
+            ->consultaLlamadasVisibles(
+                $usuario
+            )
+            ->findOrFail(
+                $id_llamada
+            );
+
+        $ruta = $this
+            ->rutaGrabacion(
+                $llamada
+            );
+
+        if (
+            $ruta === null
+            || !is_file($ruta)
+            || !is_readable($ruta)
+        ) {
+            abort(
+                404,
+                'La grabación de esta llamada todavía no está disponible.'
+            );
+        }
+
+        return response()->file(
+            $ruta,
+            [
+                'Content-Type' =>
+                    'audio/wav',
+
+                'Content-Disposition' =>
+                    'inline; filename="'
+                    . basename($ruta)
+                    . '"',
+
+                'Cache-Control' =>
+                    'private, no-store, max-age=0',
+            ]
+        );
+    }
+
+
+    /**
+     * Comprueba si el WAV ya fue creado y Laravel tiene permiso de lectura.
+     */
+    private function grabacionDisponible(
+        Llamada $llamada
+    ): bool {
+        $ruta = $this
+            ->rutaGrabacion(
+                $llamada
+            );
+
+        return $ruta !== null
+            && is_file($ruta)
+            && is_readable($ruta);
+    }
+
+
+    /**
+     * Construye internamente la ruta del WAV a partir del identificador
+     * guardado en PostgreSQL. Nunca recibe un filename desde la URL.
+     */
+    private function rutaGrabacion(
+        Llamada $llamada
+    ): ?string {
+        $identificador = trim(
+            (string) (
+                $llamada->identificador_asterisk
+                ?? ''
+            )
+        );
+
+        if ($identificador === '') {
+            return null;
+        }
+
+        /*
+         * Admite tanto el identificador CRM como UNIQUEID de Asterisk.
+         */
+        if (
+            !preg_match(
+                '/\A[A-Za-z0-9._-]{1,150}\z/',
+                $identificador
+            )
+        ) {
+            return null;
+        }
+
+        $directorio = rtrim(
+            (string) config(
+                'asterisk.recordings_path',
+                '/var/spool/asterisk/monitor'
+            ),
+            DIRECTORY_SEPARATOR
+        );
+
+        if ($directorio === '') {
+            return null;
+        }
+
+        return $directorio
+            . DIRECTORY_SEPARATOR
+            . $identificador
+            . '.wav';
     }
 
 

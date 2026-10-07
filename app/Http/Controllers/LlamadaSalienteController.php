@@ -1,10 +1,6 @@
 <?php
 
-
-
 namespace App\Http\Controllers;
-
-
 
 use App\Models\Cliente;
 
@@ -13,6 +9,7 @@ use App\Models\Llamada;
 use App\Services\AsteriskAmiService;
 
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 
 use Illuminate\Http\Request;
 
@@ -23,8 +20,6 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 use Throwable;
-
-
 
 class LlamadaSalienteController extends Controller
 
@@ -42,19 +37,15 @@ class LlamadaSalienteController extends Controller
 
         $usuario = $request->user();
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | VALIDACIÓN DEL OPERARIO*
+**        | VALIDACIÓN DEL OPERARIO**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         if (!$usuario || (int) $usuario->id_rol !== 3) {
 
@@ -62,27 +53,21 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         if (!$usuario->activo) {
 
             abort(403, 'Tu cuenta no está activa.');
 
         }
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | VALIDACIÓN DEL CLIENTE*
+**        | VALIDACIÓN DEL CLIENTE**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         if ((int) $cliente->id_empresa !== (int) $usuario->id_empresa) {
 
@@ -90,37 +75,31 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         if ($cliente->deleted_at !== null) {
 
             abort(404);
 
         }
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | CITA / CONTACTO PROGRAMADO*
+**        | CITA / CONTACTO PROGRAMADO**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | id_cita es opcional:*
+**        | id_cita es opcional:**
 
-*        | - Si la llamada se hace desde Clientes, puede venir vacío.*
+**        | - Si la llamada se hace desde Clientes, puede venir vacío.**
 
-*        | - Si la llamada se hace desde Agenda, debe pertenecer al mismo*
+**        | - Si la llamada se hace desde Agenda, debe pertenecer al mismo**
 
-*        |   cliente, empresa y operario autenticado.*
+**        |   cliente, empresa y operario autenticado.**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         $datos = $request->validate([
 
@@ -128,11 +107,7 @@ class LlamadaSalienteController extends Controller
 
         ]);
 
-
-
         $cita = null;
-
-
 
         if (!empty($datos['id_cita'])) {
 
@@ -184,15 +159,13 @@ class LlamadaSalienteController extends Controller
 
                 ->select([
 
-                    'citas.\*',
+                    'citas.\\*',
 
                     'estados_cita.nombre as estado_cita_nombre',
 
                 ])
 
                 ->first();
-
-
 
             if (!$cita) {
 
@@ -206,8 +179,6 @@ class LlamadaSalienteController extends Controller
 
             }
 
-
-
             $estadoCita = mb_strtolower(
 
                 trim((string) ($cita->estado_cita_nombre ?? '')),
@@ -215,8 +186,6 @@ class LlamadaSalienteController extends Controller
                 'UTF-8'
 
             );
-
-
 
             if (in_array(
 
@@ -240,27 +209,21 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | EXTENSIÓN DEL OPERARIO*
+**        | EXTENSIÓN DEL OPERARIO**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         $extension = trim(
 
             (string) ($usuario->extension_asterisk ?? '')
 
         );
-
-
 
         if ($extension === '') {
 
@@ -274,19 +237,15 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | TELÉFONO DEL CLIENTE*
+**        | TELÉFONO DEL CLIENTE**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         $telefono = $this->normalizarTelefono(
 
@@ -295,8 +254,6 @@ class LlamadaSalienteController extends Controller
                 ?: $cliente->telefono_secundario
 
         );
-
-
 
         if ($telefono === null) {
 
@@ -310,19 +267,15 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | ESTADO INICIAL DE LA LLAMADA*
+**        | ESTADO INICIAL DE LA LLAMADA**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         $estado = DB::table('estados_llamada')
 
@@ -338,8 +291,6 @@ class LlamadaSalienteController extends Controller
 
             ->first();
 
-
-
         if (!$estado) {
 
             $estado = DB::table('estados_llamada')
@@ -351,8 +302,6 @@ class LlamadaSalienteController extends Controller
                 ->first();
 
         }
-
-
 
         if (!$estado) {
 
@@ -366,19 +315,15 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | IDENTIFICADOR DE ASTERISK / AMI*
+**        | IDENTIFICADOR DE ASTERISK / AMI**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         $actionId = 'CRM-'
 
@@ -400,19 +345,15 @@ class LlamadaSalienteController extends Controller
 
             );
 
-
-
         /**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*        | VARIABLES PARA ASTERISK*
+**        | VARIABLES PARA ASTERISK**
 
-*        |--------------------------------------------------------------------------*
+**        |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
         $variablesAsterisk = [
 
@@ -424,22 +365,27 @@ class LlamadaSalienteController extends Controller
 
             'CRM_ACTION_ID'  => $actionId,
 
-        
+            /**
 
-            /*
-            |--------------------------------------------------------------------------
-            | NOMBRE DE LA GRABACIÓN
-            |--------------------------------------------------------------------------
-            |
-            | Infraestructura/Asterisk usa esta variable en MixMonitor para
-            | guardar el WAV con el mismo identificador que conserva el CRM.
-            |--------------------------------------------------------------------------
-            */
+*            |--------------------------------------------------------------------------*
+
+*            | NOMBRE DE LA GRABACIÓN*
+
+*            |--------------------------------------------------------------------------*
+
+*            |*
+
+*            | Infraestructura/Asterisk usa esta variable en MixMonitor para*
+
+*            | guardar el WAV con el mismo identificador que conserva el CRM.*
+
+*            |--------------------------------------------------------------------------*
+
+*            */
+
             'RECORD_FILENAME' => $actionId,
 
         ];
-
-
 
         if ($cita) {
 
@@ -447,37 +393,41 @@ class LlamadaSalienteController extends Controller
 
         }
 
+        /**
 
+*        |--------------------------------------------------------------------------*
 
-        
-        /*
-        |--------------------------------------------------------------------------
-        | URL PÚBLICA ESPERADA DE LA GRABACIÓN
-        |--------------------------------------------------------------------------
-        |
-        | Nginx publicará /recordings/ y Asterisk guardará:
-        | {identificador_asterisk}.wav
-        |--------------------------------------------------------------------------
-        */
+*        | URL PÚBLICA ESPERADA DE LA GRABACIÓN*
+
+*        |--------------------------------------------------------------------------*
+
+*        |*
+
+*        | Nginx publicará /recordings/ y Asterisk guardará:*
+
+*        | {identificador_asterisk}.wav*
+
+*        |--------------------------------------------------------------------------*
+
+*        */
 
         $grabacionUrl = '/recordings/'
-            . rawurlencode($actionId)
-            . '.wav';
 
+            . rawurlencode($actionId)
+
+            . '.wav';
 
         try {
 
             /**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*            | SOLICITAR ORIGINATE A ASTERISK*
+**            | SOLICITAR ORIGINATE A ASTERISK**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
             $response = $asterisk->originate(
 
@@ -491,25 +441,21 @@ class LlamadaSalienteController extends Controller
 
             );
 
-
-
             /**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*            | REGISTRAR LLAMADA Y VINCULARLA CON LA AGENDA*
+**            | REGISTRAR LLAMADA Y VINCULARLA CON LA AGENDA**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*            | Un "Originate aceptado" significa que Asterisk aceptó intentar*
+**            | Un "Originate aceptado" significa que Asterisk aceptó intentar**
 
-*            | la llamada. Todavía NO se marca la cita como Realizada.*
+**            | la llamada. Todavía NO se marca la cita como Realizada.**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
             $llamada = DB::transaction(
 
@@ -541,8 +487,6 @@ class LlamadaSalienteController extends Controller
 
                             ?? 'Originate aceptado por Asterisk.');
 
-
-
                     if ($cita) {
 
                         $observaciones .= ' Contacto programado #'
@@ -552,8 +496,6 @@ class LlamadaSalienteController extends Controller
                             . '.';
 
                     }
-
-
 
                     $llamada = Llamada::create([
 
@@ -589,27 +531,23 @@ class LlamadaSalienteController extends Controller
 
                     ]);
 
-
-
                     /**
 
-*                    |--------------------------------------------------------------------------*
+**                    |--------------------------------------------------------------------------**
 
-*                    | ENLACE CITA -> LLAMADA*
+**                    | ENLACE CITA -> LLAMADA**
 
-*                    |--------------------------------------------------------------------------*
+**                    |--------------------------------------------------------------------------**
 
-*                    | Solo se actualiza id_llamada.*
+**                    | Solo se actualiza id_llamada.**
 
-*                    | El estado de la cita sigue Pendiente/Confirmada hasta conocer*
+**                    | El estado de la cita sigue Pendiente/Confirmada hasta conocer**
 
-*                    | el resultado real de la llamada.*
+**                    | el resultado real de la llamada.**
 
-*                    |--------------------------------------------------------------------------*
+**                    |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
                     if ($cita) {
 
@@ -657,27 +595,21 @@ class LlamadaSalienteController extends Controller
 
                     }
 
-
-
                     return $llamada;
 
                 }
 
             );
 
-
-
             /**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*            | RESPUESTA*
+**            | RESPUESTA**
 
-*            |--------------------------------------------------------------------------*
+**            |--------------------------------------------------------------------------**
 
-*/
-
-
+**/
 
             $mensaje = 'Asterisk aceptó la llamada. Primero sonará la extensión '
 
@@ -685,15 +617,11 @@ class LlamadaSalienteController extends Controller
 
                 . ' del operario.';
 
-
-
             if ($cita) {
 
                 $mensaje .= ' La llamada quedó vinculada con el contacto programado de la agenda.';
 
             }
-
-
 
             return redirect()
 
@@ -717,8 +645,6 @@ class LlamadaSalienteController extends Controller
 
             report($e);
 
-
-
             return back()->with(
 
                 'error',
@@ -733,8 +659,6 @@ class LlamadaSalienteController extends Controller
 
             report($e);
 
-
-
             return back()->with(
 
                 'error',
@@ -747,6 +671,223 @@ class LlamadaSalienteController extends Controller
 
     }
 
+
+    /**
+     * Recibe el aviso de Asterisk cuando una llamada termina.
+     *
+     * Asterisk debe enviar el mismo identificador que Laravel colocó en:
+     * - CRM_ACTION_ID
+     * - RECORD_FILENAME
+     * - llamadas.identificador_asterisk
+     *
+     * Se aceptan "action_id" o "record_filename" para facilitar la integración.
+     */
+    public function finalizarLlamada(
+        Request $request
+    ): JsonResponse {
+        /*
+        |--------------------------------------------------------------------------
+        | AUTENTICACIÓN DEL WEBHOOK
+        |--------------------------------------------------------------------------
+        |
+        | El endpoint no usa la sesión de un operario porque lo invoca Asterisk.
+        | Se protege con un token compartido enviado en X-Asterisk-Token.
+        |--------------------------------------------------------------------------
+        */
+
+        $tokenEsperado = trim(
+            (string) config(
+                'asterisk.webhook_token',
+                ''
+            )
+        );
+
+        $tokenRecibido = trim(
+            (string) (
+                $request->header(
+                    'X-Asterisk-Token'
+                )
+                ?: $request->input(
+                    'token',
+                    ''
+                )
+            )
+        );
+
+        if ($tokenEsperado === '') {
+            return response()->json([
+                'status' => 'error',
+                'message' =>
+                    'ASTERISK_WEBHOOK_TOKEN no está configurado en el CRM.',
+            ], 503);
+        }
+
+        if (
+            $tokenRecibido === ''
+            || !hash_equals(
+                $tokenEsperado,
+                $tokenRecibido
+            )
+        ) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Token de Asterisk inválido.',
+            ], 401);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | IDENTIFICADOR DE LA LLAMADA
+        |--------------------------------------------------------------------------
+        */
+
+        $actionId = trim(
+            (string) (
+                $request->input(
+                    'action_id'
+                )
+                ?: $request->input(
+                    'record_filename'
+                )
+                ?: ''
+            )
+        );
+
+        if ($actionId === '') {
+            return response()->json([
+                'status' => 'error',
+                'message' =>
+                    'action_id o record_filename es requerido.',
+            ], 422);
+        }
+
+        $llamada = DB::table('llamadas')
+            ->where(
+                'identificador_asterisk',
+                $actionId
+            )
+            ->first();
+
+        if (!$llamada) {
+            return response()->json([
+                'status' => 'error',
+                'message' =>
+                    'No se encontró una llamada con ese identificador.',
+                'identificador_asterisk' =>
+                    $actionId,
+            ], 404);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ESTADO FINALIZADA
+        |--------------------------------------------------------------------------
+        */
+
+        $estadoFinalizada = DB::table(
+            'estados_llamada'
+        )
+            ->where('activo', true)
+            ->whereRaw(
+                'LOWER(nombre) = LOWER(?)',
+                ['Finalizada']
+            )
+            ->first();
+
+        if (!$estadoFinalizada) {
+            return response()->json([
+                'status' => 'error',
+                'message' =>
+                    'No existe el estado Finalizada en estados_llamada.',
+            ], 500);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | FECHA DE FIN Y DURACIÓN
+        |--------------------------------------------------------------------------
+        |
+        | duracion continúa siendo INTEGER porque almacena SEGUNDOS.
+        |--------------------------------------------------------------------------
+        */
+
+        $fin = $llamada->fecha_fin
+            ? \Carbon\Carbon::parse(
+                $llamada->fecha_fin
+            )
+            : now();
+
+        $inicio = \Carbon\Carbon::parse(
+            $llamada->fecha_inicio
+        );
+
+        $duracion = $llamada->duracion !== null
+            ? max(
+                0,
+                (int) $llamada->duracion
+            )
+            : max(
+                0,
+                (int) round(
+                    $inicio->diffInSeconds(
+                        $fin
+                    )
+                )
+            );
+
+        $grabacionUrl =
+            $llamada->grabacion_url
+            ?: '/recordings/'
+                . rawurlencode($actionId)
+                . '.wav';
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACTUALIZACIÓN IDÉMPOTENTE
+        |--------------------------------------------------------------------------
+        |
+        | Si Asterisk manda el aviso dos veces, la llamada no se duplica:
+        | simplemente queda correctamente cerrada.
+        |--------------------------------------------------------------------------
+        */
+
+        DB::table('llamadas')
+            ->where(
+                'id_llamada',
+                $llamada->id_llamada
+            )
+            ->update([
+                'id_estado_llamada' =>
+                    $estadoFinalizada->id_estado_llamada,
+
+                'fecha_fin' =>
+                    $llamada->fecha_fin
+                        ?: $fin,
+
+                'duracion' =>
+                    $duracion,
+
+                'grabacion_url' =>
+                    $grabacionUrl,
+
+                'updated_at' =>
+                    now(),
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'id_llamada' =>
+                $llamada->id_llamada,
+            'identificador_asterisk' =>
+                $actionId,
+            'estado' =>
+                'Finalizada',
+            'duracion' =>
+                $duracion,
+            'grabacion_url' =>
+                $grabacionUrl,
+        ]);
+    }
 
 
     private function normalizarTelefono(
@@ -761,11 +902,7 @@ class LlamadaSalienteController extends Controller
 
         }
 
-
-
         $telefono = trim($telefono);
-
-
 
         $prefijo = str_starts_with(
 
@@ -779,8 +916,6 @@ class LlamadaSalienteController extends Controller
 
             : '';
 
-
-
         $digitos = preg_replace(
 
             '/\D+/',
@@ -791,15 +926,11 @@ class LlamadaSalienteController extends Controller
 
         );
 
-
-
         if (!$digitos) {
 
             return null;
 
         }
-
-
 
         if (
 
@@ -812,8 +943,6 @@ class LlamadaSalienteController extends Controller
             return null;
 
         }
-
-
 
         return $prefijo . $digitos;
 

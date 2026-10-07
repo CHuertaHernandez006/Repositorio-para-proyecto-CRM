@@ -52,5 +52,6 @@ return [
     */
 
     'originate_timeout' => (int) env('ASTERISK_ORIGINATE_TIMEOUT', 30000),
+'webhook_token' => env('ASTERISK_WEBHOOK_TOKEN')
 
-];
+    ];

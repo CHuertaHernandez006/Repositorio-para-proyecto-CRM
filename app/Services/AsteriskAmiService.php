@@ -26,18 +26,21 @@ class AsteriskAmiService
             );
 
             $headers = [
-                'Action'   => 'Originate',
+                'Action' => 'Originate',
                 'ActionID' => $this->cleanValue($actionId),
-                'Channel'  => $channel,
-                'Context'  => config('asterisk.outbound_context', 'from-crm'),
-                'Exten'    => $this->cleanValue($telefonoCliente),
+                'Channel' => $channel,
+                'Context' => config('asterisk.outbound_context', 'from-crm'),
+                'Exten' => $this->cleanValue($telefonoCliente),
                 'Priority' => '1',
                 'CallerID' => sprintf(
                     '"CRM" <%s>',
                     $this->cleanValue($extensionOperario)
                 ),
-                'Timeout'  => (string) config('asterisk.originate_timeout', 30000),
-                'Async'    => 'true',
+                'Timeout' => (string) config(
+                    'asterisk.originate_timeout',
+                    30000
+                ),
+                'Async' => 'true',
             ];
 
             foreach ($variables as $key => $value) {
@@ -50,7 +53,11 @@ class AsteriskAmiService
 
             $response = $this->sendAction($headers);
 
-            if (strtolower($response['Response'] ?? '') !== 'success') {
+            if (
+                strtolower(
+                    $response['Response'] ?? ''
+                ) !== 'success'
+            ) {
                 throw new RuntimeException(
                     $response['Message']
                     ?? 'Asterisk rechazó la solicitud de llamada.'
@@ -68,7 +75,10 @@ class AsteriskAmiService
     {
         $host = (string) config('asterisk.ami.host');
         $port = (int) config('asterisk.ami.port', 5038);
-        $timeout = (float) config('asterisk.ami.connect_timeout', 5);
+        $timeout = (float) config(
+            'asterisk.ami.connect_timeout',
+            5
+        );
 
         if ($host === '') {
             throw new RuntimeException(
@@ -96,34 +106,48 @@ class AsteriskAmiService
 
         stream_set_timeout(
             $socket,
-            (int) config('asterisk.ami.read_timeout', 5)
+            (int) config(
+                'asterisk.ami.read_timeout',
+                5
+            )
         );
 
         $this->socket = $socket;
 
-        // Banner inicial de AMI.
         fgets($this->socket);
     }
 
     private function login(): void
     {
-        $username = (string) config('asterisk.ami.username');
-        $password = (string) config('asterisk.ami.password');
+        $username = (string) config(
+            'asterisk.ami.username'
+        );
 
-        if ($username === '' || $password === '') {
+        $password = (string) config(
+            'asterisk.ami.password'
+        );
+
+        if (
+            $username === ''
+            || $password === ''
+        ) {
             throw new RuntimeException(
                 'Faltan ASTERISK_AMI_USERNAME o ASTERISK_AMI_PASSWORD.'
             );
         }
 
         $response = $this->sendAction([
-            'Action'   => 'Login',
+            'Action' => 'Login',
             'Username' => $username,
-            'Secret'   => $password,
-            'Events'   => 'off',
+            'Secret' => $password,
+            'Events' => 'off',
         ]);
 
-        if (strtolower($response['Response'] ?? '') !== 'success') {
+        if (
+            strtolower(
+                $response['Response'] ?? ''
+            ) !== 'success'
+        ) {
             throw new RuntimeException(
                 $response['Message']
                 ?? 'No fue posible iniciar sesión en Asterisk AMI.'
@@ -142,7 +166,7 @@ class AsteriskAmiService
                 'Action' => 'Logoff',
             ]);
         } catch (\Throwable $e) {
-            // La llamada ya fue enviada; no fallamos por el cierre de AMI.
+            // No se falla el flujo por el cierre de AMI.
         }
     }
 
@@ -155,36 +179,30 @@ class AsteriskAmiService
         $this->socket = null;
     }
 
-    /**
-     * Envía una acción AMI.
-     *
-     * Acepta:
-     * [
-     *   'Action' => 'Login',
-     *   ...
-     * ]
-     *
-     * y también líneas repetidas:
-     * [
-     *   'Action' => 'Originate',
-     *   ['Variable' => 'A=1'],
-     *   ['Variable' => 'B=2'],
-     * ]
-     */
-    private function sendAction(array $headers): array
-    {
+    private function sendAction(
+        array $headers
+    ): array {
         if (!$this->socket) {
-            throw new RuntimeException('No existe conexión activa con AMI.');
+            throw new RuntimeException(
+                'No existe conexión activa con AMI.'
+            );
         }
 
         $payload = '';
 
         foreach ($headers as $key => $value) {
-            if (is_int($key) && is_array($value)) {
-                foreach ($value as $nestedKey => $nestedValue) {
+            if (
+                is_int($key)
+                && is_array($value)
+            ) {
+                foreach (
+                    $value as $nestedKey => $nestedValue
+                ) {
                     $payload .= $nestedKey
                         . ': '
-                        . $this->cleanValue((string) $nestedValue)
+                        . $this->cleanValue(
+                            (string) $nestedValue
+                        )
                         . "\r\n";
                 }
 
@@ -193,13 +211,18 @@ class AsteriskAmiService
 
             $payload .= $key
                 . ': '
-                . $this->cleanValue((string) $value)
+                . $this->cleanValue(
+                    (string) $value
+                )
                 . "\r\n";
         }
 
         $payload .= "\r\n";
 
-        $written = fwrite($this->socket, $payload);
+        $written = fwrite(
+            $this->socket,
+            $payload
+        );
 
         if ($written === false) {
             throw new RuntimeException(
@@ -221,7 +244,10 @@ class AsteriskAmiService
                 break;
             }
 
-            $line = rtrim($line, "\r\n");
+            $line = rtrim(
+                $line,
+                "\r\n"
+            );
 
             if ($line === '') {
                 if (!empty($response)) {
@@ -235,8 +261,11 @@ class AsteriskAmiService
                 continue;
             }
 
-            [$key, $value] = explode(':', $line, 2);
-            $response[trim($key)] = trim($value);
+            [$key, $value] =
+                explode(':', $line, 2);
+
+            $response[trim($key)] =
+                trim($value);
         }
 
         if (empty($response)) {
@@ -248,8 +277,15 @@ class AsteriskAmiService
         return $response;
     }
 
-    private function cleanValue(string $value): string
-    {
-        return trim(str_replace(["\r", "\n"], '', $value));
+    private function cleanValue(
+        string $value
+    ): string {
+        return trim(
+            str_replace(
+                ["\r", "\n"],
+                '',
+                $value
+            )
+        );
     }
 }

@@ -17,73 +17,74 @@ class CalendarioController extends Controller
      * Muestra la lista de citas del operador autenticado.
      */
     public function index(Request $request)
-{
-    $usuario = Auth::user();
+    {
+        $usuario = Auth::user();
 
-    if (!$usuario) {
-        return redirect()->route('login');
-    }
+        if (!$usuario) {
+            return redirect()->route('login');
+        }
 
-    $idUsuario = $usuario->id ?? $usuario->id_usuario;
+        $idUsuario = $usuario->id ?? $usuario->id_usuario;
 
-    abort_if($idUsuario === null, 403);
+        abort_if($idUsuario === null, 403);
 
-    $datos = $request->validate([
-        'buscar' => 'nullable|string|max:100',
-    ]);
+        $datos = $request->validate([
+            'buscar' => 'nullable|string|max:100',
+        ]);
 
-    $buscar = trim($datos['buscar'] ?? '');
+        $buscar = trim($datos['buscar'] ?? '');
 
-    $consulta = Calendario::with(['cliente', 'estadoCita', 'usuario'])
-        ->where('id_usuario', $idUsuario);
+        $consulta = Calendario::with(['cliente', 'estadoCita', 'usuario'])
+            ->where('id_usuario', $idUsuario);
 
-    if ($buscar !== '') {
-        // Permite buscar varias palabras, por ejemplo: Omar Martínez.
-        $palabras = preg_split('/\s+/u', $buscar, -1, PREG_SPLIT_NO_EMPTY);
+        if ($buscar !== '') {
+            // Permite buscar varias palabras, por ejemplo: Omar Martínez.
+            $palabras = preg_split('/\s+/u', $buscar, -1, PREG_SPLIT_NO_EMPTY);
 
-        foreach ($palabras as $palabra) {
-            // Escapar comodines para buscar el texto literalmente.
-            $texto = str_replace(
-                ['!', '%', '_'],
-                ['!!', '!%', '!_'],
-                mb_strtolower($palabra, 'UTF-8')
-            );
+            foreach ($palabras as $palabra) {
+                // Escapar comodines para buscar el texto literalmente.
+                $texto = str_replace(
+                    ['!', '%', '_'],
+                    ['!!', '!%', '!_'],
+                    mb_strtolower($palabra, 'UTF-8')
+                );
 
-            $termino = '%' . $texto . '%';
+                $termino = '%' . $texto . '%';
 
-            // Agrupamos los OR para conservar el filtro del operador.
-            $consulta->where(function ($q) use ($termino) {
-                $q->whereRaw(
-                    "LOWER(motivo) LIKE ? ESCAPE '!'",
-                    [$termino]
-                )
-                ->orWhereRaw(
-                    "LOWER(observaciones) LIKE ? ESCAPE '!'",
-                    [$termino]
-                )
-                ->orWhereHas('cliente', function ($cliente) use ($termino) {
-                    $cliente->where(function ($nombre) use ($termino) {
-                        $nombre->whereRaw(
-                            "LOWER(nombre) LIKE ? ESCAPE '!'",
-                            [$termino]
-                        )
-                        ->orWhereRaw(
-                            "LOWER(apellido_paterno) LIKE ? ESCAPE '!'",
-                            [$termino]
-                        );
+                // Agrupamos los OR para conservar el filtro del operador.
+                $consulta->where(function ($q) use ($termino) {
+                    $q->whereRaw(
+                        "LOWER(motivo) LIKE ? ESCAPE '!'",
+                        [$termino]
+                    )
+                    ->orWhereRaw(
+                        "LOWER(observaciones) LIKE ? ESCAPE '!'",
+                        [$termino]
+                    )
+                    ->orWhereHas('cliente', function ($cliente) use ($termino) {
+                        $cliente->where(function ($nombre) use ($termino) {
+                            $nombre->whereRaw(
+                                "LOWER(nombre) LIKE ? ESCAPE '!'",
+                                [$termino]
+                            )
+                            ->orWhereRaw(
+                                "LOWER(apellido_paterno) LIKE ? ESCAPE '!'",
+                                [$termino]
+                            );
+                        });
                     });
                 });
-            });
+            }
         }
+
+        // Carga todas las coincidencias del operador para el calendario.
+        $citas = $consulta
+            ->orderBy('fecha_hora_inicio', 'asc')
+            ->get();
+
+        return view('calendario.index', compact('citas', 'buscar'));
     }
 
-    // Carga todas las coincidencias del operador para el calendario.
-    $citas = $consulta
-        ->orderBy('fecha_hora_inicio', 'asc')
-        ->get();
-
-    return view('calendario.index', compact('citas', 'buscar'));
-}
     /**
      * Formulario para agendar una nueva cita.
      */
@@ -127,6 +128,19 @@ class CalendarioController extends Controller
             'motivo'            => 'nullable|string|max:255',
             'observaciones'     => 'nullable|string|max:1000',
         ]);
+
+        // VERIFICACIÓN DE DISPONIBILIDAD DE HORARIO
+        $citaOcupada = Calendario::where('id_usuario', $datos['id_usuario'])
+            ->where('fecha_hora_inicio', $datos['fecha_hora_inicio'])
+            ->exists();
+
+        if ($citaOcupada) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'fecha_hora_inicio' => 'El operario ya tiene programada una cita en la fecha y hora seleccionadas.'
+                ]);
+        }
 
         $estadoPendiente = EstadoCita::whereRaw('LOWER(nombre) = ?', ['pendiente'])
             ->where('estado', true)
@@ -176,37 +190,51 @@ class CalendarioController extends Controller
      * Actualiza la cita en la base de datos.
      */
     public function update(Request $request, $id_cita)
-{
-    $usuario = Auth::user();
-    $idUsuario = $usuario->id ?? $usuario->id_usuario;
+    {
+        $usuario = Auth::user();
+        $idUsuario = $usuario->id ?? $usuario->id_usuario;
 
-    // Buscar la cita asegurando que pertenezca al operario (si es rol 3)
-    $cita = Calendario::where('id_usuario', $idUsuario)->findOrFail($id_cita);
+        // Buscar la cita asegurando que pertenezca al operario (si es rol 3)
+        $cita = Calendario::where('id_usuario', $idUsuario)->findOrFail($id_cita);
 
-    // Si es rol Operador (Rol 3), forzamos que no cambien el cliente ni el operario asignado
-    if ($usuario->id_rol == 3) {
-        $request->merge([
-            'id_cliente' => $cita->id_cliente,
-            'id_usuario' => $cita->id_usuario,
+        // Si es rol Operador (Rol 3), forzamos que no cambien el cliente ni el operario asignado
+        if ($usuario->id_rol == 3) {
+            $request->merge([
+                'id_cliente' => $cita->id_cliente,
+                'id_usuario' => $cita->id_usuario,
+            ]);
+        }
+
+        $datos = $request->validate([
+            'id_cliente'        => 'required|integer',
+            'id_usuario'        => 'required|integer',
+            'fecha_hora_inicio' => 'required|date',
+            'fecha_hora_fin'    => 'nullable|date|after_or_equal:fecha_hora_inicio',
+            'id_estado_cita'    => 'required|integer|exists:estado_citas,id_estado_cita',
+            'motivo'            => 'nullable|string|max:255',
+            'observaciones'     => 'nullable|string|max:1000',
         ]);
+
+        // VERIFICACIÓN DE DISPONIBILIDAD (Ignorando la misma cita que se está editando)
+        $citaOcupada = Calendario::where('id_usuario', $datos['id_usuario'])
+            ->where('fecha_hora_inicio', $datos['fecha_hora_inicio'])
+            ->where('id_cita', '!=', $id_cita)
+            ->exists();
+
+        if ($citaOcupada) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'fecha_hora_inicio' => 'El operario ya tiene otra cita programada en la fecha y hora seleccionadas.'
+                ]);
+        }
+
+        $cita->update($datos);
+
+        return redirect()
+            ->route('calendario.index')
+            ->with('exito', 'Cita actualizada correctamente.');
     }
-
-    $datos = $request->validate([
-        'id_cliente'        => 'required|integer',
-        'id_usuario'        => 'required|integer',
-        'fecha_hora_inicio' => 'required|date',
-        'fecha_hora_fin'    => 'nullable|date|after_or_equal:fecha_hora_inicio',
-        'id_estado_cita'    => 'required|integer|exists:estado_citas,id_estado_cita',
-        'motivo'            => 'nullable|string|max:255',
-        'observaciones'     => 'nullable|string|max:1000',
-    ]);
-
-    $cita->update($datos);
-
-    return redirect()
-        ->route('calendario.index')
-        ->with('exito', 'Cita actualizada correctamente.');
-}
 
     /**
      * Elimina una cita.

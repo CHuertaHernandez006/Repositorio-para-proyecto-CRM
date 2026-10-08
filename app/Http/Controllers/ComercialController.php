@@ -14,12 +14,14 @@ class ComercialController extends Controller
 {
     private function consulta(Request $request)
     {
+        abort_unless((int) $request->user()->id_rol === 1 || Comercial::asesor($request->user()), 403);
         $query = DB::table('comercial_prospectos as p')
             ->join('clientes as c', function ($join) {
-                $join->on('c.id_cliente', '=', 'p.id_cliente')->on('c.id_empresa', '=', 'p.id_empresa');
+                $join->on('c.id_cliente', '=', 'p.id_cliente')->on('c.id_empresa', '=', 'p.id_empresa_origen');
             })
             ->leftJoin('usuarios as a', 'a.id_usuario', '=', 'p.id_asesor')
-            ->where('p.id_empresa', Comercial::empresa())->whereNull('c.deleted_at');
+            ->where('p.id_empresa', Comercial::empresa())
+            ->whereIn('p.id_empresa_origen', Comercial::empresasOrigen())->whereNull('c.deleted_at');
         if ((int) $request->user()->id_rol !== 1) {
             $query->where('p.id_asesor', $request->user()->getKey());
         }
@@ -62,22 +64,36 @@ class ComercialController extends Controller
 
     public function incorporar(Request $request)
     {
+        abort_unless((int) $request->user()->id_rol === 1, 403);
         $empresa = Comercial::empresa();
-        // Inserción idempotente. Incluye exclusivamente interacciones de la empresa interna.
-        $n = DB::affectingStatement('INSERT INTO comercial_prospectos (id_empresa,id_cliente)
-            SELECT c.id_empresa,c.id_cliente FROM clientes c
-            WHERE c.id_empresa = ? AND c.deleted_at IS NULL
-            AND EXISTS (SELECT 1 FROM comi_interacciones i WHERE i.id_empresa=c.id_empresa AND i.id_cliente=c.id_cliente)
-            ON CONFLICT (id_empresa,id_cliente) DO NOTHING', [$empresa]);
+        $origenes = Comercial::empresasOrigen();
+        $marcadores = implode(',', array_fill(0, count($origenes), '?'));
+
+        // Conserva el cliente y sus datos en la empresa de origen.
+        // Una calificación basta: COMI puede guardarla antes de la interacción.
+        // EXISTS y ON CONFLICT evitan duplicados, incluso ante solicitudes simultáneas.
+        $n = DB::affectingStatement("INSERT INTO comercial_prospectos
+                (id_empresa, id_empresa_origen, id_cliente)
+            SELECT ?, c.id_empresa, c.id_cliente FROM clientes c
+            WHERE c.id_empresa IN ({$marcadores}) AND c.deleted_at IS NULL
+            AND (
+                EXISTS (SELECT 1 FROM comi_interacciones i
+                    WHERE i.id_empresa = c.id_empresa AND i.id_cliente = c.id_cliente)
+                OR EXISTS (SELECT 1 FROM comi_calificaciones_lead q
+                    WHERE q.id_empresa = c.id_empresa AND q.id_cliente = c.id_cliente)
+            )
+            ON CONFLICT (id_empresa, id_empresa_origen, id_cliente) DO NOTHING",
+            array_merge([$empresa], $origenes));
+
         return back()->with('exito', "Se incorporaron {$n} prospectos nuevos de COMI.");
     }
 
     public function show(Request $request, $id)
     {
         $prospecto = $this->registro($request, $id);
-        $interacciones = DB::table('comi_interacciones')->where('id_empresa', $prospecto->id_empresa)
+        $interacciones = DB::table('comi_interacciones')->where('id_empresa', $prospecto->id_empresa_origen)
             ->where('id_cliente', $prospecto->id_cliente)->orderByDesc('fecha_hora_inicio')->paginate(10, ['*'], 'interacciones');
-        $calificacion = DB::table('comi_calificaciones_lead')->where('id_empresa', $prospecto->id_empresa)
+        $calificacion = DB::table('comi_calificaciones_lead')->where('id_empresa', $prospecto->id_empresa_origen)
             ->where('id_cliente', $prospecto->id_cliente)->orderByDesc('id_calificacion')->first();
         $historial = DB::table('comercial_seguimientos as s')->join('usuarios as u', 'u.id_usuario', '=', 's.id_usuario')
             ->where('s.id_prospecto', $id)->select('s.*','u.nombre','u.apellido_paterno')
@@ -99,6 +115,7 @@ class ComercialController extends Controller
 
     public function asignar(Request $request, $id)
     {
+        abort_unless((int) $request->user()->id_rol === 1, 403);
         $datos = $request->validate(['id_asesor' => 'required|integer']);
         DB::transaction(function () use ($request, $id, $datos) {
             // Mismo orden de bloqueo que la desactivación: usuario, después prospecto.
@@ -138,6 +155,7 @@ class ComercialController extends Controller
 
     public function contratar(Request $request, $id)
     {
+        abort_unless((int) $request->user()->id_rol === 1, 403);
         $datos = $request->validate(['id_empresa_contratada' => 'required|integer', 'nota' => 'required|string|max:5000']);
         DB::transaction(function () use ($request, $id, $datos) {
             $p = $this->registro($request, $id, true);
@@ -161,18 +179,22 @@ class ComercialController extends Controller
         return view('comercial.agenda', compact('prospectos'));
     }
 
-    public function equipo()
+    public function equipo(Request $request)
     {
+        abort_unless((int) $request->user()->id_rol === 1, 403);
         $asesores = Comercial::asesores()->orderBy('nombre')->paginate(15);
         $cargas = DB::table('comercial_prospectos')->where('id_empresa', Comercial::empresa())
+            ->whereIn('id_empresa_origen', Comercial::empresasOrigen())
             ->whereNotIn('estado', ['contratado','no_interesado'])->selectRaw('id_asesor, count(*) as total')->groupBy('id_asesor')->pluck('total','id_asesor');
         $actividad = DB::table('comercial_seguimientos as s')->join('comercial_prospectos as p','p.id','=','s.id_prospecto')
-            ->where('p.id_empresa', Comercial::empresa())->selectRaw('s.id_usuario, MAX(s.created_at) as ultima')->groupBy('s.id_usuario')->pluck('ultima','id_usuario');
+            ->where('p.id_empresa', Comercial::empresa())
+            ->whereIn('p.id_empresa_origen', Comercial::empresasOrigen())->selectRaw('s.id_usuario, MAX(s.created_at) as ultima')->groupBy('s.id_usuario')->pluck('ultima','id_usuario');
         return view('comercial.equipo', compact('asesores','cargas','actividad'));
     }
 
     public function crearAsesor(Request $request)
     {
+        abort_unless((int) $request->user()->id_rol === 1, 403);
         if (is_string($request->input('correo'))) {
             $request->merge(['correo' => mb_strtolower(trim($request->input('correo')), 'UTF-8')]);
         }
@@ -198,6 +220,7 @@ class ComercialController extends Controller
 
     public function estadoAsesor(Request $request, $id)
     {
+        abort_unless((int) $request->user()->id_rol === 1, 403);
         $datos = $request->validate(['activo' => 'required|boolean']);
         DB::transaction(function () use ($id, $datos) {
             $asesor = Comercial::asesores()->where('id_usuario', $id)->lockForUpdate()->first();

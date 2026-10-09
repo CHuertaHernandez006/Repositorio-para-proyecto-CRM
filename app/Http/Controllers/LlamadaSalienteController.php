@@ -158,14 +158,10 @@ class LlamadaSalienteController extends Controller
                 )
 
                 ->select([
-
-                    'citas.\\*',
-
+                    'citas.*',
                     'estados_cita.nombre as estado_cita_nombre',
-
-                ])
-
-                ->first();
+                    ])
+                    ->first();
 
             if (!$cita) {
 

@@ -522,34 +522,111 @@
         font-size: 12px;
     }
 
-    .pagination-zone {
-        display: flex;
+  .pagination-zone {
+    padding: 17px 20px;
+    border-top: 1px solid rgba(148,163,184,.08);
+}
+
+.calls-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.calls-pagination__info {
+    color: #68788f;
+    font-size: 12px;
+}
+
+.calls-pagination__links {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.calls-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 36px;
+    height: 36px;
+    padding: 0 11px;
+
+    border: 1px solid #2a3a50;
+    border-radius: 9px;
+
+    background: #0e1b2d;
+    color: #8ca0b7;
+
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1;
+
+    text-decoration: none;
+    transition: .18s ease;
+}
+
+.calls-page:hover {
+    border-color: rgba(53,198,255,.45);
+    background: rgba(53,198,255,.10);
+    color: #fff;
+}
+
+.calls-page.active {
+    border-color: #35c6ff;
+    background: #35c6ff;
+    color: #06131f;
+}
+
+.calls-page.disabled {
+    border-color: #26374b;
+    background: #0c1727;
+    color: #4e5f73;
+    cursor: default;
+    pointer-events: none;
+}
+
+.calls-page--nav {
+    min-width: auto;
+    padding: 0 13px;
+}
+
+@media (max-width: 600px) {
+    .calls-pagination {
         justify-content: center;
-        padding: 17px 20px;
-        border-top: 1px solid rgba(148,163,184,.08);
     }
 
-    .pagination-zone .pagination {
-        margin: 0;
+    .calls-pagination__info {
+        width: 100%;
+        text-align: center;
     }
 
-    .pagination-zone .page-link {
-        border-color: #2a3a50;
-        background: #0e1b2d;
-        color: #8ca0b7;
+    .calls-pagination__links {
+        width: 100%;
+        justify-content: center;
     }
 
-    .pagination-zone .page-item.active .page-link {
-        border-color: #35c6ff;
-        background: #35c6ff;
-        color: #06131f;
+    .calls-page--nav {
+        font-size: 0;
+        width: 36px;
+        padding: 0;
     }
 
-    .pagination-zone .page-item.disabled .page-link {
-        border-color: #26374b;
-        background: #0c1727;
-        color: #4e5f73;
+    .calls-page--nav.previous::after {
+        content: "‹";
+        font-size: 18px;
     }
+
+    .calls-page--nav.next::after {
+        content: "›";
+        font-size: 18px;
+    }
+}
 
     @media (max-width: 1200px) {
         .stats-grid {
@@ -958,12 +1035,187 @@
 
             </div>
 
-            @if($llamadas->hasPages())
-                <div class="pagination-zone">
-                    {{ $llamadas->links() }}
-                </div>
-            @endif
+           @if($llamadas->hasPages())
 
+    @php
+        $paginaActual = $llamadas->currentPage();
+        $ultimaPagina = $llamadas->lastPage();
+
+        $inicioPaginas = max(
+            1,
+            $paginaActual - 2
+        );
+
+        $finPaginas = min(
+            $ultimaPagina,
+            $paginaActual + 2
+        );
+    @endphp
+
+    <div class="pagination-zone">
+
+        <div class="calls-pagination">
+
+            <div class="calls-pagination__info">
+
+                Mostrando
+
+                <strong>
+                    {{ $llamadas->firstItem() }}
+                </strong>
+
+                –
+
+                <strong>
+                    {{ $llamadas->lastItem() }}
+                </strong>
+
+                de
+
+                <strong>
+                    {{ $llamadas->total() }}
+                </strong>
+
+                llamadas
+
+            </div>
+
+
+            <nav
+                class="calls-pagination__links"
+                aria-label="Paginación del historial de llamadas"
+            >
+
+                {{-- ANTERIOR --}}
+                @if($llamadas->onFirstPage())
+
+                    <span
+                        class="calls-page calls-page--nav previous disabled"
+                        aria-disabled="true"
+                    >
+                        ‹ Anterior
+                    </span>
+
+                @else
+
+                    <a
+                        class="calls-page calls-page--nav previous"
+                        href="{{ $llamadas->previousPageUrl() }}"
+                        rel="prev"
+                    >
+                        ‹ Anterior
+                    </a>
+
+                @endif
+
+
+                {{-- PRIMERA PÁGINA --}}
+                @if($inicioPaginas > 1)
+
+                    <a
+                        class="calls-page"
+                        href="{{ $llamadas->url(1) }}"
+                    >
+                        1
+                    </a>
+
+                    @if($inicioPaginas > 2)
+
+                        <span
+                            class="calls-page disabled"
+                            aria-hidden="true"
+                        >
+                            …
+                        </span>
+
+                    @endif
+
+                @endif
+
+
+                {{-- PÁGINAS CERCANAS --}}
+                @for(
+                    $pagina = $inicioPaginas;
+                    $pagina <= $finPaginas;
+                    $pagina++
+                )
+
+                    @if($pagina === $paginaActual)
+
+                        <span
+                            class="calls-page active"
+                            aria-current="page"
+                        >
+                            {{ $pagina }}
+                        </span>
+
+                    @else
+
+                        <a
+                            class="calls-page"
+                            href="{{ $llamadas->url($pagina) }}"
+                        >
+                            {{ $pagina }}
+                        </a>
+
+                    @endif
+
+                @endfor
+
+
+                {{-- ÚLTIMA PÁGINA --}}
+                @if($finPaginas < $ultimaPagina)
+
+                    @if($finPaginas < $ultimaPagina - 1)
+
+                        <span
+                            class="calls-page disabled"
+                            aria-hidden="true"
+                        >
+                            …
+                        </span>
+
+                    @endif
+
+                    <a
+                        class="calls-page"
+                        href="{{ $llamadas->url($ultimaPagina) }}"
+                    >
+                        {{ $ultimaPagina }}
+                    </a>
+
+                @endif
+
+
+                {{-- SIGUIENTE --}}
+                @if($llamadas->hasMorePages())
+
+                    <a
+                        class="calls-page calls-page--nav next"
+                        href="{{ $llamadas->nextPageUrl() }}"
+                        rel="next"
+                    >
+                        Siguiente ›
+                    </a>
+
+                @else
+
+                    <span
+                        class="calls-page calls-page--nav next disabled"
+                        aria-disabled="true"
+                    >
+                        Siguiente ›
+                    </span>
+
+                @endif
+
+            </nav>
+
+        </div>
+
+    </div>
+
+@endif
         @else
 
             <div class="empty-state">

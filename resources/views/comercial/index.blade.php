@@ -10,7 +10,7 @@
 @section(
     'commercial-subtitle',
     (int) Auth::user()->id_rol === 1
-        ? 'Consulta y da seguimiento a los prospectos detectados por COMI.'
+        ? 'Consulta, asigna y da seguimiento a los prospectos detectados por COMI.'
         : 'Consulta y da seguimiento a tus prospectos asignados.'
 )
 
@@ -83,8 +83,6 @@
     >
 
 
-        {{-- BÚSQUEDA --}}
-
         <div class="field">
 
             <label for="buscar">
@@ -103,8 +101,6 @@
         </div>
 
 
-
-        {{-- ESTADO --}}
 
         <div class="field">
 
@@ -143,8 +139,6 @@
 
 
 
-        {{-- ASESOR --}}
-
         @if((int) Auth::user()->id_rol === 1)
 
             <div class="field">
@@ -170,7 +164,6 @@
                     >
                         Sin asignar
                     </option>
-
 
                     @foreach($asesores as $a)
 
@@ -202,7 +195,53 @@
 
 
 
-        {{-- FECHA DESDE --}}
+        <div class="field">
+
+            <label for="cita">
+                Cita
+            </label>
+
+            <select
+                id="cita"
+                name="cita"
+            >
+
+                <option value="">
+                    Todas
+                </option>
+
+                <option
+                    value="programada"
+                    @selected(
+                        $cita === 'programada'
+                    )
+                >
+                    Cita programada
+                </option>
+
+                <option
+                    value="solicitada"
+                    @selected(
+                        $cita === 'solicitada'
+                    )
+                >
+                    Solicitada por COMI
+                </option>
+
+                <option
+                    value="sin_cita"
+                    @selected(
+                        $cita === 'sin_cita'
+                    )
+                >
+                    Sin cita
+                </option>
+
+            </select>
+
+        </div>
+
+
 
         <div class="field">
 
@@ -221,8 +260,6 @@
 
 
 
-        {{-- FECHA HASTA --}}
-
         <div class="field">
 
             <label for="hasta">
@@ -240,8 +277,6 @@
 
 
 
-        {{-- BOTONES --}}
-
         <button
             class="btn primary"
             type="submit"
@@ -256,6 +291,8 @@
             $estado !== ''
             ||
             $asesor !== ''
+            ||
+            $cita !== ''
             ||
             $desde !== ''
             ||
@@ -319,7 +356,11 @@
                     </th>
 
                     <th>
-                        Fecha de llegada
+                        Llegó
+                    </th>
+
+                    <th>
+                        Cita
                     </th>
 
                     <th>
@@ -346,9 +387,7 @@
                     <tr>
 
 
-                        {{-- ====================================
-                            PROSPECTO
-                        ===================================== --}}
+                        {{-- PROSPECTO --}}
 
                         <td>
 
@@ -386,9 +425,7 @@
 
 
 
-                        {{-- ====================================
-                            CONTACTO
-                        ===================================== --}}
+                        {{-- CONTACTO --}}
 
                         <td>
 
@@ -410,9 +447,7 @@
 
 
 
-                        {{-- ====================================
-                            FECHA DE LLEGADA
-                        ===================================== --}}
+                        {{-- FECHA DE LLEGADA --}}
 
                         <td>
 
@@ -449,7 +484,7 @@
                             @else
 
                                 <span class="muted">
-                                    Sin fecha
+                                    —
                                 </span>
 
                             @endif
@@ -458,9 +493,65 @@
 
 
 
-                        {{-- ====================================
-                            ESTADO
-                        ===================================== --}}
+                        {{-- CITA --}}
+
+                        <td>
+
+                            @if($p->cita_fecha)
+
+                                <strong>
+
+                                    {{
+                                        \Carbon\Carbon::parse(
+                                            $p->cita_fecha
+                                        )
+                                        ->timezone(
+                                            config('app.timezone')
+                                        )
+                                        ->format('d/m/Y')
+                                    }}
+
+                                </strong>
+
+                                <small>
+
+                                    {{
+                                        \Carbon\Carbon::parse(
+                                            $p->cita_fecha
+                                        )
+                                        ->timezone(
+                                            config('app.timezone')
+                                        )
+                                        ->format('H:i')
+                                    }}
+
+                                </small>
+
+
+                            @elseif($p->cita_solicitada_comi)
+
+                                <strong>
+                                    Solicitada
+                                </strong>
+
+                                <small>
+                                    COMI pidió agendar cita
+                                </small>
+
+
+                            @else
+
+                                <span class="muted">
+                                    Sin cita
+                                </span>
+
+                            @endif
+
+                        </td>
+
+
+
+                        {{-- ESTADO --}}
 
                         <td>
 
@@ -480,27 +571,139 @@
 
 
 
-                        {{-- ====================================
-                            ASESOR
-                        ===================================== --}}
+                        {{-- ASESOR --}}
 
                         <td>
 
-                            @if($p->asesor_nombre)
+                            @if(
+                                (int) Auth::user()->id_rol === 1
+                                &&
+                                !in_array(
+                                    $p->estado,
+                                    [
+                                        'contratado',
+                                        'no_interesado'
+                                    ],
+                                    true
+                                )
+                            )
 
-                                {{
-                                    trim(
-                                        $p->asesor_nombre
-                                        . ' '
-                                        . $p->asesor_apellido
-                                    )
-                                }}
+                                @php
+
+                                    $asesorActualEnLista =
+                                        $p->id_asesor
+                                        &&
+                                        $asesores->contains(
+                                            'id_usuario',
+                                            $p->id_asesor
+                                        );
+
+                                @endphp
+
+
+                                <form
+                                    method="POST"
+                                    action="{{
+                                        route(
+                                            'comercial.asignar',
+                                            $p->id
+                                        )
+                                    }}"
+                                >
+
+                                    @csrf
+
+                                    @method('PUT')
+
+
+                                    <select
+                                        name="id_asesor"
+                                        onchange="this.form.submit()"
+                                    >
+
+                                        <option
+                                            value=""
+                                            disabled
+                                            @selected(
+                                                !$p->id_asesor
+                                            )
+                                        >
+                                            Sin asignar
+                                        </option>
+
+
+                                        @if(
+                                            $p->id_asesor
+                                            &&
+                                            !$asesorActualEnLista
+                                        )
+
+                                            <option
+                                                value="{{ $p->id_asesor }}"
+                                                selected
+                                            >
+
+                                                {{
+                                                    trim(
+                                                        $p->asesor_nombre
+                                                        . ' '
+                                                        . $p->asesor_apellido
+                                                    )
+                                                }}
+                                                (inactivo)
+
+                                            </option>
+
+                                        @endif
+
+
+                                        @foreach($asesores as $a)
+
+                                            <option
+                                                value="{{ $a->id_usuario }}"
+                                                @selected(
+                                                    (int) $p->id_asesor
+                                                    ===
+                                                    (int) $a->id_usuario
+                                                )
+                                            >
+
+                                                {{
+                                                    trim(
+                                                        $a->nombre
+                                                        . ' '
+                                                        . $a->apellido_paterno
+                                                    )
+                                                }}
+
+                                            </option>
+
+                                        @endforeach
+
+                                    </select>
+
+                                </form>
+
 
                             @else
 
-                                <span class="muted">
-                                    Sin asignar
-                                </span>
+                                @if($p->asesor_nombre)
+
+                                    {{
+                                        trim(
+                                            $p->asesor_nombre
+                                            . ' '
+                                            . $p->asesor_apellido
+                                        )
+                                    }}
+
+                                @else
+
+                                    <span class="muted">
+                                        Sin asignar
+                                    </span>
+
+                                @endif
 
                             @endif
 
@@ -508,9 +711,7 @@
 
 
 
-                        {{-- ====================================
-                            ACCIÓN
-                        ===================================== --}}
+                        {{-- ACCIÓN --}}
 
                         <td>
 
@@ -535,31 +736,12 @@
                     <tr>
 
                         <td
-                            colspan="6"
+                            colspan="7"
                             class="empty"
                         >
 
-                            @if(
-                                $buscar !== ''
-                                ||
-                                $estado !== ''
-                                ||
-                                $asesor !== ''
-                                ||
-                                $desde !== ''
-                                ||
-                                $hasta !== ''
-                            )
-
-                                No hay prospectos que coincidan
-                                con los filtros seleccionados.
-
-                            @else
-
-                                Aún no hay prospectos
-                                detectados por COMI.
-
-                            @endif
+                            No hay prospectos que coincidan
+                            con los filtros seleccionados.
 
                         </td>
 
@@ -573,11 +755,6 @@
 
     </div>
 
-
-
-    {{-- ========================================================
-        PAGINACIÓN
-    ========================================================= --}}
 
     @include(
         'comercial.paginacion',

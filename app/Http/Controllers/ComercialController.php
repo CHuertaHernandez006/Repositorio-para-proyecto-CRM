@@ -18,71 +18,190 @@ class ComercialController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    private function consulta(Request $request)
-    {
-        abort_unless(
-            (int) $request->user()->id_rol === 1
-            || Comercial::asesor($request->user()),
-            403
+   private function consulta(Request $request)
+{
+    abort_unless(
+        (int) $request->user()->id_rol === 1
+        || Comercial::asesor($request->user()),
+        403
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRÓXIMA CITA DEL CLIENTE
+    |--------------------------------------------------------------------------
+    |
+    | Obtiene solamente la próxima cita futura del cliente.
+    |
+    */
+
+    $proximasCitas = DB::table('citas as ct')
+        ->select(
+            'ct.id_empresa',
+            'ct.id_cliente'
+        )
+        ->selectRaw(
+            'MIN(ct.fecha_hora_inicio) as cita_fecha'
+        )
+        ->where(
+            'ct.fecha_hora_inicio',
+            '>=',
+            now()
+        )
+        ->groupBy(
+            'ct.id_empresa',
+            'ct.id_cliente'
         );
 
-        $query = DB::table('comercial_prospectos as p')
-            ->join('clientes as c', function ($join) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | SOLICITUD DE CITA DETECTADA POR COMI
+    |--------------------------------------------------------------------------
+    |
+    | COMI solamente almacena aquí si durante alguna interacción
+    | el prospecto solicitó una cita.
+    |
+    */
+
+    $solicitudesCita = DB::table('comi_interacciones as ci')
+        ->select(
+            'ci.id_empresa',
+            'ci.id_cliente'
+        )
+        ->selectRaw(
+            'BOOL_OR(ci.cita_solicitada) as cita_solicitada_comi'
+        )
+        ->groupBy(
+            'ci.id_empresa',
+            'ci.id_cliente'
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CONSULTA PRINCIPAL
+    |--------------------------------------------------------------------------
+    */
+
+    $query = DB::table('comercial_prospectos as p')
+
+        ->join(
+            'clientes as c',
+            function ($join) {
+
                 $join->on(
                     'c.id_cliente',
                     '=',
                     'p.id_cliente'
-                )->on(
+                )
+                ->on(
                     'c.id_empresa',
                     '=',
                     'p.id_empresa_origen'
                 );
-            })
-            ->leftJoin(
-                'usuarios as a',
-                'a.id_usuario',
-                '=',
-                'p.id_asesor'
-            )
-            ->where(
-                'p.id_empresa',
-                Comercial::empresa()
-            )
-            ->whereIn(
-                'p.id_empresa_origen',
-                Comercial::empresasOrigen()
-            )
-            ->whereNull('c.deleted_at');
+            }
+        )
 
-        /*
-        |--------------------------------------------------------------------------
-        | ASESOR COMERCIAL
-        |--------------------------------------------------------------------------
-        |
-        | Los asesores solamente pueden consultar los prospectos
-        | que se encuentran asignados a su cuenta.
-        |
-        */
+        ->leftJoin(
+            'usuarios as a',
+            'a.id_usuario',
+            '=',
+            'p.id_asesor'
+        )
 
-        if ((int) $request->user()->id_rol !== 1) {
-            $query->where(
-                'p.id_asesor',
-                $request->user()->getKey()
-            );
-        }
+        ->leftJoinSub(
+            $proximasCitas,
+            'pc',
+            function ($join) {
 
-        return $query->select(
-            'p.*',
-            'c.nombre',
-            'c.apellido_paterno',
-            'c.organizacion',
-            'c.correo',
-            'c.telefono_principal',
-            'a.nombre as asesor_nombre',
-            'a.apellido_paterno as asesor_apellido'
+                $join->on(
+                    'pc.id_empresa',
+                    '=',
+                    'p.id_empresa_origen'
+                )
+                ->on(
+                    'pc.id_cliente',
+                    '=',
+                    'p.id_cliente'
+                );
+            }
+        )
+
+        ->leftJoinSub(
+            $solicitudesCita,
+            'sc',
+            function ($join) {
+
+                $join->on(
+                    'sc.id_empresa',
+                    '=',
+                    'p.id_empresa_origen'
+                )
+                ->on(
+                    'sc.id_cliente',
+                    '=',
+                    'p.id_cliente'
+                );
+            }
+        )
+
+        ->where(
+            'p.id_empresa',
+            Comercial::empresa()
+        )
+
+        ->whereIn(
+            'p.id_empresa_origen',
+            Comercial::empresasOrigen()
+        )
+
+        ->whereNull(
+            'c.deleted_at'
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ASESOR COMERCIAL
+    |--------------------------------------------------------------------------
+    |
+    | Un asesor únicamente puede consultar sus propios prospectos.
+    |
+    */
+
+    if ((int) $request->user()->id_rol !== 1) {
+
+        $query->where(
+            'p.id_asesor',
+            $request->user()->getKey()
         );
     }
 
+
+    return $query->select(
+
+        'p.*',
+
+        'c.nombre',
+        'c.apellido_paterno',
+        'c.organizacion',
+        'c.correo',
+        'c.telefono_principal',
+
+        'a.nombre as asesor_nombre',
+        'a.apellido_paterno as asesor_apellido',
+
+        'pc.cita_fecha',
+
+        DB::raw(
+            'COALESCE(
+                sc.cita_solicitada_comi,
+                FALSE
+            ) as cita_solicitada_comi'
+        )
+    );
+}
 
     /*
     |--------------------------------------------------------------------------
@@ -197,12 +316,11 @@ class ComercialController extends Controller
     | LISTADO DE PROSPECTOS
     |--------------------------------------------------------------------------
     */
-
-    public function index(Request $request)
+public function index(Request $request)
 {
     /*
     |--------------------------------------------------------------------------
-    | SINCRONIZACIÓN AUTOMÁTICA DE COMI
+    | SINCRONIZACIÓN AUTOMÁTICA
     |--------------------------------------------------------------------------
     */
 
@@ -213,35 +331,61 @@ class ComercialController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | FILTROS
+    | VALIDACIÓN DE FILTROS
     |--------------------------------------------------------------------------
     */
 
     $datos = $request->validate([
-        'buscar' => 'nullable|string|max:100',
+
+        'buscar' =>
+            'nullable|string|max:100',
 
         'estado' => [
             'nullable',
-            Rule::in(array_keys(Comercial::ESTADOS))
+            Rule::in(
+                array_keys(
+                    Comercial::ESTADOS
+                )
+            )
         ],
 
-        'asesor' => 'nullable|string|max:30',
+        'asesor' =>
+            'nullable|string|max:30',
 
-        'desde' => 'nullable|date_format:Y-m-d',
+        'cita' => [
+            'nullable',
+            Rule::in([
+                'programada',
+                'solicitada',
+                'sin_cita'
+            ])
+        ],
 
-        'hasta' => 'nullable|date_format:Y-m-d',
+        'desde' =>
+            'nullable|date_format:Y-m-d',
+
+        'hasta' =>
+            'nullable|date_format:Y-m-d',
     ]);
 
 
-    $buscar = trim($datos['buscar'] ?? '');
+    $buscar =
+        trim($datos['buscar'] ?? '');
 
-    $estado = $datos['estado'] ?? '';
+    $estado =
+        $datos['estado'] ?? '';
 
-    $asesor = $datos['asesor'] ?? '';
+    $asesor =
+        $datos['asesor'] ?? '';
 
-    $desde = $datos['desde'] ?? '';
+    $cita =
+        $datos['cita'] ?? '';
 
-    $hasta = $datos['hasta'] ?? '';
+    $desde =
+        $datos['desde'] ?? '';
+
+    $hasta =
+        $datos['hasta'] ?? '';
 
 
     /*
@@ -250,19 +394,21 @@ class ComercialController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    $base = $this->consulta($request);
+    $base =
+        $this->consulta($request);
 
 
     /*
     |--------------------------------------------------------------------------
-    | RESUMEN GENERAL
+    | MÉTRICAS
     |--------------------------------------------------------------------------
     */
 
     $resumen = [
 
         'total' =>
-            (clone $base)->count(),
+            (clone $base)
+                ->count(),
 
         'pendientes' =>
             (clone $base)
@@ -294,34 +440,36 @@ class ComercialController extends Controller
 
     if ($buscar !== '') {
 
-        $base->where(function ($q) use ($buscar) {
+        $base->where(
+            function ($q) use ($buscar) {
 
-            $termino =
-                '%' .
-                mb_strtolower(
-                    $buscar,
-                    'UTF-8'
-                ) .
-                '%';
+                $termino =
+                    '%' .
+                    mb_strtolower(
+                        $buscar,
+                        'UTF-8'
+                    ) .
+                    '%';
 
-            $q->whereRaw(
-                "LOWER(CONCAT(c.nombre, ' ', c.apellido_paterno)) LIKE ?",
-                [$termino]
-            )
-            ->orWhereRaw(
-                'LOWER(c.organizacion) LIKE ?',
-                [$termino]
-            )
-            ->orWhereRaw(
-                'LOWER(c.correo) LIKE ?',
-                [$termino]
-            )
-            ->orWhere(
-                'c.telefono_principal',
-                'like',
-                $termino
-            );
-        });
+                $q->whereRaw(
+                    "LOWER(CONCAT(c.nombre, ' ', c.apellido_paterno)) LIKE ?",
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    'LOWER(c.organizacion) LIKE ?',
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    'LOWER(c.correo) LIKE ?',
+                    [$termino]
+                )
+                ->orWhere(
+                    'c.telefono_principal',
+                    'like',
+                    $termino
+                );
+            }
+        );
     }
 
 
@@ -354,13 +502,58 @@ class ComercialController extends Controller
 
     } elseif (
         $asesor !== ''
-        && ctype_digit($asesor)
+        &&
+        ctype_digit($asesor)
     ) {
 
         $base->where(
             'p.id_asesor',
             (int) $asesor
         );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CITA
+    |--------------------------------------------------------------------------
+    */
+
+    if ($cita === 'programada') {
+
+        $base->whereNotNull(
+            'pc.cita_fecha'
+        );
+
+    } elseif ($cita === 'solicitada') {
+
+        $base
+            ->whereNull(
+                'pc.cita_fecha'
+            )
+            ->where(
+                'sc.cita_solicitada_comi',
+                true
+            );
+
+    } elseif ($cita === 'sin_cita') {
+
+        $base
+            ->whereNull(
+                'pc.cita_fecha'
+            )
+            ->where(
+                function ($q) {
+
+                    $q->whereNull(
+                        'sc.cita_solicitada_comi'
+                    )
+                    ->orWhere(
+                        'sc.cita_solicitada_comi',
+                        false
+                    );
+                }
+            );
     }
 
 
@@ -377,7 +570,8 @@ class ComercialController extends Controller
                 'Y-m-d',
                 $desde,
                 config('app.timezone')
-            )->startOfDay();
+            )
+            ->startOfDay();
 
         $base->where(
             'p.created_at',
@@ -394,7 +588,8 @@ class ComercialController extends Controller
                 'Y-m-d',
                 $hasta,
                 config('app.timezone')
-            )->endOfDay();
+            )
+            ->endOfDay();
 
         $base->where(
             'p.created_at',
@@ -406,11 +601,12 @@ class ComercialController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | ASESORES PARA EL FILTRO
+    | ASESORES DISPONIBLES
     |--------------------------------------------------------------------------
     */
 
-    $asesores = collect();
+    $asesores =
+        collect();
 
     if ((int) $request->user()->id_rol === 1) {
 
@@ -436,15 +632,16 @@ class ComercialController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    $prospectos = $base
-        ->orderByDesc(
-            'p.created_at'
-        )
-        ->orderByDesc(
-            'p.id'
-        )
-        ->paginate(15)
-        ->withQueryString();
+    $prospectos =
+        $base
+            ->orderByDesc(
+                'p.created_at'
+            )
+            ->orderByDesc(
+                'p.id'
+            )
+            ->paginate(15)
+            ->withQueryString();
 
 
     return view(
@@ -454,6 +651,7 @@ class ComercialController extends Controller
             'buscar',
             'estado',
             'asesor',
+            'cita',
             'desde',
             'hasta',
             'asesores',
@@ -1071,37 +1269,65 @@ class ComercialController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function agenda(
-        Request $request
-    ) {
-        $prospectos =
-            $this->consulta($request)
-                ->whereNotNull(
-                    'p.proximo_contacto'
-                )
-                ->whereNotIn(
-                    'p.estado',
-                    [
-                        'contratado',
-                        'no_interesado'
-                    ]
-                )
-                ->orderBy(
-                    'p.proximo_contacto'
-                )
-                ->orderBy(
-                    'p.id'
-                )
-                ->paginate(20);
+    public function agenda(Request $request)
+{
+    $prospectos = $this->consulta($request)
+
+        ->whereNotIn(
+            'p.estado',
+            [
+                'contratado',
+                'no_interesado'
+            ]
+        )
+
+        ->where(function ($query) {
+            $query
+                ->whereNotNull('pc.cita_fecha')
+                ->orWhereNotNull('p.proximo_contacto');
+        })
+
+        ->selectRaw("
+            CASE
+                WHEN pc.cita_fecha IS NOT NULL
+                     AND p.proximo_contacto IS NOT NULL
+                    THEN LEAST(
+                        pc.cita_fecha,
+                        p.proximo_contacto
+                    )
+
+                WHEN pc.cita_fecha IS NOT NULL
+                    THEN pc.cita_fecha
+
+                ELSE p.proximo_contacto
+            END AS fecha_agenda
+        ")
+
+        ->selectRaw("
+            CASE
+                WHEN pc.cita_fecha IS NOT NULL
+                     AND (
+                         p.proximo_contacto IS NULL
+                         OR pc.cita_fecha <= p.proximo_contacto
+                     )
+                    THEN 'cita_comi'
+
+                ELSE 'seguimiento'
+            END AS tipo_agenda
+        ")
+
+        ->orderBy('fecha_agenda')
+        ->orderBy('p.id')
+
+        ->paginate(20)
+        ->withQueryString();
 
 
-        return view(
-            'comercial.agenda',
-            compact(
-                'prospectos'
-            )
-        );
-    }
+    return view(
+        'comercial.agenda',
+        compact('prospectos')
+    );
+}
 
 
     /*

@@ -18,7 +18,7 @@ class ComercialController extends Controller
     |--------------------------------------------------------------------------
     */
 
-   private function consulta(Request $request)
+  private function consulta(Request $request)
 {
     abort_unless(
         (int) $request->user()->id_rol === 1
@@ -28,39 +28,55 @@ class ComercialController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | PRÓXIMA CITA DEL CLIENTE
+    | PRÓXIMA CITA REAL DE COMI
     |--------------------------------------------------------------------------
     |
-    | Obtiene solamente la próxima cita futura del cliente.
+    | Las citas generadas por COMI se guardan en citas_agenda.
+    | Se relacionan con el cliente mediante conversation_id ->
+    | comi_interacciones.id_conversacion.
     |
     */
 
-    $proximasCitas = DB::table('citas as ct')
-        ->select(
-            'ct.id_empresa',
-            'ct.id_cliente'
+    $proximasCitas = DB::table('citas_agenda as ca')
+        ->join(
+            'comi_interacciones as ci',
+            'ci.id_conversacion',
+            '=',
+            'ca.conversation_id'
         )
-        ->selectRaw(
-            'MIN(ct.fecha_hora_inicio) as cita_fecha'
+        ->whereIn(
+            'ca.estado',
+            [
+                'pendiente_aprobacion',
+                'confirmada',
+                'reprogramada',
+            ]
         )
         ->where(
-            'ct.fecha_hora_inicio',
+            'ca.fecha_hora_cita',
             '>=',
             now()
         )
+        ->select(
+            'ci.id_empresa',
+            'ci.id_cliente'
+        )
+        ->selectRaw(
+            'MIN(ca.fecha_hora_cita) as cita_fecha'
+        )
         ->groupBy(
-            'ct.id_empresa',
-            'ct.id_cliente'
+            'ci.id_empresa',
+            'ci.id_cliente'
         );
 
 
     /*
     |--------------------------------------------------------------------------
-    | SOLICITUD DE CITA DETECTADA POR COMI
+    | CITA SOLICITADA DURANTE LA INTERACCIÓN
     |--------------------------------------------------------------------------
     |
-    | COMI solamente almacena aquí si durante alguna interacción
-    | el prospecto solicitó una cita.
+    | cita_solicitada únicamente indica que durante la conversación
+    | se detectó que el prospecto quería una cita.
     |
     */
 
@@ -80,7 +96,7 @@ class ComercialController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | CONSULTA PRINCIPAL
+    | PROSPECTOS
     |--------------------------------------------------------------------------
     */
 
@@ -163,11 +179,8 @@ class ComercialController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | ASESOR COMERCIAL
+    | VISIBILIDAD DEL ASESOR
     |--------------------------------------------------------------------------
-    |
-    | Un asesor únicamente puede consultar sus propios prospectos.
-    |
     */
 
     if ((int) $request->user()->id_rol !== 1) {
@@ -1269,63 +1282,438 @@ public function index(Request $request)
     |--------------------------------------------------------------------------
     */
 
-    public function agenda(Request $request)
+ public function agenda(Request $request)
 {
-    $prospectos = $this->consulta($request)
+    abort_unless(
+        (int) $request->user()->id_rol === 1
+        || Comercial::asesor($request->user()),
+        403
+    );
 
-        ->whereNotIn(
-            'p.estado',
-            [
-                'contratado',
-                'no_interesado'
-            ]
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILTROS
+    |--------------------------------------------------------------------------
+    */
+
+    $datos = $request->validate([
+
+        'buscar' =>
+            'nullable|string|max:100',
+
+        'estado_cita' => [
+            'nullable',
+            Rule::in([
+                'pendiente_aprobacion',
+                'confirmada',
+                'rechazada',
+                'reprogramada',
+            ])
+        ],
+
+        'asesor' =>
+            'nullable|string|max:30',
+    ]);
+
+
+    $buscar =
+        trim($datos['buscar'] ?? '');
+
+    $estadoCita =
+        $datos['estado_cita'] ?? '';
+
+    $asesor =
+        $datos['asesor'] ?? '';
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MAPA CONVERSACIÓN -> CLIENTE
+    |--------------------------------------------------------------------------
+    */
+
+    $conversaciones = DB::table(
+        'comi_interacciones as ci'
+    )
+        ->whereNotNull(
+            'ci.id_conversacion'
+        )
+        ->select(
+            'ci.id_conversacion',
+            'ci.id_empresa',
+            'ci.id_cliente'
+        )
+        ->distinct();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CITAS COMI
+    |--------------------------------------------------------------------------
+    */
+
+    $base = DB::table('citas_agenda as ca')
+
+        ->joinSub(
+            $conversaciones,
+            'ci',
+            function ($join) {
+
+                $join->on(
+                    'ci.id_conversacion',
+                    '=',
+                    'ca.conversation_id'
+                );
+            }
         )
 
-        ->where(function ($query) {
-            $query
-                ->whereNotNull('pc.cita_fecha')
-                ->orWhereNotNull('p.proximo_contacto');
-        })
+        ->join(
+            'comercial_prospectos as p',
+            function ($join) {
 
-        ->selectRaw("
-            CASE
-                WHEN pc.cita_fecha IS NOT NULL
-                     AND p.proximo_contacto IS NOT NULL
-                    THEN LEAST(
-                        pc.cita_fecha,
-                        p.proximo_contacto
-                    )
+                $join->on(
+                    'p.id_empresa_origen',
+                    '=',
+                    'ci.id_empresa'
+                )
+                ->on(
+                    'p.id_cliente',
+                    '=',
+                    'ci.id_cliente'
+                )
+                ->where(
+                    'p.id_empresa',
+                    '=',
+                    Comercial::empresa()
+                );
+            }
+        )
 
-                WHEN pc.cita_fecha IS NOT NULL
-                    THEN pc.cita_fecha
+        ->join(
+            'clientes as c',
+            function ($join) {
 
-                ELSE p.proximo_contacto
-            END AS fecha_agenda
-        ")
+                $join->on(
+                    'c.id_empresa',
+                    '=',
+                    'p.id_empresa_origen'
+                )
+                ->on(
+                    'c.id_cliente',
+                    '=',
+                    'p.id_cliente'
+                );
+            }
+        )
 
-        ->selectRaw("
-            CASE
-                WHEN pc.cita_fecha IS NOT NULL
-                     AND (
-                         p.proximo_contacto IS NULL
-                         OR pc.cita_fecha <= p.proximo_contacto
-                     )
-                    THEN 'cita_comi'
+        ->leftJoin(
+            'usuarios as a',
+            'a.id_usuario',
+            '=',
+            'p.id_asesor'
+        )
 
-                ELSE 'seguimiento'
-            END AS tipo_agenda
-        ")
+        ->whereIn(
+            'p.id_empresa_origen',
+            Comercial::empresasOrigen()
+        )
 
-        ->orderBy('fecha_agenda')
-        ->orderBy('p.id')
+        ->whereNull(
+            'c.deleted_at'
+        );
 
-        ->paginate(20)
-        ->withQueryString();
+
+    /*
+    |--------------------------------------------------------------------------
+    | ASESOR: SOLO SUS PROSPECTOS
+    |--------------------------------------------------------------------------
+    */
+
+    if ((int) $request->user()->id_rol !== 1) {
+
+        $base->where(
+            'p.id_asesor',
+            $request->user()->getKey()
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | COLUMNAS
+    |--------------------------------------------------------------------------
+    */
+
+    $base->select(
+
+        'ca.id as id_cita_comi',
+        'ca.conversation_id',
+        'ca.nombre_contacto',
+        'ca.telefono',
+        'ca.correo',
+        'ca.nombre_empresa',
+        'ca.objetivo_reunion',
+        'ca.fecha_hora_cita',
+        'ca.estado as estado_cita',
+        'ca.notas',
+
+        'p.id as prospecto_id',
+        'p.id_asesor',
+        'p.estado as estado_comercial',
+
+        'c.nombre',
+        'c.apellido_paterno',
+        'c.organizacion',
+        'c.telefono_principal',
+
+        'a.nombre as asesor_nombre',
+        'a.apellido_paterno as asesor_apellido'
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESUMEN
+    |--------------------------------------------------------------------------
+    */
+
+    $estadosActivos = [
+        'pendiente_aprobacion',
+        'confirmada',
+        'reprogramada',
+    ];
+
+
+    $zonaAgenda =
+        'America/Mexico_City';
+
+
+    $inicioHoy =
+        Carbon::now($zonaAgenda)
+            ->startOfDay()
+            ->utc();
+
+
+    $finHoy =
+        Carbon::now($zonaAgenda)
+            ->endOfDay()
+            ->utc();
+
+
+    $ahora =
+        Carbon::now('UTC');
+
+
+    $resumen = [
+
+        'hoy' =>
+            (clone $base)
+                ->whereIn(
+                    'ca.estado',
+                    $estadosActivos
+                )
+                ->whereBetween(
+                    'ca.fecha_hora_cita',
+                    [
+                        $inicioHoy,
+                        $finHoy
+                    ]
+                )
+                ->count(),
+
+        'pendientes' =>
+            (clone $base)
+                ->where(
+                    'ca.estado',
+                    'pendiente_aprobacion'
+                )
+                ->count(),
+
+        'proximas' =>
+            (clone $base)
+                ->whereIn(
+                    'ca.estado',
+                    $estadosActivos
+                )
+                ->where(
+                    'ca.fecha_hora_cita',
+                    '>=',
+                    $ahora
+                )
+                ->count(),
+    ];
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRÓXIMA CITA
+    |--------------------------------------------------------------------------
+    */
+
+    $proximaCita =
+        (clone $base)
+            ->whereIn(
+                'ca.estado',
+                $estadosActivos
+            )
+            ->where(
+                'ca.fecha_hora_cita',
+                '>=',
+                $ahora
+            )
+            ->orderBy(
+                'ca.fecha_hora_cita'
+            )
+            ->first();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BÚSQUEDA
+    |--------------------------------------------------------------------------
+    */
+
+    if ($buscar !== '') {
+
+        $termino =
+            '%' .
+            mb_strtolower(
+                $buscar,
+                'UTF-8'
+            ) .
+            '%';
+
+
+        $base->where(
+            function ($q) use ($termino) {
+
+                $q->whereRaw(
+                    'LOWER(ca.nombre_contacto) LIKE ?',
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    'LOWER(ca.nombre_empresa) LIKE ?',
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    'LOWER(ca.correo) LIKE ?',
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    'LOWER(ca.telefono) LIKE ?',
+                    [$termino]
+                )
+                ->orWhereRaw(
+                    'LOWER(ca.objetivo_reunion) LIKE ?',
+                    [$termino]
+                );
+            }
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ESTADO DE CITA
+    |--------------------------------------------------------------------------
+    */
+
+    if ($estadoCita !== '') {
+
+        $base->where(
+            'ca.estado',
+            $estadoCita
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ASESOR
+    |--------------------------------------------------------------------------
+    */
+
+    if ($asesor === 'sin_asignar') {
+
+        $base->whereNull(
+            'p.id_asesor'
+        );
+
+    } elseif (
+        $asesor !== ''
+        &&
+        ctype_digit($asesor)
+    ) {
+
+        $base->where(
+            'p.id_asesor',
+            (int) $asesor
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ASESORES PARA EL SELECT
+    |--------------------------------------------------------------------------
+    */
+
+    $asesores =
+        collect();
+
+
+    if ((int) $request->user()->id_rol === 1) {
+
+        $asesores =
+            Comercial::asesores()
+                ->where(
+                    'activo',
+                    true
+                )
+                ->orderBy(
+                    'nombre'
+                )
+                ->orderBy(
+                    'apellido_paterno'
+                )
+                ->get();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESULTADOS
+    |--------------------------------------------------------------------------
+    |
+    | Primero futuras, luego vencidas.
+    |
+    */
+
+    $citas =
+        $base
+            ->orderByRaw(
+                '(ca.fecha_hora_cita < NOW()) ASC'
+            )
+            ->orderBy(
+                'ca.fecha_hora_cita'
+            )
+            ->paginate(20)
+            ->withQueryString();
 
 
     return view(
         'comercial.agenda',
-        compact('prospectos')
+        compact(
+            'citas',
+            'buscar',
+            'estadoCita',
+            'asesor',
+            'asesores',
+            'resumen',
+            'proximaCita',
+            'zonaAgenda'
+        )
     );
 }
 

@@ -2036,7 +2036,7 @@
 
         'llamadas' => 'Llamadas',
 
-
+'configuracion' => 'Configuración',
 
     ] as $prefijo => $etiqueta) {
 
@@ -2547,7 +2547,17 @@
                 ),
 
         ],
+[
+    'ruta' => 'configuracion.index',
 
+    'patron' => 'configuracion.*',
+
+    'texto' => 'Configuración',
+
+    'icono' => 'settings',
+
+    'visible' => Auth::check(),
+],
 
 
     ];

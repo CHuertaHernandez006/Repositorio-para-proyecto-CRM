@@ -28,6 +28,7 @@ use App\Http\Controllers\CalendarioController;
 
 use App\Http\Controllers\CitaController;
 
+use App\Http\Controllers\ConfiguracionController;
 
 
 
@@ -1053,7 +1054,34 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->name('citas.destroy');
 
 });
+/**
+ * |--------------------------------------------------------------------------
+ * | CONFIGURACIÓN DE CUENTA
+ * |--------------------------------------------------------------------------
+ * | Disponible para cualquier usuario autenticado.
+ * |--------------------------------------------------------------------------
+ */
 
+Route::middleware(['auth'])->group(function () {
+
+    Route::get(
+        '/configuracion',
+        [
+            ConfiguracionController::class,
+            'index',
+        ]
+    )->name('configuracion.index');
+
+
+    Route::put(
+        '/configuracion/password',
+        [
+            ConfiguracionController::class,
+            'actualizarPassword',
+        ]
+    )->name('configuracion.password.update');
+
+});
 require __DIR__.'/llamadas_salientes.php';
 
 // Módulo comercial interno: permisos propios, sin modificar rutas de los inquilinos.

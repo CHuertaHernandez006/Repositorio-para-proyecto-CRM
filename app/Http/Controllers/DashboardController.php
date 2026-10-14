@@ -68,7 +68,9 @@ class DashboardController extends Controller
         */
 
         if ((int) $usuario->id_rol === 3) {
-            return view('dashboard');
+            $totalClientes = \App\Support\AccesoClientes::consulta($usuario)->count();
+            $esAsignacion = (int) $usuario->id_tipo_operario === 2;
+            return view('operarios.inicio', compact('totalClientes', 'esAsignacion'));
         }
 
         if (\App\Support\Comercial::asesor($usuario)) {

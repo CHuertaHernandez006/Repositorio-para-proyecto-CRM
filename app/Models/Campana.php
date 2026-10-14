@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class Campana extends Model
 {
@@ -124,7 +125,14 @@ class Campana extends Model
                 'activo',
                 true
             )
-            ->withTimestamps();
+            ->withTimestamps()
+            ->when(
+                Auth::check() && (int) Auth::user()->id_rol === 3,
+                fn ($q) => \App\Support\AccesoClientes::aplicar(
+                    $q,
+                    Auth::user()
+                    )
+                );
     }
 
 
@@ -153,6 +161,13 @@ class Campana extends Model
                 'activo',
                 'intentos',
             ])
-            ->withTimestamps();
+            ->withTimestamps()
+            ->when(
+                Auth::check() && (int) Auth::user()->id_rol === 3,
+                fn ($q) => \App\Support\AccesoClientes::aplicar(
+                    $q,
+                    Auth::user()
+                    )
+                );
     }
 }

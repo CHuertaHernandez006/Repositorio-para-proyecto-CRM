@@ -1,10 +1,6 @@
 <?php
 
-
-
 use Illuminate\Support\Facades\Route;
-
-
 
 use App\Http\Controllers\AuthController;
 
@@ -34,6 +30,8 @@ use App\Http\Controllers\PasswordRecoveryController;
 
 use App\Http\Controllers\ComiAgendaController;
 
+use App\Http\Controllers\AsignacionClienteController;
+
 /**
 
 *|--------------------------------------------------------------------------*
@@ -44,8 +42,6 @@ use App\Http\Controllers\ComiAgendaController;
 
 */
 
-
-
 // Mostrar formulario de inicio de sesión*
 
 Route::get('/', function () {
@@ -53,8 +49,6 @@ Route::get('/', function () {
     return view('welcome');
 
 })->name('login');
-
-
 
 // Verificar credenciales*
 
@@ -66,8 +60,6 @@ Route::post('/login-verificar', [
 
 ])->name('login.verificar');
 
-
-
 // Cerrar sesión*
 
 Route::post('/logout', [
@@ -76,123 +68,39 @@ Route::post('/logout', [
 
     'logout',
 
+
 ])->name('logout');
-
-
 
 /**
- * |--------------------------------------------------------------------------
- * | AUTENTICACIÓN Y PÚBLICAS
- * |--------------------------------------------------------------------------
+ *--------------------------------------------------------------------------
+ * RECUPERACIÓN DE CONTRASEÑA
+ *--------------------------------------------------------------------------
+ * Estas rutas son públicas porque el usuario todavía no ha iniciado sesión.
  */
 
+// Mostrar formulario para solicitar recuperación.
+Route::get('/recuperar-contrasena', [
+    PasswordRecoveryController::class,
+    'mostrarSolicitud',
+])->name('password.request');
 
-/*
-|--------------------------------------------------------------------------
-| INICIAR SESIÓN
-|--------------------------------------------------------------------------
-*/
+// Enviar correo con el enlace de recuperación.
+Route::post('/recuperar-contrasena', [
+    PasswordRecoveryController::class,
+    'enviarEnlace',
+])->middleware('throttle:3,5')->name('password.email');
 
-// Mostrar formulario de inicio de sesión
-Route::get('/', function () {
+// Mostrar formulario para crear una nueva contraseña.
+Route::get('/restablecer-contrasena/{token}', [
+    PasswordRecoveryController::class,
+    'mostrarRestablecer',
+])->name('password.reset.form');
 
-    return view('welcome');
-
-})->name('login');
-
-
-// Verificar credenciales
-Route::post('/login-verificar', [
-
-    AuthController::class,
-    'verificarAcceso',
-
-])->name('login.verificar');
-
-
-// Cerrar sesión
-Route::post('/logout', [
-
-    AuthController::class,
-    'logout',
-
-])->name('logout');
-
-
-
-/*
-|--------------------------------------------------------------------------
-| RECUPERACIÓN DE CONTRASEÑA
-|--------------------------------------------------------------------------
-|
-| Estas rutas son públicas porque el usuario todavía
-| no ha iniciado sesión.
-|
-*/
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMULARIO PARA SOLICITAR RECUPERACIÓN
-|--------------------------------------------------------------------------
-*/
-
-Route::get(
-    '/recuperar-contrasena',
-    [
-        PasswordRecoveryController::class,
-        'mostrarSolicitud',
-    ]
-)->name('password.request');
-
-
-/*
-|--------------------------------------------------------------------------
-| ENVIAR CORREO DE RECUPERACIÓN
-|--------------------------------------------------------------------------
-*/
-
-Route::post(
-    '/recuperar-contrasena',
-    [
-        PasswordRecoveryController::class,
-        'enviarEnlace',
-    ]
-)
-    ->middleware('throttle:3,5')
-    ->name('password.email');
-
-
-/*
-|--------------------------------------------------------------------------
-| FORMULARIO PARA CREAR NUEVA CONTRASEÑA
-|--------------------------------------------------------------------------
-*/
-
-Route::get(
-    '/restablecer-contrasena/{token}',
-    [
-        PasswordRecoveryController::class,
-        'mostrarRestablecer',
-    ]
-)->name('password.reset.form');
-
-
-/*
-|--------------------------------------------------------------------------
-| GUARDAR NUEVA CONTRASEÑA
-|--------------------------------------------------------------------------
-*/
-
-Route::post(
-    '/restablecer-contrasena',
-    [
-        PasswordRecoveryController::class,
-        'restablecer',
-    ]
-)
-    ->middleware('throttle:5,1')
-    ->name('password.update');
+// Guardar la nueva contraseña.
+Route::post('/restablecer-contrasena', [
+    PasswordRecoveryController::class,
+    'restablecer',
+])->middleware('throttle:5,1')->name('password.update');
 
 /**
 
@@ -204,8 +112,6 @@ Route::post(
 
 */
 
-
-
 Route::get('/registro_seleccion', [
 
     RegistroSeleccionController::class,
@@ -214,8 +120,6 @@ Route::get('/registro_seleccion', [
 
 ])->name('registro_seleccion');
 
-
-
 Route::get('/registro-operador', [
 
     RegistroOperadorController::class,
@@ -223,10 +127,6 @@ Route::get('/registro-operador', [
     'create',
 
 ])->name('seleccion.registro_operador');
-
-
-
-
 
 /**
 
@@ -237,8 +137,6 @@ Route::get('/registro-operador', [
 *|--------------------------------------------------------------------------*
 
 */
-
-
 
 Route::get('/dashboard', [
 
@@ -252,71 +150,85 @@ Route::get('/dashboard', [
 
     ->name('dashboard');
 
-
-
-
-
 /**
+
 |--------------------------------------------------------------------------
+
 | CLIENTES - CONSULTA
+
 |--------------------------------------------------------------------------
+
 | Admin Cliente (Rol 2) y Operario (Rol 3)
+
 |--------------------------------------------------------------------------
+
 */
 
 Route::middleware(['auth', 'rol:2,3'])->group(function () {
 
     Route::get('/clientes', [
+
         ClienteController::class,
+
         'index',
+
     ])->name('clientes.index');
 
 });
 
-
 /**
+
 |--------------------------------------------------------------------------
+
 | CLIENTES - ADMINISTRACIÓN
+
 |--------------------------------------------------------------------------
+
 | Exclusivo para Admin Cliente (Rol 2)
+
 |--------------------------------------------------------------------------
+
 */
 
 Route::middleware(['auth', 'rol:2'])->group(function () {
 
-    Route::get('/clientes/crear', [
-        ClienteController::class,
-        'create',
-    ])->name('clientes.create');
-
-    Route::post('/clientes', [
-        ClienteController::class,
-        'store',
-    ])->name('clientes.store');
-
     Route::get('/clientes/{id_cliente}/editar', [
+
         ClienteController::class,
+
         'edit',
+
     ])
+
         ->whereNumber('id_cliente')
+
         ->name('clientes.edit');
 
     Route::put('/clientes/{id_cliente}', [
+
         ClienteController::class,
+
         'update',
+
     ])
+
         ->whereNumber('id_cliente')
+
         ->name('clientes.update');
 
     Route::delete('/clientes/{id_cliente}', [
+
         ClienteController::class,
+
         'destroy',
+
     ])
+
         ->whereNumber('id_cliente')
+
         ->name('clientes.destroy');
 
 });
-
 
 /**
 
@@ -332,11 +244,7 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:2,3'])->group(function () {
-
-
 
     Route::get('/campanas', [
 
@@ -345,8 +253,6 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
         'index',
 
     ])->name('campanas.index');
-
-
 
     Route::get('/campanas/{campana}/clientes', [
 
@@ -362,10 +268,6 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -380,11 +282,7 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:2'])->group(function () {
-
-
 
     Route::get('/campanas/crear', [
 
@@ -394,8 +292,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
     ])->name('campanas.create');
 
-
-
     Route::post('/campanas', [
 
         CampanasController::class,
@@ -403,8 +299,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         'store',
 
     ])->name('campanas.store');
-
-
 
     Route::post('/campanas/{campana}/clientes', [
 
@@ -417,8 +311,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('campana')
 
         ->name('campanas.clientes.asignar');
-
-
 
     Route::delete(
 
@@ -440,8 +332,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('campanas.clientes.quitar');
 
-
-
     Route::get('/campanas/{campana}/editar', [
 
         CampanasController::class,
@@ -454,8 +344,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('campanas.edit');
 
-
-
     Route::put('/campanas/{campana}', [
 
         CampanasController::class,
@@ -467,8 +355,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('campana')
 
         ->name('campanas.update');
-
-
 
     Route::delete('/campanas/{campana}', [
 
@@ -483,10 +369,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->name('campanas.destroy');
 
 });
-
-
-
-
 
 /**
 
@@ -504,11 +386,7 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:2,3'])->group(function () {
-
-
 
     Route::get('/campanas/{campana}', [
 
@@ -524,10 +402,6 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -542,11 +416,7 @@ Route::middleware(['auth', 'rol:2,3'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:1,2,3'])->group(function () {
-
-
 
     Route::get('/llamadas', [
 
@@ -555,8 +425,6 @@ Route::middleware(['auth', 'rol:1,2,3'])->group(function () {
         'index',
 
     ])->name('llamadas.index');
-
-
 
     Route::get('/llamadas/{id_llamada}', [
 
@@ -572,10 +440,6 @@ Route::middleware(['auth', 'rol:1,2,3'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -590,11 +454,7 @@ Route::middleware(['auth', 'rol:1,2,3'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:1'])->group(function () {
-
-
 
     Route::get('/empresas', [
 
@@ -604,8 +464,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
     ])->name('empresas.index');
 
-
-
     Route::get('/empresas/crear', [
 
         EmpresaController::class,
@@ -614,8 +472,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
     ])->name('empresas.create');
 
-
-
     Route::post('/empresas', [
 
         EmpresaController::class,
@@ -623,8 +479,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         'store',
 
     ])->name('empresas.store');
-
-
 
     Route::get('/empresas/{id_empresa}/editar', [
 
@@ -638,8 +492,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
         ->name('empresas.edit');
 
-
-
     Route::put('/empresas/{id_empresa}', [
 
         EmpresaController::class,
@@ -651,8 +503,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         ->whereNumber('id_empresa')
 
         ->name('empresas.update');
-
-
 
     Route::delete('/empresas/{id_empresa}', [
 
@@ -666,8 +516,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
         ->name('empresas.destroy');
 
-
-
     Route::get('/empresas/{id_empresa}/admin/editar', [
 
         EmpresaController::class,
@@ -679,8 +527,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         ->whereNumber('id_empresa')
 
         ->name('empresas.admin.edit');
-
-
 
     Route::put('/empresas/{id_empresa}/admin', [
 
@@ -696,10 +542,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -714,11 +556,7 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:2'])->group(function () {
-
-
 
     Route::get('/operarios', [
 
@@ -728,8 +566,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
     ])->name('operarios.index');
 
-
-
     Route::get('/operarios/objetivos', [
 
         OperarioController::class,
@@ -737,8 +573,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         'objetivos',
 
     ])->name('operarios.objetivos');
-
-
 
     Route::get('/operarios/create', [
 
@@ -748,8 +582,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
     ])->name('operarios.create');
 
-
-
     Route::post('/operarios', [
 
         OperarioController::class,
@@ -757,8 +589,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         'store',
 
     ])->name('operarios.store');
-
-
 
     Route::patch(
 
@@ -778,8 +608,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('operarios.solicitud.reenviar');
 
-
-
     Route::get('/operarios/{operario}', [
 
         OperarioController::class,
@@ -791,8 +619,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('operario')
 
         ->name('operarios.show');
-
-
 
     Route::get('/operarios/{operario}/edit', [
 
@@ -806,8 +632,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('operarios.edit');
 
-
-
     Route::put('/operarios/{operario}', [
 
         OperarioController::class,
@@ -820,8 +644,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('operarios.update');
 
-
-
     Route::patch('/operarios/{operario}/estado', [
 
         OperarioController::class,
@@ -833,8 +655,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('operario')
 
         ->name('operarios.toggleEstado');
-
-
 
     Route::delete('/operarios/{operario}', [
 
@@ -850,10 +670,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -868,11 +684,7 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:1'])->group(function () {
-
-
 
     Route::get('/operarios/solicitudes', [
 
@@ -881,8 +693,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         'solicitudes',
 
     ])->name('operarios.solicitudes');
-
-
 
     Route::patch(
 
@@ -901,8 +711,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
         ->whereNumber('operario')
 
         ->name('operarios.solicitud.aprobar');
-
-
 
     Route::patch(
 
@@ -924,10 +732,6 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -942,11 +746,7 @@ Route::middleware(['auth', 'rol:1'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:1,2'])->group(function () {
-
-
 
     Route::post('/operarios/{operario}/objetivo', [
 
@@ -962,10 +762,6 @@ Route::middleware(['auth', 'rol:1,2'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -980,11 +776,7 @@ Route::middleware(['auth', 'rol:1,2'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:3'])->group(function () {
-
-
 
     Route::get('/calendario', [
 
@@ -994,8 +786,6 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
 
     ])->name('calendario.index');
 
-
-
     Route::get('/calendario/crear', [
 
         CalendarioController::class,
@@ -1004,8 +794,6 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
 
     ])->name('calendario.create');
 
-
-
     Route::post('/calendario', [
 
         CalendarioController::class,
@@ -1013,8 +801,6 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
         'store',
 
     ])->name('calendario.store');
-
-
 
     Route::get('/calendario/{id_cita}/editar', [
 
@@ -1028,8 +814,6 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
 
         ->name('calendario.edit');
 
-
-
     Route::put('/calendario/{id_cita}', [
 
         CalendarioController::class,
@@ -1041,8 +825,6 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
         ->whereNumber('id_cita')
 
         ->name('calendario.update');
-
-
 
     Route::delete('/calendario/{id_cita}', [
 
@@ -1058,10 +840,6 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
 
 });
 
-
-
-
-
 /**
 
 *|--------------------------------------------------------------------------*
@@ -1076,11 +854,7 @@ Route::middleware(['auth', 'rol:3'])->group(function () {
 
 */
 
-
-
 Route::middleware(['auth', 'rol:2'])->group(function () {
-
-
 
     Route::get('/citas', [
 
@@ -1090,8 +864,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
     ])->name('citas.index');
 
-
-
     Route::get('/citas/crear', [
 
         CitaController::class,
@@ -1100,8 +872,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
     ])->name('citas.create');
 
-
-
     Route::post('/citas', [
 
         CitaController::class,
@@ -1109,8 +879,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         'store',
 
     ])->name('citas.store');
-
-
 
     Route::get('/citas/{id_cita}', [
 
@@ -1124,8 +892,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('citas.show');
 
-
-
     Route::get('/citas/{id_cita}/editar', [
 
         CitaController::class,
@@ -1138,8 +904,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->name('citas.edit');
 
-
-
     Route::put('/citas/{id_cita}', [
 
         CitaController::class,
@@ -1151,8 +915,6 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->whereNumber('id_cita')
 
         ->name('citas.update');
-
-
 
     Route::delete('/citas/{id_cita}', [
 
@@ -1167,159 +929,139 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
         ->name('citas.destroy');
 
 });
+
 /**
+
  * |--------------------------------------------------------------------------
+
  * | CONFIGURACIÓN DE CUENTA
+
  * |--------------------------------------------------------------------------
+
  * | Disponible para cualquier usuario autenticado.
+
  * |--------------------------------------------------------------------------
+
  */
 
 Route::middleware(['auth'])->group(function () {
 
     Route::get(
+
         '/configuracion',
+
         [
+
             ConfiguracionController::class,
+
             'index',
+
         ]
+
     )->name('configuracion.index');
 
-
     Route::put(
+
         '/configuracion/password',
+
         [
+
             ConfiguracionController::class,
+
             'actualizarPassword',
+
         ]
-    )->name('configuracion.password.update');
 
-});
-
-/**
- * |--------------------------------------------------------------------------
- * | CONFIGURACIÓN DE CUENTA
- * |--------------------------------------------------------------------------
- * | Disponible para cualquier usuario autenticado.
- * |--------------------------------------------------------------------------
- */
-
-Route::middleware(['auth'])->group(function () {
-
-    Route::get(
-        '/configuracion',
-        [
-            ConfiguracionController::class,
-            'index',
-        ]
-    )->name('configuracion.index');
-
-
-    Route::put(
-        '/configuracion/password',
-        [
-            ConfiguracionController::class,
-            'actualizarPassword',
-        ]
     )->name('configuracion.password.update');
 
 });
 
 
 /**
- * |--------------------------------------------------------------------------
- * | COMI - AGENDA Y SERVICIO TÉCNICO
- * |--------------------------------------------------------------------------
+ * --------------------------------------------------------------------------
+ * COMI - AGENDA Y SERVICIO TÉCNICO
+ * --------------------------------------------------------------------------
  */
-
 Route::middleware(['auth'])->group(function () {
+    // Agenda
+    Route::get('/comi/agenda', [
+        ComiAgendaController::class,
+        'index',
+    ])->name('comi.agenda.index');
 
-    /*
-    |--------------------------------------------------------------------------
-    | AGENDA
-    |--------------------------------------------------------------------------
-    */
+    Route::patch('/comi/agenda/{id_cita}/estado', [
+        ComiAgendaController::class,
+        'cambiarEstado',
+    ])->whereNumber('id_cita')
+      ->name('comi.agenda.estado');
 
-    Route::get(
-        '/comi/agenda',
-        [
-            ComiAgendaController::class,
-            'index',
-        ]
-    )->name('comi.agenda.index');
+    Route::get('/comi/agenda/{id_cita}/reprogramar', [
+        ComiAgendaController::class,
+        'reprogramarForm',
+    ])->whereNumber('id_cita')
+      ->name('comi.agenda.reprogramar.form');
 
+    Route::patch('/comi/agenda/{id_cita}/reprogramar', [
+        ComiAgendaController::class,
+        'reprogramar',
+    ])->whereNumber('id_cita')
+      ->name('comi.agenda.reprogramar');
 
-    Route::patch(
-        '/comi/agenda/{id_cita}/estado',
-        [
-            ComiAgendaController::class,
-            'cambiarEstado',
-        ]
-    )
-        ->whereNumber('id_cita')
-        ->name('comi.agenda.estado');
+    // Servicio técnico
+    Route::get('/comi/servicio', [
+        ComiAgendaController::class,
+        'solicitudesServicio',
+    ])->name('comi.servicio.index');
 
+    Route::get('/comi/servicio/{id_solicitud}/programar', [
+        ComiAgendaController::class,
+        'programarVisitaForm',
+    ])->whereNumber('id_solicitud')
+      ->name('comi.servicio.programar.form');
 
-    Route::get(
-        '/comi/agenda/{id_cita}/reprogramar',
-        [
-            ComiAgendaController::class,
-            'reprogramarForm',
-        ]
-    )
-        ->whereNumber('id_cita')
-        ->name('comi.agenda.reprogramar.form');
-
-
-    Route::patch(
-        '/comi/agenda/{id_cita}/reprogramar',
-        [
-            ComiAgendaController::class,
-            'reprogramar',
-        ]
-    )
-        ->whereNumber('id_cita')
-        ->name('comi.agenda.reprogramar');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SERVICIO TÉCNICO
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get(
-        '/comi/servicio',
-        [
-            ComiAgendaController::class,
-            'solicitudesServicio',
-        ]
-    )->name('comi.servicio.index');
-
-
-    Route::get(
-        '/comi/servicio/{id_solicitud}/programar',
-        [
-            ComiAgendaController::class,
-            'programarVisitaForm',
-        ]
-    )
-        ->whereNumber('id_solicitud')
-        ->name('comi.servicio.programar.form');
-
-
-    Route::post(
-        '/comi/servicio/{id_solicitud}/programar',
-        [
-            ComiAgendaController::class,
-            'programarVisita',
-        ]
-    )
-        ->whereNumber('id_solicitud')
-        ->name('comi.servicio.programar');
-
+    Route::post('/comi/servicio/{id_solicitud}/programar', [
+        ComiAgendaController::class,
+        'programarVisita',
+    ])->whereNumber('id_solicitud')
+      ->name('comi.servicio.programar');
 });
+
 require __DIR__.'/llamadas_salientes.php';
 
 // Módulo comercial interno: permisos propios, sin modificar rutas de los inquilinos.
+
 require __DIR__.'/comercial.php';
+
+// Alta: el controlador distingue Prospección de Asignación.
+
+Route::middleware(['auth', 'rol:2,3'])->group(function () {
+
+    Route::get('/clientes/crear', [
+
+        ClienteController::class,
+
+        'create',
+
+    ])->name('clientes.create');
+
+    Route::post('/clientes', [
+
+        ClienteController::class,
+
+        'store',
+
+    ])->name('clientes.store');
+
+});
+
+Route::middleware(['auth', 'rol:2'])->group(function () {
+
+    Route::get('/asignaciones-clientes', [AsignacionClienteController::class, 'index'])
+
+        ->name('clientes.asignaciones.index');
+
+    Route::put('/asignaciones-clientes/{id_cliente}', [AsignacionClienteController::class, 'update'])
+
+        ->whereNumber('id_cliente')->name('clientes.asignaciones.update');
+
+});

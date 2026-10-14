@@ -24,7 +24,7 @@ class ClienteController extends Controller
 
         $buscar = trim($datos['buscar'] ?? '');
 
-        $consulta = Cliente::query();
+        $consulta = \App\Support\AccesoClientes::consulta(Auth::user());
 
         /*
         |--------------------------------------------------------------------------
@@ -171,6 +171,7 @@ class ClienteController extends Controller
 
     public function create()
 {
+        \App\Support\AccesoClientes::autorizarAlta(Auth::user());
     $tiposCliente = DB::table('tipos_cliente')
         ->where('activo', true)
         ->orderBy('nombre')
@@ -205,6 +206,7 @@ class ClienteController extends Controller
 
     public function store(Request $request)
     {
+        \App\Support\AccesoClientes::autorizarAlta(Auth::user());
         $usuario = Auth::user();
 
         $idEmpresa = (int) $usuario->id_empresa;
@@ -415,7 +417,8 @@ class ClienteController extends Controller
 
     public function edit($id_cliente)
     {
-        $consulta = Cliente::query();
+        abort_unless((int) Auth::user()->id_rol === 2, 403);
+        $consulta = \App\Support\AccesoClientes::consulta(Auth::user());
 
         /*
         |--------------------------------------------------------------------------
@@ -451,6 +454,7 @@ class ClienteController extends Controller
         Request $request,
         $id_cliente
     ) {
+        abort_unless((int) Auth::user()->id_rol === 2, 403);
         $usuario = Auth::user();
 
         /*
@@ -459,7 +463,7 @@ class ClienteController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $consulta = Cliente::query();
+        $consulta = \App\Support\AccesoClientes::consulta(Auth::user());
 
         if ((int) $usuario->id_rol !== 1) {
             $consulta->where(
@@ -646,7 +650,8 @@ class ClienteController extends Controller
 
     public function destroy($id_cliente)
     {
-        $consulta = Cliente::query();
+        abort_unless((int) Auth::user()->id_rol === 2, 403);
+        $consulta = \App\Support\AccesoClientes::consulta(Auth::user());
 
         if ((int) Auth::user()->id_rol !== 1) {
             $consulta->where(

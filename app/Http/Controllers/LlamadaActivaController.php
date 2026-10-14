@@ -149,6 +149,7 @@ class LlamadaActivaController extends Controller
                 'el.nombre as estado_nombre',
             ]);
 
+        \App\Support\AccesoClientes::filtrarRelacion($consulta, $usuario, 'l.id_cliente');
         $llamada = $consulta->first();
 
         if (!$llamada) {

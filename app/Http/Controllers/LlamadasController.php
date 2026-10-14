@@ -1300,6 +1300,7 @@ class LlamadasController extends Controller
         $consulta =
 
             Llamada::query();
+        \App\Support\AccesoClientes::filtrarRelacion($consulta, $usuario, 'llamadas.id_cliente');
 
 
 

@@ -1824,7 +1824,9 @@
 
 
 
-    </style>
+    .comi-role-badge--asignacion { --role-rgb: 192,132,252; --role-text: #e9d5ff; }
+.comi-role-badge--prospeccion { --role-rgb: 56,189,248; --role-text: #bae6fd; }
+</style>
 
 
 
@@ -1993,6 +1995,15 @@
     */
 
 
+
+    if ($rolActual === 3) {
+        $tipoActual = (int) $usuarioActual->id_tipo_operario;
+        $insigniaRol = match ($tipoActual) {
+            1 => ['nombre' => 'Operario · Prospección', 'clase' => 'prospeccion'],
+            2 => ['nombre' => 'Operario · Asignación', 'clase' => 'asignacion'],
+            default => ['nombre' => 'Operario · Sin tipo', 'clase' => 'usuario'],
+        };
+    }
 
     $esAsesorComercial = \App\Support\Comercial::asesor($usuarioActual);
     if ($esAsesorComercial) {
@@ -2259,7 +2270,7 @@
 
 
 
-            'texto' => 'Clientes',
+            'texto' => ($rolActual === 3 && (int) $usuarioActual->id_tipo_operario === 2) ? 'Mis clientes' : 'Clientes',
 
 
 

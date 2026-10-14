@@ -98,6 +98,8 @@ class CalendarioController extends Controller
         }
 
 
+        \App\Support\AccesoClientes::filtrarRelacion($consulta, $usuario, 'citas.id_cliente');
+
         if ($buscar !== '') {
 
             $palabras = preg_split(
@@ -291,7 +293,7 @@ class CalendarioController extends Controller
 
 
 
-        $clientes = Cliente::query()
+        $clientes = \App\Support\AccesoClientes::consulta($usuario)
 
             ->where(
 
@@ -487,7 +489,7 @@ class CalendarioController extends Controller
 
 
 
-        Cliente::query()
+        \App\Support\AccesoClientes::consulta($usuario)
 
             ->where(
 
@@ -705,7 +707,7 @@ class CalendarioController extends Controller
 
 
 
-        $clientes = Cliente::query()
+        $clientes = \App\Support\AccesoClientes::consulta($usuario)
 
             ->where(
 
@@ -1002,7 +1004,7 @@ class CalendarioController extends Controller
 
 
 
-        Cliente::query()
+        \App\Support\AccesoClientes::consulta($usuario)
 
             ->where(
 
@@ -1284,7 +1286,7 @@ class CalendarioController extends Controller
 
 
 
-        return $consulta;
+        return \App\Support\AccesoClientes::filtrarRelacion($consulta, $usuario, 'citas.id_cliente');
 
     }
 

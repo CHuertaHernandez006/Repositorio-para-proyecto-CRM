@@ -314,4 +314,8 @@ class Cliente extends Model
             ])
             ->withTimestamps();
     }
+    public function responsable(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_usuario_responsable', 'id_usuario')->withTrashed();
+    }
 }

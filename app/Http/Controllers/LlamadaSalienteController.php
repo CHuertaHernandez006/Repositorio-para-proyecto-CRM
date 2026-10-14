@@ -101,6 +101,8 @@ class LlamadaSalienteController extends Controller
 
 **/
 
+        \App\Support\AccesoClientes::autorizarCliente($usuario, $cliente->id_cliente);
+
         $datos = $request->validate([
 
             'id_cita' => ['nullable', 'integer', 'min:1'],

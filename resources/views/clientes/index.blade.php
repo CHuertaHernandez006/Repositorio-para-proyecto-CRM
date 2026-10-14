@@ -15,6 +15,8 @@
     $rolActual = (int) (auth()->user()->id_rol ?? 0);
     $esAdminCliente = $rolActual === 2;
     $esOperario = $rolActual === 3;
+    $esAsignacion = $esOperario && (int) auth()->user()->id_tipo_operario === 2;
+    $puedeCrear = $esAdminCliente || ($esOperario && (int) auth()->user()->id_tipo_operario === 1);
 
     $buscar = $buscar ?? '';
 
@@ -238,17 +240,17 @@
 
             <p class="cc-eyebrow">COMICenter / Gestión comercial</p>
 
-            <h1 class="cc-title" id="clientes-title">Clientes</h1>
+            <h1 class="cc-title" id="clientes-title">{{ $esAsignacion ? 'Mis clientes asignados' : 'Clientes' }}</h1>
 
             <p class="cc-subtitle">
             {{ $esOperario
-                ? 'Consulta los clientes de tu empresa e inicia llamadas desde el CRM.'
+                ? ($esAsignacion ? 'Atiende los clientes que tu administrador te asignó.' : 'Busca clientes de tu empresa o registra nuevos prospectos.')
                 : 'Administra tus contactos y da seguimiento a cada oportunidad.' }}
         </p>
 
         </div>
 
-        @if ($esAdminCliente)
+        @if ($puedeCrear)
 
 
             <a href="{{ route('clientes.create') }}" class="cc-btn cc-btn-primary">
@@ -262,10 +264,16 @@
 
         @endif
 
+        @if ($esAdminCliente)
+            <a href="{{ route('clientes.asignaciones.index') }}" class="cc-btn cc-btn-primary">Asignaciones</a>
+        @endif
     </header>
 
 
 
+    @if (session('exito'))
+        <div role="status" class="cc-alert">{{ session('exito') }}</div>
+    @endif
     @if (session('success'))
 
         <div role="status" class="cc-alert" style="background: #143f39; border-color: #286556; color: #a7f3d0;">{{ session('success') }}</div>
@@ -530,7 +538,7 @@
 
                 @if ($buscar !== '')
                     <a href="{{ route('clientes.index') }}" class="cc-btn cc-btn-secondary">Ver clientes</a>
-                @elseif ($esAdminCliente)
+                @elseif ($puedeCrear)
                     <a href="{{ route('clientes.create') }}" class="cc-btn cc-btn-primary">Nuevo cliente</a>
                 @endif
 

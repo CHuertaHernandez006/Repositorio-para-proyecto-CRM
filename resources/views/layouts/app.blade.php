@@ -2211,8 +2211,29 @@
         ],
 
 
+[
+    'ruta' => 'comi.agenda.index',
 
+    'patron' => 'comi.agenda.*',
 
+    'texto' => 'Agenda COMI',
+
+    'icono' => 'calendar-days',
+
+    'visible' => Auth::check(),
+],
+
+[
+    'ruta' => 'comi.servicio.index',
+
+    'patron' => 'comi.servicio.*',
+
+    'texto' => 'Servicio COMI',
+
+    'icono' => 'wrench',
+
+    'visible' => Auth::check(),
+],
 
 
 

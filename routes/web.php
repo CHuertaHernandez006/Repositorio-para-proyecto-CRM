@@ -32,6 +32,7 @@ use App\Http\Controllers\ConfiguracionController;
 
 use App\Http\Controllers\PasswordRecoveryController;
 
+use App\Http\Controllers\ComiAgendaController;
 
 /**
 
@@ -1192,6 +1193,130 @@ Route::middleware(['auth'])->group(function () {
             'actualizarPassword',
         ]
     )->name('configuracion.password.update');
+
+});
+
+/**
+ * |--------------------------------------------------------------------------
+ * | CONFIGURACIÓN DE CUENTA
+ * |--------------------------------------------------------------------------
+ * | Disponible para cualquier usuario autenticado.
+ * |--------------------------------------------------------------------------
+ */
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get(
+        '/configuracion',
+        [
+            ConfiguracionController::class,
+            'index',
+        ]
+    )->name('configuracion.index');
+
+
+    Route::put(
+        '/configuracion/password',
+        [
+            ConfiguracionController::class,
+            'actualizarPassword',
+        ]
+    )->name('configuracion.password.update');
+
+});
+
+
+/**
+ * |--------------------------------------------------------------------------
+ * | COMI - AGENDA Y SERVICIO TÉCNICO
+ * |--------------------------------------------------------------------------
+ */
+
+Route::middleware(['auth'])->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | AGENDA
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/comi/agenda',
+        [
+            ComiAgendaController::class,
+            'index',
+        ]
+    )->name('comi.agenda.index');
+
+
+    Route::patch(
+        '/comi/agenda/{id_cita}/estado',
+        [
+            ComiAgendaController::class,
+            'cambiarEstado',
+        ]
+    )
+        ->whereNumber('id_cita')
+        ->name('comi.agenda.estado');
+
+
+    Route::get(
+        '/comi/agenda/{id_cita}/reprogramar',
+        [
+            ComiAgendaController::class,
+            'reprogramarForm',
+        ]
+    )
+        ->whereNumber('id_cita')
+        ->name('comi.agenda.reprogramar.form');
+
+
+    Route::patch(
+        '/comi/agenda/{id_cita}/reprogramar',
+        [
+            ComiAgendaController::class,
+            'reprogramar',
+        ]
+    )
+        ->whereNumber('id_cita')
+        ->name('comi.agenda.reprogramar');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SERVICIO TÉCNICO
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/comi/servicio',
+        [
+            ComiAgendaController::class,
+            'solicitudesServicio',
+        ]
+    )->name('comi.servicio.index');
+
+
+    Route::get(
+        '/comi/servicio/{id_solicitud}/programar',
+        [
+            ComiAgendaController::class,
+            'programarVisitaForm',
+        ]
+    )
+        ->whereNumber('id_solicitud')
+        ->name('comi.servicio.programar.form');
+
+
+    Route::post(
+        '/comi/servicio/{id_solicitud}/programar',
+        [
+            ComiAgendaController::class,
+            'programarVisita',
+        ]
+    )
+        ->whereNumber('id_solicitud')
+        ->name('comi.servicio.programar');
 
 });
 require __DIR__.'/llamadas_salientes.php';

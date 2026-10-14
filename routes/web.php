@@ -30,7 +30,7 @@ use App\Http\Controllers\CitaController;
 
 use App\Http\Controllers\ConfiguracionController;
 
-
+use App\Http\Controllers\PasswordRecoveryController;
 
 
 /**
@@ -79,7 +79,119 @@ Route::post('/logout', [
 
 
 
+/**
+ * |--------------------------------------------------------------------------
+ * | AUTENTICACIÓN Y PÚBLICAS
+ * |--------------------------------------------------------------------------
+ */
 
+
+/*
+|--------------------------------------------------------------------------
+| INICIAR SESIÓN
+|--------------------------------------------------------------------------
+*/
+
+// Mostrar formulario de inicio de sesión
+Route::get('/', function () {
+
+    return view('welcome');
+
+})->name('login');
+
+
+// Verificar credenciales
+Route::post('/login-verificar', [
+
+    AuthController::class,
+    'verificarAcceso',
+
+])->name('login.verificar');
+
+
+// Cerrar sesión
+Route::post('/logout', [
+
+    AuthController::class,
+    'logout',
+
+])->name('logout');
+
+
+
+/*
+|--------------------------------------------------------------------------
+| RECUPERACIÓN DE CONTRASEÑA
+|--------------------------------------------------------------------------
+|
+| Estas rutas son públicas porque el usuario todavía
+| no ha iniciado sesión.
+|
+*/
+
+
+/*
+|--------------------------------------------------------------------------
+| FORMULARIO PARA SOLICITAR RECUPERACIÓN
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/recuperar-contrasena',
+    [
+        PasswordRecoveryController::class,
+        'mostrarSolicitud',
+    ]
+)->name('password.request');
+
+
+/*
+|--------------------------------------------------------------------------
+| ENVIAR CORREO DE RECUPERACIÓN
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    '/recuperar-contrasena',
+    [
+        PasswordRecoveryController::class,
+        'enviarEnlace',
+    ]
+)
+    ->middleware('throttle:3,5')
+    ->name('password.email');
+
+
+/*
+|--------------------------------------------------------------------------
+| FORMULARIO PARA CREAR NUEVA CONTRASEÑA
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/restablecer-contrasena/{token}',
+    [
+        PasswordRecoveryController::class,
+        'mostrarRestablecer',
+    ]
+)->name('password.reset.form');
+
+
+/*
+|--------------------------------------------------------------------------
+| GUARDAR NUEVA CONTRASEÑA
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    '/restablecer-contrasena',
+    [
+        PasswordRecoveryController::class,
+        'restablecer',
+    ]
+)
+    ->middleware('throttle:5,1')
+    ->name('password.update');
 
 /**
 

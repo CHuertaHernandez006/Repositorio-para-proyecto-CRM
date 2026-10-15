@@ -40,7 +40,7 @@
     }
 
     .ca-description {
-        max-width: 720px;
+        max-width: 760px;
         margin: 7px 0 0;
         color: #94a3b8;
         font-size: 14px;
@@ -136,10 +136,10 @@
 
     .ca-button {
         display: inline-flex;
-        min-height: 38px;
+        min-height: 36px;
         align-items: center;
         justify-content: center;
-        padding: 0 13px;
+        padding: 0 12px;
         border-radius: 8px;
         text-decoration: none;
         font-size: 12px;
@@ -185,12 +185,14 @@
     }
 
     .ca-table-wrapper {
+        width: 100%;
         overflow-x: auto;
     }
 
     .ca-table {
         width: 100%;
         border-collapse: collapse;
+        min-width: 1100px;
     }
 
     .ca-table th {
@@ -230,6 +232,7 @@
         border-radius: 999px;
         font-size: 11px;
         font-weight: 700;
+        white-space: nowrap;
     }
 
     .ca-status-pendiente {
@@ -269,18 +272,24 @@
     }
 
     .ca-empty h2 {
+        margin: 0 0 8px;
         color: #e2e8f0;
     }
 
     .ca-empty p {
+        margin: 0;
         color: #64748b;
     }
 
     .ca-pagination {
         display: flex;
         justify-content: space-between;
+        align-items: center;
+        gap: 12px;
         padding: 15px;
         border-top: 1px solid #2b3a50;
+        color: #64748b;
+        font-size: 12px;
     }
 
     .ca-page-link {
@@ -304,9 +313,18 @@
     }
 
     @media (max-width: 650px) {
+        .comi-agenda-page {
+            padding: 18px 12px;
+        }
+
         .ca-summary,
         .ca-filter-form {
             grid-template-columns: 1fr;
+        }
+
+        .ca-pagination {
+            align-items: flex-start;
+            flex-direction: column;
         }
     }
 
@@ -326,7 +344,8 @@
         </h1>
 
         <p class="ca-description">
-            Consulta y administra las citas generadas por COMI.
+            Consulta y administra las citas generadas por los
+            proyectos y agendas de COMI.
         </p>
 
     </header>
@@ -349,21 +368,6 @@
 
     @endif
 
-
-    @include('comi.agenda._legacy')
-
-
-    @if(!$agendas->isEmpty())
-
-        <div style="margin: 26px 0 14px;">
-            <p class="ca-eyebrow">
-                Nuevo modelo multi-proyecto
-            </p>
-
-            <h2 style="margin: 0; color: #f8fafc; font-size: 20px;">
-                Agenda multi-proyecto
-            </h2>
-        </div>
 
     <div class="ca-summary">
 
@@ -415,12 +419,17 @@
         >
 
             <div class="ca-field">
-                <label>Proyecto</label>
+
+                <label for="proyecto">
+                    Proyecto
+                </label>
 
                 <select
                     name="proyecto"
+                    id="proyecto"
                     class="ca-select"
                 >
+
                     <option value="">
                         Todos
                     </option>
@@ -430,25 +439,33 @@
                         <option
                             value="{{ $proyecto->id_proyecto }}"
                             @selected(
-                                request('proyecto')
-                                == $proyecto->id_proyecto
+                                (string) request('proyecto')
+                                ===
+                                (string) $proyecto->id_proyecto
                             )
                         >
                             {{ $proyecto->nombre }}
                         </option>
 
                     @endforeach
+
                 </select>
+
             </div>
 
 
             <div class="ca-field">
-                <label>Agenda</label>
+
+                <label for="agenda">
+                    Agenda
+                </label>
 
                 <select
                     name="agenda"
+                    id="agenda"
                     class="ca-select"
                 >
+
                     <option value="">
                         Todas
                     </option>
@@ -458,25 +475,33 @@
                         <option
                             value="{{ $agenda->id_agenda }}"
                             @selected(
-                                request('agenda')
-                                == $agenda->id_agenda
+                                (string) request('agenda')
+                                ===
+                                (string) $agenda->id_agenda
                             )
                         >
                             {{ $agenda->nombre }}
                         </option>
 
                     @endforeach
+
                 </select>
+
             </div>
 
 
             <div class="ca-field">
-                <label>Estado</label>
+
+                <label for="estado">
+                    Estado
+                </label>
 
                 <select
                     name="estado"
+                    id="estado"
                     class="ca-select"
                 >
+
                     <option value="">
                         Todos
                     </option>
@@ -530,19 +555,26 @@
                     >
                         Reprogramada
                     </option>
+
                 </select>
+
             </div>
 
 
             <div class="ca-field">
-                <label>Fecha</label>
+
+                <label for="fecha">
+                    Fecha
+                </label>
 
                 <input
                     type="date"
                     name="fecha"
+                    id="fecha"
                     value="{{ request('fecha') }}"
                     class="ca-input"
                 >
+
             </div>
 
 
@@ -573,12 +605,12 @@
             <div class="ca-empty">
 
                 <h2>
-                    No tienes agendas asignadas
+                    No tienes agendas disponibles
                 </h2>
 
                 <p>
-                    Tu usuario todavía no tiene permiso
-                    para visualizar una agenda COMI.
+                    Tu usuario no tiene acceso a una agenda COMI
+                    con los permisos actuales.
                 </p>
 
             </div>
@@ -592,8 +624,7 @@
                 </h2>
 
                 <p>
-                    No existen citas que coincidan
-                    con los filtros seleccionados.
+                    No existen citas que coincidan con los filtros.
                 </p>
 
             </div>
@@ -605,40 +636,26 @@
                 <table class="ca-table">
 
                     <thead>
+
                         <tr>
                             <th>Fecha</th>
-                            <th>Cliente</th>
+                            <th>Prospecto</th>
+                            <th>Empresa</th>
                             <th>Proyecto</th>
                             <th>Agenda</th>
-                            <th>Motivo</th>
+                            <th>Objetivo</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
+
                     </thead>
+
 
                     <tbody>
 
                         @foreach($citas as $cita)
 
                             @php
-
-                                $clienteNombre = trim(
-                                    ($cita->cliente?->nombre ?? '')
-                                    . ' '
-                                    . ($cita->cliente?->apellido_paterno ?? '')
-                                    . ' '
-                                    . ($cita->cliente?->apellido_materno ?? '')
-                                );
-
-                                if ($clienteNombre === '') {
-
-                                    $clienteNombre =
-                                        $cita
-                                            ->solicitudServicio
-                                            ?->nombre_contacto
-                                        ?? 'Sin cliente';
-
-                                }
 
                                 $estadoTexto = match(
                                     $cita->estado
@@ -662,6 +679,7 @@
                                         => $cita->estado,
                                 };
 
+
                                 $estadoClase = match(
                                     $cita->estado
                                 ) {
@@ -684,11 +702,27 @@
                                         => '',
                                 };
 
+
                                 $puedeGestionar =
                                     $agendasGestionables
                                         ->contains(
                                             (int) $cita->id_agenda
                                         );
+
+
+                                $zonaHoraria =
+                                    $cita->zona_horaria
+                                    ?: 'America/Mexico_City';
+
+
+                                $fecha =
+                                    $cita->fecha_hora
+                                    ? \Carbon\Carbon::parse(
+                                        $cita->fecha_hora
+                                    )->timezone(
+                                        $zonaHoraria
+                                    )
+                                    : null;
 
                             @endphp
 
@@ -698,76 +732,89 @@
                                 <td>
 
                                     <span class="ca-primary">
+
                                         {{
-                                            $cita
-                                                ->fecha_hora_inicio
-                                                ?->timezone(
-                                                    $cita->agenda
-                                                        ?->zona_horaria
-                                                    ?? config(
-                                                        'app.timezone'
-                                                    )
-                                                )
-                                                ->format(
-                                                    'd/m/Y'
-                                                )
+                                            $fecha
+                                                ?->format('d/m/Y')
+                                            ?? 'Sin fecha'
                                         }}
+
+                                    </span>
+
+                                    @if($fecha)
+
+                                        <span class="ca-secondary">
+                                            {{ $fecha->format('H:i') }}
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="ca-primary">
+                                        {{ $cita->nombre_prospecto }}
+                                    </span>
+
+                                    @if($cita->telefono)
+
+                                        <span class="ca-secondary">
+                                            {{ $cita->telefono }}
+                                        </span>
+
+                                    @endif
+
+                                    @if($cita->correo)
+
+                                        <span class="ca-secondary">
+                                            {{ $cita->correo }}
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="ca-primary">
+                                        {{ $cita->empresa_prospecto }}
                                     </span>
 
                                     <span class="ca-secondary">
-                                        {{
-                                            $cita
-                                                ->fecha_hora_inicio
-                                                ?->timezone(
-                                                    $cita->agenda
-                                                        ?->zona_horaria
-                                                    ?? config(
-                                                        'app.timezone'
-                                                    )
-                                                )
-                                                ->format(
-                                                    'H:i'
-                                                )
-                                        }}
+                                        Tenant:
+                                        {{ $cita->tenant_empresa }}
                                     </span>
 
                                 </td>
 
 
                                 <td>
+
                                     <span class="ca-primary">
-                                        {{ $clienteNombre }}
+                                        {{ $cita->proyecto }}
                                     </span>
 
-                                    @if($cita->cliente?->correo)
-                                        <span class="ca-secondary">
-                                            {{ $cita->cliente->correo }}
-                                        </span>
-                                    @endif
+                                    <span class="ca-secondary">
+                                        {{ $cita->proyecto_slug }}
+                                    </span>
+
                                 </td>
 
 
                                 <td>
-                                    {{
-                                        $cita->proyecto?->nombre
-                                        ?? 'Sin proyecto'
-                                    }}
+
+                                    <span class="ca-primary">
+                                        {{ $cita->agenda }}
+                                    </span>
+
                                 </td>
 
 
                                 <td>
-                                    {{
-                                        $cita->agenda?->nombre
-                                        ?? 'Sin agenda'
-                                    }}
-                                </td>
-
-
-                                <td>
-                                    {{
-                                        $cita->motivo
-                                        ?: 'Sin motivo'
-                                    }}
+                                    {{ $cita->objetivo }}
                                 </td>
 
 
@@ -790,7 +837,8 @@
                                     @if(
                                         $puedeGestionar
                                         &&
-                                        $cita->estado ===
+                                        $cita->estado
+                                            ===
                                             'pendiente_aprobacion'
                                         &&
                                         $cita->id_conversacion
@@ -807,6 +855,7 @@
                                                     )
                                                 }}"
                                             >
+
                                                 @csrf
                                                 @method('PATCH')
 
@@ -817,14 +866,20 @@
                                                 >
 
                                                 <button
+                                                    type="submit"
                                                     class="
                                                         ca-button
                                                         ca-button-confirm
                                                     "
-                                                    type="submit"
+                                                    onclick="
+                                                        return confirm(
+                                                            '¿Confirmar esta cita?'
+                                                        );
+                                                    "
                                                 >
                                                     Confirmar
                                                 </button>
+
                                             </form>
 
 
@@ -837,6 +892,7 @@
                                                     )
                                                 }}"
                                             >
+
                                                 @csrf
                                                 @method('PATCH')
 
@@ -847,14 +903,20 @@
                                                 >
 
                                                 <button
+                                                    type="submit"
                                                     class="
                                                         ca-button
                                                         ca-button-reject
                                                     "
-                                                    type="submit"
+                                                    onclick="
+                                                        return confirm(
+                                                            '¿Rechazar esta cita?'
+                                                        );
+                                                    "
                                                 >
                                                     Rechazar
                                                 </button>
+
                                             </form>
 
 
@@ -875,23 +937,11 @@
 
                                         </div>
 
-                                    @elseif(
-                                        $cita->id_solicitud
-                                    )
+                                    @elseif(!$puedeGestionar)
 
-                                        <a
-                                            href="{{
-                                                route(
-                                                    'comi.servicio.index'
-                                                )
-                                            }}"
-                                            class="
-                                                ca-button
-                                                ca-button-secondary
-                                            "
-                                        >
-                                            Ver servicio
-                                        </a>
+                                        <span class="ca-secondary">
+                                            Solo lectura
+                                        </span>
 
                                     @else
 
@@ -921,7 +971,13 @@
                     {{ $citas->currentPage() }}
                     de
                     {{ $citas->lastPage() }}
+
+                    ·
+
+                    {{ $citas->total() }}
+                    citas
                 </span>
+
 
                 <div>
 
@@ -935,6 +991,7 @@
                         </a>
 
                     @endif
+
 
                     @if($citas->nextPageUrl())
 
@@ -954,8 +1011,6 @@
         @endif
 
     </div>
-
-    @endif
 
 </section>
 

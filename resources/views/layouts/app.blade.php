@@ -1997,10 +1997,10 @@
 
 
     if ($rolActual === 3) {
-        $tipoActual = (int) $usuarioActual->id_tipo_operario;
+        $tipoActual = \App\Support\PerfilOperario::tipo($usuarioActual);
         $insigniaRol = match ($tipoActual) {
-            1 => ['nombre' => 'Operario · Prospección', 'clase' => 'prospeccion'],
-            2 => ['nombre' => 'Operario · Asignación', 'clase' => 'asignacion'],
+            'prospeccion' => ['nombre' => 'Operario · Prospección', 'clase' => 'prospeccion'],
+            'asignacion' => ['nombre' => 'Operario · Asignación', 'clase' => 'asignacion'],
             default => ['nombre' => 'Operario · Sin tipo', 'clase' => 'usuario'],
         };
     }
@@ -2270,7 +2270,7 @@
 
 
 
-            'texto' => ($rolActual === 3 && (int) $usuarioActual->id_tipo_operario === 2) ? 'Mis clientes' : 'Clientes',
+            'texto' => ($rolActual === 3 && \App\Support\PerfilOperario::esAsignacion($usuarioActual)) ? 'Mis clientes' : 'Clientes',
 
 
 

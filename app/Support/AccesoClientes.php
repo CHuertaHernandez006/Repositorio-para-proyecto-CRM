@@ -12,7 +12,7 @@ class AccesoClientes
         if ((int) $usuario->id_rol === 3) {
             abort_unless($usuario->activo && !$usuario->deleted_at
                 && $usuario->estaAprobado()
-                && in_array((int) $usuario->id_tipo_operario, [1, 2], true),
+                && PerfilOperario::tipo($usuario) !== null,
                 403, 'Tu cuenta no está habilitada para operar.');
         }
     }
@@ -21,7 +21,7 @@ class AccesoClientes
     {
         self::validarOperario($usuario);
         $consulta->where('clientes.id_empresa', $usuario->id_empresa);
-        if ((int) $usuario->id_rol === 3 && (int) $usuario->id_tipo_operario === 2) {
+        if ((int) $usuario->id_rol === 3 && \App\Support\PerfilOperario::esAsignacion($usuario)) {
             $consulta->where('clientes.id_usuario_responsable', $usuario->id_usuario);
         }
         return $consulta;
@@ -50,7 +50,7 @@ class AccesoClientes
     {
         self::validarOperario($usuario);
         abort_unless((int) $usuario->id_rol === 2 ||
-            ((int) $usuario->id_rol === 3 && (int) $usuario->id_tipo_operario === 1),
+            ((int) $usuario->id_rol === 3 && \App\Support\PerfilOperario::esProspeccion($usuario)),
             403, 'Tu perfil no tiene permisos para registrar clientes nuevos.');
     }
 }

@@ -105,4 +105,13 @@ class TipoOperario extends Model
             'id_tipo_operario'
         );
     }
+    /** Descripción coherente con el nombre del perfil, sin modificar registros. */
+    public function getDescripcionAttribute($value): ?string
+    {
+        return match (\App\Support\PerfilOperario::clave($this)) {
+            'asignacion' => 'Operario que trabaja con clientes asignados por el administrador.',
+            'prospeccion' => 'Operario que puede buscar clientes de su empresa y registrar nuevos prospectos.',
+            default => $value,
+        };
+    }
 }

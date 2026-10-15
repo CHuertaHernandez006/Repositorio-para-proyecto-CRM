@@ -12,8 +12,8 @@ class AsignacionClienteController extends Controller
 {
     private function operarios($usuario)
     {
-        return User::query()->where('id_empresa', $usuario->id_empresa)
-            ->where('id_rol', 3)->where('id_tipo_operario', 2)->where('activo', true)
+        return \App\Support\PerfilOperario::filtrarAsignacion(User::query())->where('id_empresa', $usuario->id_empresa)
+            ->where('id_rol', 3)->where('activo', true)
             ->whereHas('aprobacionActual', fn ($q) => $q->where('estado', 'aprobado'));
     }
 

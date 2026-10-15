@@ -1624,7 +1624,7 @@ class CampanasController extends Controller
 
         if ((int) $usuario->id_rol === 3) {
             \App\Support\AccesoClientes::validarOperario($usuario);
-            if ((int) $usuario->id_tipo_operario === 2) {
+            if (\App\Support\PerfilOperario::esAsignacion($usuario)) {
                 $consulta->whereHas('clientes');
             }
         }

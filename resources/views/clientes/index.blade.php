@@ -15,8 +15,8 @@
     $rolActual = (int) (auth()->user()->id_rol ?? 0);
     $esAdminCliente = $rolActual === 2;
     $esOperario = $rolActual === 3;
-    $esAsignacion = $esOperario && (int) auth()->user()->id_tipo_operario === 2;
-    $puedeCrear = $esAdminCliente || ($esOperario && (int) auth()->user()->id_tipo_operario === 1);
+    $esAsignacion = $esOperario && \App\Support\PerfilOperario::esAsignacion(auth()->user());
+    $puedeCrear = $esAdminCliente || ($esOperario && \App\Support\PerfilOperario::esProspeccion(auth()->user()));
 
     $buscar = $buscar ?? '';
 

@@ -350,6 +350,21 @@
     @endif
 
 
+    @include('comi.agenda._legacy')
+
+
+    @if(!$agendas->isEmpty())
+
+        <div style="margin: 26px 0 14px;">
+            <p class="ca-eyebrow">
+                Nuevo modelo multi-proyecto
+            </p>
+
+            <h2 style="margin: 0; color: #f8fafc; font-size: 20px;">
+                Agenda multi-proyecto
+            </h2>
+        </div>
+
     <div class="ca-summary">
 
         <div class="ca-summary-card">
@@ -939,6 +954,8 @@
         @endif
 
     </div>
+
+    @endif
 
 </section>
 

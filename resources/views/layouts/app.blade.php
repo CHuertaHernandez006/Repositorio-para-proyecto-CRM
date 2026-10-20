@@ -2243,7 +2243,7 @@
 
     'icono' => 'wrench',
 
-    'visible' => Auth::check(),
+    'visible' => false,
 ],
 
 

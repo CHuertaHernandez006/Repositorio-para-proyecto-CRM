@@ -2234,7 +2234,9 @@
     'visible' => Auth::check(),
 ],
 
-[
+
+//Aqui esta lo de servicios comi
+[ 
     'ruta' => 'comi.servicio.index',
 
     'patron' => 'comi.servicio.*',

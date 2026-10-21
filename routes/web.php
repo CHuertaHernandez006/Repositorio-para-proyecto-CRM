@@ -48,7 +48,7 @@ use App\Http\Controllers\ComiAgendaController;
 
 use App\Http\Controllers\AsignacionClienteController;
 
-
+use App\Http\Controllers\CRMRefreshController;
 // Mostrar formulario de inicio de sesión
 
 
@@ -1317,5 +1317,10 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 
         ->whereNumber('id_cliente')->name('clientes.asignaciones.update');
 
-
+Route::get('/crm/actualizaciones', [CRMRefreshController::class, 'estado'])
+    ->name('crm.actualizaciones');
 });
+
+// Agregar a routes/web.php SIN borrar rutas existentes.
+// Reutiliza los middleware de autenticación y autorización de los listados.
+

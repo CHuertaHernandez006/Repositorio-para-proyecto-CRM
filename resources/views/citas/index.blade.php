@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-
+@include('partials.crm-auto-refresh')
 @php
     $buscarActual = $buscar ?? request('buscar');
 

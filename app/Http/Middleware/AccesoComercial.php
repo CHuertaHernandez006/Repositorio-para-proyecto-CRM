@@ -13,7 +13,7 @@ class AccesoComercial
         $usuario = $request->user();
         abort_unless($usuario && $usuario->activo && !$usuario->deleted_at, 403);
         $super = (int) $usuario->id_rol === 1;
-        abort_unless($super || ($nivel !== 'admin' && Comercial::asesor($usuario)), 403);
+        abort_unless($super || ($request->routeIs('comercial.agenda') && \App\Support\AgendaInterna::gestor($usuario)) || ($nivel !== 'admin' && Comercial::asesor($usuario)), 403);
         Comercial::empresa();
         abort_unless(Comercial::rol() !== null, 503, 'Instala y activa el rol comercial.');
         return $next($request);

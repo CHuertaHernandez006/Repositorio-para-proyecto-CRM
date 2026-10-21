@@ -12,7 +12,9 @@
 <div class="cm">
     <div class="head"><div><div class="eyebrow">COMICenter / Equipo comercial</div><h1>@yield('commercial-title')</h1><p class="muted">@yield('commercial-subtitle')</p></div></div>
     <nav class="tabs" aria-label="Gestión comercial">
+        @if((int) Auth::user()->id_rol === 1 || \App\Support\Comercial::asesor(Auth::user()))
         <a href="{{ route('comercial.prospectos.index') }}" @if(request()->routeIs('comercial.prospectos.*')) aria-current="page" @endif>{{ (int) Auth::user()->id_rol === 1 ? 'Prospectos COMI' : 'Mis prospectos' }}</a>
+        @endif
         <a href="{{ route('comercial.agenda') }}" @if(request()->routeIs('comercial.agenda')) aria-current="page" @endif>Agenda comercial</a>
         @if((int) Auth::user()->id_rol === 1)<a href="{{ route('comercial.equipo') }}" @if(request()->routeIs('comercial.equipo')) aria-current="page" @endif>Equipo comercial</a>@endif
     </nav>

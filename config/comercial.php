@@ -8,5 +8,7 @@ return [
     // Si no se define, conserva el comportamiento de la empresa interna.
     'comi_empresa_ids' => env('COMI_EMPRESA_IDS', env('COMERCIAL_EMPRESA_ID')),
 
+    // Exclusivamente IDs de COMICENTER e InterAcom, separados por coma.
+    'agenda_empresa_ids' => env('COMERCIAL_AGENDA_EMPRESA_IDS', ''),
     'rol_nombre' => 'Asesor comercial interno',
 ];

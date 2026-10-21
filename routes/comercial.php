@@ -205,3 +205,13 @@ Route::middleware([
     });
 
 });
+
+// La autorización de estas operaciones se verifica también dentro del controlador.
+Route::middleware('auth')->group(function () {
+    Route::get('/comercial/agenda/eventos', [\App\Http\Controllers\AgendaComercialController::class, 'eventos'])
+        ->name('comercial.agenda.eventos');
+    Route::post('/comi/agenda/{id}/confirmar-asesor', [\App\Http\Controllers\AgendaComercialController::class, 'confirmar'])
+        ->whereNumber('id')->name('comi.agenda.confirmar-asesor');
+    Route::post('/comi/agenda/{id}/correo', [\App\Http\Controllers\AgendaComercialController::class, 'reintentarCorreo'])
+        ->whereNumber('id')->name('comi.agenda.correo');
+});

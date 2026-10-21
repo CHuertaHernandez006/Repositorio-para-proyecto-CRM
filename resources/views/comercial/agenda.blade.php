@@ -1,950 +1,126 @@
 @extends('comercial.base')
-
-@section(
-    'commercial-title',
-    'Agenda comercial'
-)
-
-@section(
-    'commercial-subtitle',
-    'Consulta las citas generadas por COMI y organiza la atención del equipo comercial.'
-)
-
-
+@section('commercial-title', 'Agenda comercial')
+@section('commercial-subtitle', 'Citas confirmadas y asignadas al equipo interno de COMICenter e InterAcom.')
 @push('styles')
-
 <style>
-
-.cm .agenda-summary{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:16px;
-    margin-bottom:20px;
-}
-
-.cm .agenda-summary-card{
-    padding:20px 22px;
-    background:#1e293b;
-    border:1px solid #334155;
-    border-radius:14px;
-}
-
-.cm .agenda-summary-card strong{
-    display:block;
-    margin-bottom:10px;
-    font-size:30px;
-    line-height:1;
-    color:#7dd3fc;
-    font-variant-numeric:tabular-nums;
-}
-
-.cm .agenda-summary-card span{
-    color:#a8bbd2;
-    font-size:13px;
-}
-
-
-.cm .agenda-next{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto;
-    align-items:center;
-    gap:22px;
-
-    margin-bottom:20px;
-    padding:22px 24px;
-
-    border:1px solid #2f6b5e;
-    border-left:4px solid #34d399;
-    border-radius:14px;
-
-    background:
-        linear-gradient(
-            120deg,
-            rgba(52,211,153,.10),
-            rgba(30,41,59,.98)
-        );
-}
-
-.cm .agenda-next-label{
-    margin:0 0 7px;
-    color:#6ee7b7;
-    font-size:10px;
-    font-weight:700;
-    letter-spacing:.12em;
-    text-transform:uppercase;
-}
-
-.cm .agenda-next h2{
-    margin:0;
-    color:#f1f5f9;
-    font-size:20px;
-}
-
-.cm .agenda-next p{
-    margin:7px 0 0;
-    color:#b6c8df;
-    font-size:13px;
-}
-
-.cm .agenda-heading{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    margin-bottom:20px;
-}
-
-.cm .agenda-heading-icon{
-    width:42px;
-    height:42px;
-    display:grid;
-    place-items:center;
-
-    border:1px solid #31516a;
-    border-radius:10px;
-
-    background:#17364a;
-    color:#7dd3fc;
-
-    font-size:20px;
-}
-
-.cm .agenda-heading h2{
-    margin:0;
-    font-size:18px;
-}
-
-.cm .agenda-heading p{
-    margin:4px 0 0;
-}
-
-
-.cm .agenda-status{
-    display:inline-flex;
-    align-items:center;
-    padding:5px 9px;
-
-    border-radius:999px;
-    border:1px solid #36556c;
-
-    font-size:11px;
-    font-weight:600;
-    white-space:nowrap;
-}
-
-.cm .agenda-status.pendiente_aprobacion{
-    color:#fde68a;
-    background:#3d3423;
-    border-color:#756339;
-}
-
-.cm .agenda-status.confirmada{
-    color:#6ee7b7;
-    background:#123b34;
-    border-color:#1f6555;
-}
-
-.cm .agenda-status.reprogramada{
-    color:#7dd3fc;
-    background:#173549;
-    border-color:#36556c;
-}
-
-.cm .agenda-status.rechazada{
-    color:#fda4af;
-    background:#38293b;
-    border-color:#664153;
-}
-
-
-.cm .agenda-date strong{
-    display:block;
-    color:#f1f5f9;
-}
-
-.cm .agenda-date small{
-    display:block;
-    margin-top:5px;
-}
-
-.cm .agenda-vencida{
-    color:#fda4af !important;
-}
-
-
-.cm .agenda-advisor-form{
-    min-width:175px;
-}
-
-.cm .agenda-advisor-form select{
-    min-width:170px;
-}
-
-
-@media(max-width:850px){
-
-    .cm .agenda-summary{
-        grid-template-columns:1fr;
-    }
-
-    .cm .agenda-next{
-        grid-template-columns:1fr;
-    }
-
-}
-
+.cm .agenda-next{display:flex;align-items:center;justify-content:space-between;gap:20px;border:1px solid #2f6b5e;border-left:4px solid #34d399;border-radius:14px;padding:24px;margin-bottom:20px;background:linear-gradient(110deg,#133337,#1e293b)}
+.cm .agenda-next h2{margin:8px 0}.cm .agenda-next p{margin:6px 0}.cm .next-label{color:#6ee7b7;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.cm .calendar-modal{margin:auto;width:min(1250px,96vw);max-width:none;max-height:92vh;overflow:auto;padding:24px;border:1px solid #475569;border-radius:16px;background:#1e293b;color:#f1f5f9}
+.cm .calendar-modal::backdrop{background:#020617bd;backdrop-filter:blur(4px)}
+.cm .calendar-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}
+#commercial-calendar{--fc-border-color:#334155;--fc-page-bg-color:#1e293b;--fc-neutral-bg-color:#172235;--fc-list-event-hover-bg-color:#203249;--fc-today-bg-color:#38bdf810;--fc-button-bg-color:#142033;--fc-button-border-color:#475569;--fc-button-hover-bg-color:#244057;--fc-button-active-bg-color:#0284c7;--fc-event-bg-color:#0369a1;--fc-event-border-color:#38bdf8}
+#commercial-calendar .fc-col-header-cell-cushion,#commercial-calendar .fc-daygrid-day-number{color:#e2e8f0}
+.cm .calendar-details{margin-top:18px;white-space:pre-wrap;line-height:1.7;color:#cbd5e1}
+@media(max-width:650px){.cm .agenda-next{align-items:stretch;flex-direction:column}.cm .calendar-modal{padding:14px}#commercial-calendar .fc-toolbar{align-items:stretch;gap:10px;flex-direction:column}}
 </style>
-
 @endpush
-
-
 @section('commercial-content')
-
-
-{{-- ============================================================
-    RESUMEN
-============================================================ --}}
-
-<div
-    class="agenda-summary"
-    aria-label="Resumen de la agenda comercial"
->
-
-    <div class="agenda-summary-card">
-
-        <strong>
-            {{ $resumen['hoy'] }}
-        </strong>
-
-        <span>
-            Citas programadas para hoy
-        </span>
-
+    <div class="actions" style="justify-content:flex-end;margin-bottom:20px;">
+        @if($gestor)<a class="btn" href="{{ route('comi.agenda.index') }}">Gestionar solicitudes COMI</a>@endif
+        <button class="btn primary" type="button" id="open-commercial-calendar" aria-haspopup="dialog">Ver calendario</button>
     </div>
-
-
-    <div class="agenda-summary-card">
-
-        <strong>
-            {{ $resumen['pendientes'] }}
-        </strong>
-
-        <span>
-            Pendientes de aprobación
-        </span>
-
+    <div class="metrics">
+        <div class="card metric"><small>Citas confirmadas para hoy</small><strong>{{ $resumen['hoy'] }}</strong></div>
+        <div class="card metric"><small>Citas confirmadas con horario anterior</small><strong>{{ $resumen['anteriores'] }}</strong></div>
+        <div class="card metric"><small>Próximas citas confirmadas</small><strong>{{ $resumen['proximas'] }}</strong></div>
     </div>
-
-
-    <div class="agenda-summary-card">
-
-        <strong>
-            {{ $resumen['proximas'] }}
-        </strong>
-
-        <span>
-            Próximas citas
-        </span>
-
-    </div>
-
-</div>
-
-
-
-{{-- ============================================================
-    PRÓXIMA CITA
-============================================================ --}}
-
-@if($proximaCita)
-
-    @php
-
-        $fechaProxima =
-            \Carbon\Carbon::parse(
-                $proximaCita->fecha_hora_cita
-            )
-            ->timezone(
-                $zonaAgenda
-            );
-
-        $nombreProxima =
-            $proximaCita->organizacion
-            ?: trim(
-                $proximaCita->nombre
-                . ' '
-                . $proximaCita->apellido_paterno
-            );
-
-    @endphp
-
-
-    <div class="agenda-next">
-
+    <section class="agenda-next" aria-labelledby="next-commercial-title">
         <div>
-
-            <p class="agenda-next-label">
-                Próxima cita
-            </p>
-
-            <h2>
-                {{ $nombreProxima ?: $proximaCita->nombre_contacto }}
-            </h2>
-
-            <p>
-
-                <strong>
-                    {{ $fechaProxima->format('d/m/Y H:i') }}
-                </strong>
-
-                @if($proximaCita->objetivo_reunion)
-
-                    ·
-                    {{ $proximaCita->objetivo_reunion }}
-
-                @endif
-
-            </p>
-
-
-            <p>
-
-                Asesor:
-
-                <strong>
-
-                    @if($proximaCita->asesor_nombre)
-
-                        {{
-                            trim(
-                                $proximaCita->asesor_nombre
-                                . ' '
-                                . $proximaCita->asesor_apellido
-                            )
-                        }}
-
-                    @else
-
-                        Sin asignar
-
-                    @endif
-
-                </strong>
-
-            </p>
-
+            <span class="next-label">Próxima cita</span>
+            @if($proxima)
+                <h2 id="next-commercial-title">{{ $proxima->empresa_nombre ?: $proxima->contacto_nombre }}</h2>
+                <p>{{ \Carbon\Carbon::parse($proxima->fecha_hora_inicio)->timezone($zona)->format('d/m/Y H:i') }} · {{ $proxima->motivo }}</p>
+                <p>Contacto: {{ $proxima->contacto_nombre }} · {{ $proxima->telefono_contacto }}</p>
+                <p>Asesor: <strong>{{ $proxima->asesor_nombre }}</strong></p>
+            @else
+                <h2 id="next-commercial-title">No hay próximas citas confirmadas</h2>
+                <p>Las citas aparecerán aquí después de confirmarlas y asignarles un asesor en Agenda COMI.</p>
+            @endif
         </div>
-
-
-        <a
-            class="btn primary"
-            href="{{
-                route(
-                    'comercial.prospectos.show',
-                    $proximaCita->prospecto_id
-                )
-            }}"
-        >
-            Ver prospecto
-        </a>
-
-    </div>
-
-@endif
-
-
-
-{{-- ============================================================
-    AGENDA
-============================================================ --}}
-
-<section class="card">
-
-
-    <div class="agenda-heading">
-
-        <div class="agenda-heading-icon">
-            ◫
-        </div>
-
-        <div>
-
-            <h2>
-                Agenda de citas COMI
-            </h2>
-
-            <p class="muted">
-                Reuniones agendadas por COMI, ordenadas por fecha y hora.
-            </p>
-
-        </div>
-
-    </div>
-
-
-
-    {{-- ========================================================
-        FILTROS
-    ========================================================= --}}
-
-    <form
-        method="GET"
-        action="{{ route('comercial.agenda') }}"
-        class="toolbar"
-    >
-
-
-        <div class="field">
-
-            <label for="buscar">
-                Buscar
-            </label>
-
-            <input
-                id="buscar"
-                type="search"
-                name="buscar"
-                value="{{ $buscar }}"
-                maxlength="100"
-                placeholder="Prospecto, empresa, correo, teléfono u objetivo"
-            >
-
-        </div>
-
-
-
-        <div class="field">
-
-            <label for="estado_cita">
-                Estado de cita
-            </label>
-
-            <select
-                id="estado_cita"
-                name="estado_cita"
-            >
-
-                <option value="">
-                    Todos los estados
-                </option>
-
-                <option
-                    value="pendiente_aprobacion"
-                    @selected(
-                        $estadoCita ===
-                        'pendiente_aprobacion'
-                    )
-                >
-                    Pendiente de aprobación
-                </option>
-
-                <option
-                    value="confirmada"
-                    @selected(
-                        $estadoCita ===
-                        'confirmada'
-                    )
-                >
-                    Confirmada
-                </option>
-
-                <option
-                    value="reprogramada"
-                    @selected(
-                        $estadoCita ===
-                        'reprogramada'
-                    )
-                >
-                    Reprogramada
-                </option>
-
-                <option
-                    value="rechazada"
-                    @selected(
-                        $estadoCita ===
-                        'rechazada'
-                    )
-                >
-                    Rechazada
-                </option>
-
-            </select>
-
-        </div>
-
-
-
-        @if((int) Auth::user()->id_rol === 1)
-
-            <div class="field">
-
-                <label for="asesor">
-                    Asesor
-                </label>
-
-                <select
-                    id="asesor"
-                    name="asesor"
-                >
-
-                    <option value="">
-                        Todos
-                    </option>
-
-                    <option
-                        value="sin_asignar"
-                        @selected(
-                            $asesor ===
-                            'sin_asignar'
-                        )
-                    >
-                        Sin asignar
-                    </option>
-
-
-                    @foreach($asesores as $a)
-
-                        <option
-                            value="{{ $a->id_usuario }}"
-                            @selected(
-                                $asesor ===
-                                (string) $a->id_usuario
-                            )
-                        >
-
-                            {{
-                                trim(
-                                    $a->nombre
-                                    . ' '
-                                    . $a->apellido_paterno
-                                )
-                            }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
+        @if($proxima && $proxima->prospecto_id && ((int) auth()->user()->id_rol === 1 || (\App\Support\Comercial::asesor(auth()->user()) && (int) $proxima->prospecto_asesor === (int) auth()->id())))
+            <a class="btn primary" href="{{ route('comercial.prospectos.show', $proxima->prospecto_id) }}">Ver prospecto</a>
         @endif
-
-
-
-        <button
-            type="submit"
-            class="btn primary"
-        >
-            Buscar
-        </button>
-
-
-        @if(
-            $buscar !== ''
-            ||
-            $estadoCita !== ''
-            ||
-            $asesor !== ''
-        )
-
-            <a
-                href="{{ route('comercial.agenda') }}"
-                class="btn"
-            >
-                Limpiar
-            </a>
-
-        @endif
-
-    </form>
-
-
-
-    <p
-        class="muted space"
-        role="status"
-    >
-
-        <strong>
-            {{ $citas->total() }}
-        </strong>
-
-        {{
-            $citas->total() === 1
-                ? 'cita encontrada'
-                : 'citas encontradas'
-        }}
-
-        · Horario {{ $zonaAgenda }}
-
-    </p>
-
-
-
-    {{-- ========================================================
-        TABLA
-    ========================================================= --}}
-
-    <div class="scroll space">
-
-        <table>
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Fecha y hora
-                    </th>
-
-                    <th>
-                        Prospecto
-                    </th>
-
-                    <th>
-                        Objetivo
-                    </th>
-
-                    <th>
-                        Estado
-                    </th>
-
-                    <th>
-                        Asesor
-                    </th>
-
-                    <th>
-                        Acción
-                    </th>
-
-                </tr>
-
-            </thead>
-
-
-            <tbody>
-
-                @forelse($citas as $cita)
-
-                    @php
-
-                        $fecha =
-                            \Carbon\Carbon::parse(
-                                $cita->fecha_hora_cita
-                            )
-                            ->timezone(
-                                $zonaAgenda
-                            );
-
-                        $nombreProspecto =
-                            $cita->organizacion
-                            ?: trim(
-                                $cita->nombre
-                                . ' '
-                                . $cita->apellido_paterno
-                            );
-
-                        $estadoEtiqueta = match(
-                            $cita->estado_cita
-                        ) {
-                            'pendiente_aprobacion'
-                                => 'Pendiente',
-
-                            'confirmada'
-                                => 'Confirmada',
-
-                            'reprogramada'
-                                => 'Reprogramada',
-
-                            'rechazada'
-                                => 'Rechazada',
-
-                            default
-                                => ucfirst(
-                                    str_replace(
-                                        '_',
-                                        ' ',
-                                        $cita->estado_cita
-                                    )
-                                ),
-                        };
-
-                    @endphp
-
-
-                    <tr>
-
-
-                        {{-- FECHA --}}
-
-                        <td class="agenda-date">
-
-                            <strong>
-                                {{ $fecha->format('d/m/Y') }}
-                            </strong>
-
-                            <small>
-                                {{ $fecha->format('H:i') }}
-                            </small>
-
-
-                            @if(
-                                $fecha->isPast()
-                                &&
-                                !in_array(
-                                    $cita->estado_cita,
-                                    [
-                                        'rechazada'
-                                    ],
-                                    true
-                                )
-                            )
-
-                                <small class="agenda-vencida">
-                                    Horario vencido
-                                </small>
-
-                            @endif
-
-                        </td>
-
-
-
-                        {{-- PROSPECTO --}}
-
-                        <td>
-
-                            <strong>
-
-                                {{
-                                    $nombreProspecto
-                                    ?: $cita->nombre_contacto
-                                }}
-
-                            </strong>
-
-                            <small>
-
-                                {{
-                                    $cita->telefono_principal
-                                    ?: $cita->telefono
-                                    ?: 'Sin teléfono'
-                                }}
-
-                            </small>
-
-                        </td>
-
-
-
-                        {{-- OBJETIVO --}}
-
-                        <td>
-
-                            {{
-                                $cita->objetivo_reunion
-                                ?: 'Sin objetivo especificado'
-                            }}
-
-                            @if($cita->notas)
-
-                                <small>
-                                    {{ $cita->notas }}
-                                </small>
-
-                            @endif
-
-                        </td>
-
-
-
-                        {{-- ESTADO --}}
-
-                        <td>
-
-                            <span
-                                class="agenda-status {{ $cita->estado_cita }}"
-                            >
-                                {{ $estadoEtiqueta }}
-                            </span>
-
-                        </td>
-
-
-
-                        {{-- ASESOR --}}
-
-                        <td>
-
-                            @if(
-                                (int) Auth::user()->id_rol === 1
-                                &&
-                                !in_array(
-                                    $cita->estado_comercial,
-                                    [
-                                        'contratado',
-                                        'no_interesado'
-                                    ],
-                                    true
-                                )
-                            )
-
-                                <form
-                                    class="agenda-advisor-form"
-                                    method="POST"
-                                    action="{{
-                                        route(
-                                            'comercial.asignar',
-                                            $cita->prospecto_id
-                                        )
-                                    }}"
-                                >
-
-                                    @csrf
-
-                                    @method('PUT')
-
-
-                                    <select
-                                        name="id_asesor"
-                                        onchange="
-                                            if(this.value){
-                                                this.form.submit();
-                                            }
-                                        "
-                                    >
-
-                                        <option
-                                            value=""
-                                            disabled
-                                            @selected(
-                                                !$cita->id_asesor
-                                            )
-                                        >
-                                            Sin asignar
-                                        </option>
-
-
-                                        @foreach($asesores as $a)
-
-                                            <option
-                                                value="{{ $a->id_usuario }}"
-                                                @selected(
-                                                    (int) $cita->id_asesor
-                                                    ===
-                                                    (int) $a->id_usuario
-                                                )
-                                            >
-
-                                                {{
-                                                    trim(
-                                                        $a->nombre
-                                                        . ' '
-                                                        . $a->apellido_paterno
-                                                    )
-                                                }}
-
-                                            </option>
-
-                                        @endforeach
-
-                                    </select>
-
-                                </form>
-
-                            @else
-
-                                @if($cita->asesor_nombre)
-
-                                    {{
-                                        trim(
-                                            $cita->asesor_nombre
-                                            . ' '
-                                            . $cita->asesor_apellido
-                                        )
-                                    }}
-
-                                @else
-
-                                    <span class="muted">
-                                        Sin asignar
-                                    </span>
-
-                                @endif
-
-                            @endif
-
-                        </td>
-
-
-
-                        {{-- ACCIÓN --}}
-
-                        <td>
-
-                            <a
-                                href="{{
-                                    route(
-                                        'comercial.prospectos.show',
-                                        $cita->prospecto_id
-                                    )
-                                }}"
-                            >
-                                Abrir prospecto →
-                            </a>
-
-                        </td>
-
-                    </tr>
-
-
-                @empty
-
-                    <tr>
-
-                        <td
-                            colspan="6"
-                            class="empty"
-                        >
-
-                            @if(
-                                $buscar !== ''
-                                ||
-                                $estadoCita !== ''
-                                ||
-                                $asesor !== ''
-                            )
-
-                                No hay citas que coincidan
-                                con los filtros seleccionados.
-
-                            @else
-
-                                COMI todavía no tiene citas
-                                registradas para estos prospectos.
-
-                            @endif
-
-                        </td>
-
-                    </tr>
-
-                @endforelse
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    @include(
-        'comercial.paginacion',
-        [
-            'pagina' => $citas
-        ]
-    )
-
-</section>
-
+    </section>
+    <section class="card">
+        <h2>Agenda del equipo comercial</h2>
+        <p class="muted">Horario {{ $zona }}. Los filtros también se aplican al calendario y a los indicadores.</p>
+        <form method="GET" action="{{ route('comercial.agenda') }}" class="toolbar">
+            <div class="field"><label for="commercial-search">Buscar</label><input id="commercial-search" name="buscar" value="{{ request('buscar') }}" maxlength="100" placeholder="Contacto, empresa, teléfono o motivo…"></div>
+            @if($gestor)
+                <div class="field"><label for="commercial-advisor">Asesor</label><select id="commercial-advisor" name="asesor"><option value="">Todos</option>@foreach($asesores as $asesor)<option value="{{ $asesor->id_usuario }}" @selected((string) request('asesor') === (string) $asesor->id_usuario)>{{ $asesor->nombre }} {{ $asesor->apellido_paterno }}</option>@endforeach</select></div>
+            @endif
+            <button class="btn primary" type="submit">Buscar</button><a class="btn" href="{{ route('comercial.agenda') }}">Limpiar</a>
+        </form>
+        <p class="muted" role="status">{{ $citas->total() }} citas confirmadas y asignadas{{ request('buscar') ? ' para “'.request('buscar').'”' : '' }}.</p>
+        <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Contacto</th><th>Motivo</th><th>Asesor</th><th>Confirmación</th></tr></thead><tbody>
+        @forelse($citas as $cita)
+            <tr>
+                <td style="white-space:nowrap;">{{ \Carbon\Carbon::parse($cita->fecha_hora_inicio)->timezone($zona)->format('d/m/Y H:i') }}<small>{{ $cita->agenda_nombre }}</small></td>
+                <td><strong>{{ $cita->contacto_nombre }}</strong><small>{{ $cita->empresa_nombre }}</small><small>{{ $cita->telefono_contacto }}</small></td>
+                <td>{{ $cita->motivo }}</td><td>{{ $cita->asesor_nombre }}</td>
+                <td><span class="badge contratado">Confirmada</span><small>{{ $cita->correo_enviado_at ? 'Correo enviado' : 'Correo pendiente' }}</small></td>
+            </tr>
+        @empty
+            <tr><td colspan="5" class="empty">No hay citas que coincidan. Las solicitudes pendientes se gestionan en Agenda COMI.</td></tr>
+        @endforelse
+        </tbody></table></div>
+        <div class="space">{{ $citas->links() }}</div>
+    </section>
+    <dialog class="calendar-modal" id="commercial-calendar-modal" aria-labelledby="commercial-calendar-title">
+        <div class="calendar-top"><div><div class="eyebrow">Vista de apoyo</div><h2 id="commercial-calendar-title">Calendario comercial</h2><small>Horario America/Mexico_City · Citas confirmadas</small></div><button class="btn" type="button" id="close-commercial-calendar">Cerrar</button></div>
+        <p id="commercial-calendar-status" role="status"></p>
+        <div id="commercial-calendar"></div>
+        <div class="calendar-details" id="commercial-calendar-details" aria-live="polite"></div>
+    </dialog>
 @endsection
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('commercial-calendar-modal');
+    const open = document.getElementById('open-commercial-calendar');
+    const status = document.getElementById('commercial-calendar-status');
+    const endpoint = @json(route('comercial.agenda.eventos'));
+    const filters = @json(request()->only(['buscar', 'asesor']));
+    let calendar;
+    open.addEventListener('click', () => {
+        modal.showModal();
+        if (!window.FullCalendar) {status.textContent = 'No se pudo cargar el calendario. Puedes consultar las citas en la lista.'; return;}
+        if (!calendar) {
+            calendar = new FullCalendar.Calendar(document.getElementById('commercial-calendar'), {
+                locale: 'es', firstDay: 1, timeZone: 'UTC', height: 580,
+                now: () => new Intl.DateTimeFormat('sv-SE', {timeZone:'America/Mexico_City', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'}).format(new Date()).replace(' ', 'T'),
+                customButtons: {hoyMexico: {text: 'Hoy', click: () => calendar.gotoDate(new Intl.DateTimeFormat('sv-SE', {timeZone:'America/Mexico_City', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date()))}},
+                initialView: window.innerWidth < 650 ? 'timeGridDay' : 'timeGridWeek',
+                initialDate: @json(now('America/Mexico_City')->format('Y-m-d')),
+                headerToolbar: {left: 'prev,next hoyMexico', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'},
+                buttonText: {today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Agenda'},
+                allDaySlot: false, slotMinTime: '00:00:00', slotMaxTime: '24:00:00', scrollTime: '08:00:00',
+                noEventsContent: 'No hay citas confirmadas en este período.',
+                events: async (info, success, failure) => {
+                    status.textContent = 'Cargando citas…';
+                    const url = new URL(endpoint);
+                    Object.entries(filters).forEach(([k,v]) => {if (v) url.searchParams.set(k,v);});
+                    // Interpretar los límites como fechas locales de México en el servidor.
+                    url.searchParams.set('start', info.startStr.slice(0,10));
+                    url.searchParams.set('end', info.endStr.slice(0,10));
+                    try {
+                        const r = await fetch(url, {headers: {'Accept': 'application/json'}, credentials: 'same-origin'});
+                        if (!r.ok) throw new Error('No fue posible consultar las citas.');
+                        const events = await r.json(); success(events);
+                        status.textContent = events.length + ' citas en este período.';
+                    } catch(e) {failure(e); status.textContent = 'No se pudieron cargar las citas. Cierra y vuelve a abrir el calendario para reintentar.';}
+                },
+                eventClick: info => {
+                    const e = info.event;
+                    document.getElementById('commercial-calendar-details').textContent = e.title + '\n' + (e.extendedProps.telefono || '') + '\n' + (e.extendedProps.motivo || '');
+                },
+            });
+            calendar.render();
+        } else {calendar.updateSize(); calendar.refetchEvents();}
+    });
+    document.getElementById('close-commercial-calendar').addEventListener('click', () => modal.close());
+    modal.addEventListener('close', () => open.focus());
+});
+</script>
+@endpush

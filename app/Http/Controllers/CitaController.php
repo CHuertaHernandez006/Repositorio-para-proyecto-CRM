@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class CitaController extends Controller
 {
@@ -20,7 +21,8 @@ class CitaController extends Controller
 
     public function index(Request $request)
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (!$usuario) {
             abort(403);
@@ -28,6 +30,7 @@ class CitaController extends Controller
 
         $datos = $request->validate([
             'buscar' => 'nullable|string|max:100',
+            'buscar_comi' => 'nullable|string|max:100',
             'estado' => 'nullable|integer',
             'operario' => 'nullable|integer',
             'fecha_desde' => 'nullable|date',
@@ -218,6 +221,27 @@ class CitaController extends Controller
             );
         }
 
+        // Solo los gestores de las dos empresas internas ven citas COMI compartidas.
+        // No se copian filas a citas: ambas pantallas consultan el mismo registro COMI.
+        if (\App\Support\AgendaInterna::gestor($usuario)) {
+            $buscarComi = trim($datos['buscar_comi'] ?? '');
+            $consultaComi = \App\Support\AgendaInterna::consulta($usuario)
+                ->where('c.estado', 'confirmada');
+            if ($buscarComi !== '') {
+                $consultaComi->whereRaw(
+                    "concat_ws(' ', cl.nombre, cl.apellido_paterno, cl.organizacion, anterior.nombre_contacto, anterior.nombre_empresa, c.motivo, asesor.nombre, asesor.apellido_paterno) ILIKE ?",
+                    ['%'.$buscarComi.'%']
+                );
+            }
+            $citasComi = $consultaComi
+                ->orderByRaw('(c.fecha_hora_inicio < NOW()) ASC')
+                ->orderBy('c.fecha_hora_inicio')->orderBy('c.id_cita')
+                ->paginate(10, ['*'], 'pagina_comi')->withQueryString();
+            return view('citas.internas', compact(
+                'citas', 'buscar', 'operarios', 'estados', 'citasComi', 'buscarComi'
+            ));
+        }
+
         return view(
             'citas.index',
             compact(
@@ -238,7 +262,8 @@ class CitaController extends Controller
 
     public function create()
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (
             !$usuario ||
@@ -286,7 +311,8 @@ class CitaController extends Controller
 
     public function store(Request $request)
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (
             !$usuario ||
@@ -465,7 +491,8 @@ class CitaController extends Controller
 
     public function show($id_cita)
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (!$usuario) {
             abort(403);
@@ -516,7 +543,8 @@ class CitaController extends Controller
 
     public function edit($id_cita)
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (
             !$usuario ||
@@ -588,7 +616,8 @@ class CitaController extends Controller
         Request $request,
         $id_cita
     ) {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (
             !$usuario ||
@@ -764,7 +793,8 @@ class CitaController extends Controller
 
     public function destroy($id_cita)
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (
             !$usuario ||

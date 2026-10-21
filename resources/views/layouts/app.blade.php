@@ -2164,7 +2164,7 @@
             'patron' => 'comercial.agenda',
             'texto' => 'Agenda comercial',
             'icono' => 'calendar-check',
-            'visible' => $esAsesorComercial,
+            'visible' => $esAsesorComercial || \App\Support\AgendaInterna::gestor($usuarioActual),
         ],
         [
             'ruta' => 'comercial.equipo',
@@ -2231,12 +2231,10 @@
 
     'icono' => 'calendar-days',
 
-    'visible' => Auth::check(),
+    'visible' => Auth::check() && (\App\Support\AgendaInterna::gestor($usuarioActual) || !in_array((int) $usuarioActual->id_empresa, \App\Support\AgendaInterna::empresas(), true)),
 ],
 
-
-//Aqui esta lo de servicios comi
-[ 
+[
     'ruta' => 'comi.servicio.index',
 
     'patron' => 'comi.servicio.*',

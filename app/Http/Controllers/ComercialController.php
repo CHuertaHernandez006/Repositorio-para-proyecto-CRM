@@ -22,25 +22,14 @@ class ComercialController extends Controller
         // Próxima cita REAL de COMI por cliente.
         // citas_agenda.conversation_id -> conversaciones.id_conversacion
         // conversaciones aporta id_empresa + id_cliente.
-        $proximasCitas = DB::table('citas_agenda as ca')
-            ->join(
-                'conversaciones as co',
-                'co.id_conversacion',
-                '=',
-                'ca.conversation_id'
-            )
-            ->whereIn('ca.estado', [
-                'pendiente_aprobacion',
-                'confirmada',
-                'reprogramada',
-            ])
-            ->where('ca.fecha_hora_cita', '>=', now())
-            ->whereNotNull('co.id_cliente')
-            ->select('co.id_empresa', 'co.id_cliente')
-            ->selectRaw('MIN(ca.fecha_hora_cita) as cita_fecha')
-            ->groupBy('co.id_empresa', 'co.id_cliente');
+        $proximasCitas = DB::table('comi_citas_agenda as ca')
+            ->where('ca.estado', 'confirmada')
+            ->where('ca.fecha_hora_inicio', '>=', now())
+            ->whereNotNull('ca.id_cliente')
+            ->select('ca.id_empresa', 'ca.id_cliente')
+            ->selectRaw('MIN(ca.fecha_hora_inicio) as cita_fecha')
+            ->groupBy('ca.id_empresa', 'ca.id_cliente');
 
-        // Indicador histórico de que durante una interacción se solicitó cita.
         $solicitudesCita = DB::table('comi_interacciones as ci')
             ->select('ci.id_empresa', 'ci.id_cliente')
             ->selectRaw('BOOL_OR(ci.cita_solicitada) as cita_solicitada_comi')
@@ -534,172 +523,7 @@ class ComercialController extends Controller
 
     public function agenda(Request $request)
     {
-        abort_unless(
-            (int) $request->user()->id_rol === 1 || Comercial::asesor($request->user()),
-            403
-        );
-
-        // Si el Super Admin entra directamente a Agenda, también sincronizamos
-        // clientes que hayan llegado mediante una cita de COMI.
-        if ((int) $request->user()->id_rol === 1) {
-            $this->sincronizarProspectosComi();
-        }
-
-        $datos = $request->validate([
-            'buscar' => 'nullable|string|max:100',
-            'estado_cita' => [
-                'nullable',
-                Rule::in([
-                    'pendiente_aprobacion',
-                    'confirmada',
-                    'rechazada',
-                    'reprogramada',
-                ]),
-            ],
-            'asesor' => 'nullable|string|max:30',
-        ]);
-
-        $buscar = trim($datos['buscar'] ?? '');
-        $estadoCita = $datos['estado_cita'] ?? '';
-        $asesor = $datos['asesor'] ?? '';
-
-        // Relación comprobada en producción:
-        // citas_agenda.conversation_id = conversaciones.id_conversacion.
-        $base = DB::table('citas_agenda as ca')
-            ->join(
-                'conversaciones as co',
-                'co.id_conversacion',
-                '=',
-                'ca.conversation_id'
-            )
-            ->join('comercial_prospectos as p', function ($join) {
-                $join->on('p.id_empresa_origen', '=', 'co.id_empresa')
-                    ->on('p.id_cliente', '=', 'co.id_cliente');
-            })
-            ->join('clientes as c', function ($join) {
-                $join->on('c.id_empresa', '=', 'p.id_empresa_origen')
-                    ->on('c.id_cliente', '=', 'p.id_cliente');
-            })
-            ->leftJoin('usuarios as a', 'a.id_usuario', '=', 'p.id_asesor')
-            ->whereNotNull('co.id_cliente')
-            ->where('p.id_empresa', Comercial::empresa())
-            ->whereIn('p.id_empresa_origen', Comercial::empresasOrigen())
-            ->whereNull('c.deleted_at');
-
-        if ((int) $request->user()->id_rol !== 1) {
-            $base->where('p.id_asesor', $request->user()->getKey());
-        }
-
-        $base->select(
-            'ca.id as id_cita_comi',
-            'ca.conversation_id',
-            'ca.nombre_contacto',
-            'ca.telefono',
-            'ca.correo',
-            'ca.nombre_empresa',
-            'ca.objetivo_reunion',
-            'ca.fecha_hora_cita',
-            'ca.estado as estado_cita',
-            'ca.notas',
-            'p.id as prospecto_id',
-            'p.id_asesor',
-            'p.estado as estado_comercial',
-            'c.nombre',
-            'c.apellido_paterno',
-            'c.organizacion',
-            'c.telefono_principal',
-            'a.nombre as asesor_nombre',
-            'a.apellido_paterno as asesor_apellido'
-        );
-
-        $estadosActivos = [
-            'pendiente_aprobacion',
-            'confirmada',
-            'reprogramada',
-        ];
-
-        $zonaAgenda = 'America/Mexico_City';
-
-        $inicioHoy = Carbon::now($zonaAgenda)
-            ->startOfDay()
-            ->utc();
-
-        $finHoy = Carbon::now($zonaAgenda)
-            ->endOfDay()
-            ->utc();
-
-        $ahora = Carbon::now('UTC');
-
-        $resumen = [
-            'hoy' => (clone $base)
-                ->whereIn('ca.estado', $estadosActivos)
-                ->whereBetween('ca.fecha_hora_cita', [$inicioHoy, $finHoy])
-                ->count(),
-
-            'pendientes' => (clone $base)
-                ->where('ca.estado', 'pendiente_aprobacion')
-                ->count(),
-
-            'proximas' => (clone $base)
-                ->whereIn('ca.estado', $estadosActivos)
-                ->where('ca.fecha_hora_cita', '>=', $ahora)
-                ->count(),
-        ];
-
-        $proximaCita = (clone $base)
-            ->whereIn('ca.estado', $estadosActivos)
-            ->where('ca.fecha_hora_cita', '>=', $ahora)
-            ->orderBy('ca.fecha_hora_cita')
-            ->first();
-
-        if ($buscar !== '') {
-            $termino = '%' . mb_strtolower($buscar, 'UTF-8') . '%';
-
-            $base->where(function ($q) use ($termino) {
-                $q->whereRaw('LOWER(ca.nombre_contacto) LIKE ?', [$termino])
-                    ->orWhereRaw('LOWER(ca.nombre_empresa) LIKE ?', [$termino])
-                    ->orWhereRaw('LOWER(ca.correo) LIKE ?', [$termino])
-                    ->orWhereRaw('LOWER(ca.telefono) LIKE ?', [$termino])
-                    ->orWhereRaw('LOWER(ca.objetivo_reunion) LIKE ?', [$termino]);
-            });
-        }
-
-        if ($estadoCita !== '') {
-            $base->where('ca.estado', $estadoCita);
-        }
-
-        if ($asesor === 'sin_asignar') {
-            $base->whereNull('p.id_asesor');
-        } elseif ($asesor !== '' && ctype_digit($asesor)) {
-            $base->where('p.id_asesor', (int) $asesor);
-        }
-
-        $asesores = collect();
-
-        if ((int) $request->user()->id_rol === 1) {
-            $asesores = Comercial::asesores()
-                ->where('activo', true)
-                ->orderBy('nombre')
-                ->orderBy('apellido_paterno')
-                ->get();
-        }
-
-        $citas = $base
-            ->orderByRaw('(ca.fecha_hora_cita < NOW()) ASC')
-            ->orderBy('ca.fecha_hora_cita')
-            ->paginate(20)
-            ->withQueryString();
-
-        return view('comercial.agenda', compact(
-            'citas',
-            'buscar',
-            'estadoCita',
-            'asesor',
-            'asesores',
-            'resumen',
-            'proximaCita',
-            'zonaAgenda'
-        ));
+        return app(AgendaComercialController::class)->index($request);
     }
 
     public function equipo(Request $request)
@@ -828,6 +652,13 @@ class ComercialController extends Controller
                 ->first();
 
             abort_unless($asesor, 404);
+            if (!$datos['activo'] && DB::table('comi_cita_asignaciones as a')
+                ->join('comi_citas_agenda as c', 'c.id_cita', '=', 'a.id_cita')
+                ->where('a.id_asesor', $id)->where('c.estado', 'confirmada')
+                ->where('c.fecha_hora_inicio', '>=', now())->exists()) {
+                throw ValidationException::withMessages(['equipo' => 'El asesor tiene citas confirmadas futuras. Resuelve esas citas antes de desactivarlo.']);
+            }
+
 
             if (
                 !(bool) $datos['activo']

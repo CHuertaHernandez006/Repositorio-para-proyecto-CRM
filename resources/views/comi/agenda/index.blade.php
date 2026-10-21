@@ -360,6 +360,7 @@
     @endif
 
 
+    @if($errors->any())<div class="ca-alert ca-alert-error" role="alert">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
     @if(session('error'))
 
         <div class="ca-alert ca-alert-error">
@@ -833,125 +834,69 @@
 
 
                                 <td>
-
                                     @if(
-                                        $puedeGestionar
-                                        &&
-                                        $cita->estado
-                                            ===
-                                            'pendiente_aprobacion'
-                                        &&
-                                        $cita->id_conversacion
+                                    in_array((int) $cita->id_empresa, $empresasInternas, true)
+                                    && $cita->tipo_proyecto === 'comercial'
                                     )
+                                    
+                                    @include('comi.agenda.asesor', ['cita' => $cita])
+                                    @elseif(
+        $puedeGestionar
+        && $cita->estado === 'pendiente_aprobacion'
+        && $cita->id_conversacion
+    )
+        <div class="ca-actions">
+            <form
+                method="POST"
+                action="{{ route('comi.agenda.estado', $cita->id_cita) }}"
+                onsubmit="return confirm('¿Confirmar esta cita?');"
+            >
+                @csrf
+                @method('PATCH')
 
-                                        <div class="ca-actions">
+                <input type="hidden" name="estado" value="confirmada">
 
-                                            <form
-                                                method="POST"
-                                                action="{{
-                                                    route(
-                                                        'comi.agenda.estado',
-                                                        $cita->id_cita
-                                                    )
-                                                }}"
-                                            >
+                <button
+                    type="submit"
+                    class="ca-button ca-button-confirm"
+                >
+                    Confirmar
+                </button>
+            </form>
 
-                                                @csrf
-                                                @method('PATCH')
+            <form
+                method="POST"
+                action="{{ route('comi.agenda.estado', $cita->id_cita) }}"
+                onsubmit="return confirm('¿Rechazar esta cita?');"
+            >
+                @csrf
+                @method('PATCH')
 
-                                                <input
-                                                    type="hidden"
-                                                    name="estado"
-                                                    value="confirmada"
-                                                >
+                <input type="hidden" name="estado" value="rechazada">
 
-                                                <button
-                                                    type="submit"
-                                                    class="
-                                                        ca-button
-                                                        ca-button-confirm
-                                                    "
-                                                    onclick="
-                                                        return confirm(
-                                                            '¿Confirmar esta cita?'
-                                                        );
-                                                    "
-                                                >
-                                                    Confirmar
-                                                </button>
+                <button
+                    type="submit"
+                    class="ca-button ca-button-reject"
+                >
+                    Rechazar
+                </button>
+            </form>
 
-                                            </form>
+            <a
+                href="{{ route('comi.agenda.reprogramar.form', $cita->id_cita) }}"
+                class="ca-button ca-button-reprogram"
+            >
+                Reprogramar
+            </a>
+        </div>
 
+    @elseif(!$puedeGestionar)
+        <span class="ca-secondary">Solo lectura</span>
 
-                                            <form
-                                                method="POST"
-                                                action="{{
-                                                    route(
-                                                        'comi.agenda.estado',
-                                                        $cita->id_cita
-                                                    )
-                                                }}"
-                                            >
-
-                                                @csrf
-                                                @method('PATCH')
-
-                                                <input
-                                                    type="hidden"
-                                                    name="estado"
-                                                    value="rechazada"
-                                                >
-
-                                                <button
-                                                    type="submit"
-                                                    class="
-                                                        ca-button
-                                                        ca-button-reject
-                                                    "
-                                                    onclick="
-                                                        return confirm(
-                                                            '¿Rechazar esta cita?'
-                                                        );
-                                                    "
-                                                >
-                                                    Rechazar
-                                                </button>
-
-                                            </form>
-
-
-                                            <a
-                                                href="{{
-                                                    route(
-                                                        'comi.agenda.reprogramar.form',
-                                                        $cita->id_cita
-                                                    )
-                                                }}"
-                                                class="
-                                                    ca-button
-                                                    ca-button-reprogram
-                                                "
-                                            >
-                                                Reprogramar
-                                            </a>
-
-                                        </div>
-
-                                    @elseif(!$puedeGestionar)
-
-                                        <span class="ca-secondary">
-                                            Solo lectura
-                                        </span>
-
-                                    @else
-
-                                        <span class="ca-secondary">
-                                            Sin acciones pendientes
-                                        </span>
-
-                                    @endif
-
-                                </td>
+    @else
+        <span class="ca-secondary">Sin acciones pendientes</span>
+    @endif
+</td>
 
                             </tr>
 

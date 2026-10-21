@@ -30,6 +30,12 @@ class ComiAgendaController extends Controller
     public function index(Request $request)
     {
         $usuario = $request->user();
+        $empresasInternas = \App\Support\AgendaInterna::empresas();
+        $esGestorInterno = \App\Support\AgendaInterna::gestor($usuario);
+        $empresasVisibles = $esGestorInterno ? $empresasInternas : [(int) $usuario->id_empresa];
+        $asesoresInternos = $esGestorInterno
+            ? \App\Support\Comercial::asesores()->where('activo', true)->orderBy('nombre')->get()
+            : collect();
 
         if (!$this->esSuperAdmin($usuario) && !$usuario->id_empresa) {
             abort(403, 'Tu usuario no tiene una empresa asignada.');
@@ -66,7 +72,7 @@ class ComiAgendaController extends Controller
             ->where('activo', true);
 
         if (!$this->esSuperAdmin($usuario)) {
-            $agendasQuery->where('id_empresa', $usuario->id_empresa);
+            $agendasQuery->whereIn('id_empresa', $empresasVisibles);
         }
 
         $agendas = $agendasQuery
@@ -83,7 +89,7 @@ class ComiAgendaController extends Controller
             ->where('activo', true);
 
         if (!$this->esSuperAdmin($usuario)) {
-            $proyectosQuery->where('id_empresa', $usuario->id_empresa);
+            $proyectosQuery->whereIn('id_empresa', $empresasVisibles);
         }
 
         $proyectos = $proyectosQuery
@@ -103,7 +109,7 @@ class ComiAgendaController extends Controller
             ->whereIn('c.id_agenda', $agendaIds);
 
         if (!$this->esSuperAdmin($usuario)) {
-            $consultaBase->where('c.id_empresa', $usuario->id_empresa);
+            $consultaBase->whereIn('c.id_empresa', $empresasVisibles);
         }
 
         $resumen = [
@@ -296,10 +302,7 @@ class ComiAgendaController extends Controller
         */
 
         if (!$this->esSuperAdmin($usuario)) {
-            $consulta->where(
-                'c.id_empresa',
-                $usuario->id_empresa
-            );
+            $consulta->whereIn('c.id_empresa', $empresasVisibles);
         }
 
         /*
@@ -336,6 +339,11 @@ class ComiAgendaController extends Controller
             );
         }
 
+        $consulta->leftJoin('comi_cita_asignaciones as asignacion', 'asignacion.id_cita', '=', 'c.id_cita')
+            ->leftJoin('usuarios as asesor_interno', 'asesor_interno.id_usuario', '=', 'asignacion.id_asesor')
+            ->addSelect('p.tipo as tipo_proyecto', 'asignacion.id_asesor', 'asignacion.correo_enviado_at', 'asignacion.correo_error')
+            ->selectRaw("concat_ws(' ', asesor_interno.nombre, asesor_interno.apellido_paterno) as asesor_interno_nombre");
+
         $citas = $consulta
             ->orderByDesc('c.fecha_hora_inicio')
             ->paginate(15)
@@ -349,7 +357,7 @@ class ComiAgendaController extends Controller
                 'citas',
                 'resumen',
                 'filtros',
-                'agendasGestionables'
+                'agendasGestionables', 'empresasInternas', 'asesoresInternos', 'esGestorInterno'
             )
         );
     }
@@ -380,10 +388,17 @@ class ComiAgendaController extends Controller
             ->where('id_cita', $id_cita);
 
         if (!$this->esSuperAdmin($usuario)) {
-            $query->where('id_empresa', $usuario->id_empresa);
+            $query->whereIn('id_empresa', \App\Support\AgendaInterna::gestor($usuario)
+                ? \App\Support\AgendaInterna::empresas() : [(int) $usuario->id_empresa]);
         }
 
         $cita = $query->firstOrFail();
+        $esComercialInterna = in_array((int) $cita->id_empresa, \App\Support\AgendaInterna::empresas(), true)
+            && DB::table('comi_proyectos')->where('id_proyecto', $cita->id_proyecto)->where('tipo', 'comercial')->exists();
+        if ($esComercialInterna && $datos['estado'] === 'confirmada') {
+            return app(AgendaComercialController::class)->confirmar($request, $id_cita);
+        }
+
 
         $this->verificarGestionAgenda(
             $usuario,
@@ -470,7 +485,8 @@ class ComiAgendaController extends Controller
             ->where('id_cita', $id_cita);
 
         if (!$this->esSuperAdmin($usuario)) {
-            $query->where('id_empresa', $usuario->id_empresa);
+            $query->whereIn('id_empresa', \App\Support\AgendaInterna::gestor($usuario)
+                ? \App\Support\AgendaInterna::empresas() : [(int) $usuario->id_empresa]);
         }
 
         $cita = $query->firstOrFail();
@@ -562,7 +578,8 @@ class ComiAgendaController extends Controller
             ->where('id_cita', $id_cita);
 
         if (!$this->esSuperAdmin($usuario)) {
-            $query->where('id_empresa', $usuario->id_empresa);
+            $query->whereIn('id_empresa', \App\Support\AgendaInterna::gestor($usuario)
+                ? \App\Support\AgendaInterna::empresas() : [(int) $usuario->id_empresa]);
         }
 
         $cita = $query->firstOrFail();
@@ -1440,6 +1457,25 @@ class ComiAgendaController extends Controller
     private function agendasVisibles(
         $usuario
     ) {
+        if ((int) $usuario->id_rol === 2 && \App\Support\AgendaInterna::gestor($usuario)) {
+            return ComiAgenda::query()->where('activo', true)->where(function ($q) use ($usuario) {
+                $q->where('id_empresa', $usuario->id_empresa)
+                    ->orWhere(function ($q) {
+                        $q->whereIn('id_empresa', \App\Support\AgendaInterna::empresas())
+                            ->whereIn('id_proyecto', DB::table('comi_proyectos')->where('tipo', 'comercial')->select('id_proyecto'));
+                    });
+            })->pluck('id_agenda')->map(fn ($id) => (int) $id);
+        }
+        if ((int) $usuario->id_rol !== 1 && (int) $usuario->id_rol !== 2
+            && in_array((int) $usuario->id_empresa, \App\Support\AgendaInterna::empresas(), true)) {
+            return DB::table('comi_agenda_usuarios as au')
+                ->join('comi_agendas as ag', 'ag.id_agenda', '=', 'au.id_agenda')
+                ->join('comi_proyectos as pr', 'pr.id_proyecto', '=', 'ag.id_proyecto')
+                ->where('au.id_empresa', $usuario->id_empresa)->where('au.id_usuario', $usuario->id_usuario)
+                ->where('au.puede_ver', true)->where('pr.tipo', '<>', 'comercial')
+                ->pluck('ag.id_agenda')->map(fn ($id) => (int) $id);
+        }
+
         /*
          * Súper Admin: todas.
          */
@@ -1499,6 +1535,16 @@ class ComiAgendaController extends Controller
     private function agendasGestionables(
         $usuario
     ) {
+        if ((int) $usuario->id_rol !== 1 && (int) $usuario->id_rol !== 2
+            && in_array((int) $usuario->id_empresa, \App\Support\AgendaInterna::empresas(), true)) {
+            return DB::table('comi_agenda_usuarios as au')
+                ->join('comi_agendas as ag', 'ag.id_agenda', '=', 'au.id_agenda')
+                ->join('comi_proyectos as pr', 'pr.id_proyecto', '=', 'ag.id_proyecto')
+                ->where('au.id_empresa', $usuario->id_empresa)->where('au.id_usuario', $usuario->id_usuario)
+                ->where('au.puede_gestionar', true)->where('pr.tipo', '<>', 'comercial')
+                ->pluck('ag.id_agenda')->map(fn ($id) => (int) $id);
+        }
+
         /*
          * Súper Admin y Admin Cliente pueden gestionar
          * todas las agendas que administran por rol.
@@ -1538,6 +1584,13 @@ class ComiAgendaController extends Controller
         $usuario,
         $idAgenda
     ): void {
+        $agenda = ComiAgenda::findOrFail($idAgenda);
+        if (in_array((int) $agenda->id_empresa, \App\Support\AgendaInterna::empresas(), true)
+            && DB::table('comi_proyectos')->where('id_proyecto', $agenda->id_proyecto)->where('tipo', 'comercial')->exists()) {
+            abort_unless($agenda->activo && \App\Support\AgendaInterna::gestor($usuario), 403);
+            return;
+        }
+
         /*
          * Súper Admin: acceso total.
          */

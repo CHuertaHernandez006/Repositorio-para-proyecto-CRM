@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Support\AvanceObjetivos;
 use App\Models\Empresa;
 use Illuminate\Support\Facades\Auth;
 
@@ -70,7 +71,8 @@ class DashboardController extends Controller
         if ((int) $usuario->id_rol === 3) {
             $totalClientes = \App\Support\AccesoClientes::consulta($usuario)->count();
             $esAsignacion = \App\Support\PerfilOperario::esAsignacion($usuario);
-            return view('operarios.inicio', compact('totalClientes', 'esAsignacion'));
+            $misObjetivos = AvanceObjetivos::consultar($usuario);
+            return view('operarios.inicio', compact('totalClientes', 'esAsignacion', 'misObjetivos'));
         }
 
         if (\App\Support\Comercial::asesor($usuario)) {

@@ -9,6 +9,7 @@ namespace App\Http\Controllers;
 use App\Models\AprobacionUsuario;
 
 use App\Models\ObjetivoOperario;
+use App\Support\AvanceObjetivos;
 
 use App\Models\TipoOperario;
 
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 
 
@@ -46,7 +48,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -406,7 +409,8 @@ class OperarioController extends Controller
 
     public function objetivos()
     {
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
         if (
             !$usuario ||
@@ -463,265 +467,18 @@ class OperarioController extends Controller
             ->filter()
             ->values();
 
-        /*
-        |--------------------------------------------------------------------------
-        | ACTUALIZAR OBJETIVOS VENCIDOS
-        |--------------------------------------------------------------------------
-        */
-
-        if ($idsOperarios->isNotEmpty()) {
-            ObjetivoOperario::query()
-                ->whereIn(
-                    'id_usuario',
-                    $idsOperarios
-                )
-                ->whereIn(
-                    'estado',
-                    [
-                        'pendiente',
-                        'en_progreso',
-                    ]
-                )
-                ->whereDate(
-                    'fecha_fin',
-                    '<',
-                    now()->toDateString()
-                )
-                ->update([
-                    'estado' => 'vencido',
-                ]);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | AVANCE AUTOMÁTICO POR OPERARIO
-        |--------------------------------------------------------------------------
-        |
-        | Para el objetivo cuentan únicamente llamadas:
-        | - salientes;
-        | - del mismo operario y empresa;
-        | - dentro del periodo del objetivo;
-        | - con fecha_fin registrada por Asterisk/AMI.
-        |
-        | También se conservan métricas de intentos y llamadas clasificadas.
-        |--------------------------------------------------------------------------
-        */
-
-        $hoy = now()->startOfDay();
-
         foreach ($operarios as $operario) {
-            $objetivoActual = ObjetivoOperario::query()
-                ->where(
-                    'id_usuario',
-                    $operario->id_usuario
-                )
-                ->whereIn(
-                    'estado',
-                    [
-                        'pendiente',
-                        'en_progreso',
-                        'cumplido',
-                    ]
-                )
-                ->whereDate(
-                    'fecha_fin',
-                    '>=',
-                    $hoy->toDateString()
-                )
-                ->latest('id_objetivo')
-                ->first();
-
-            $operario->objetivo_actual = $objetivoActual;
-            $operario->situacion_objetivo = 'sin_objetivo';
-
-            $operario->llamadas_intentadas = 0;
-            $operario->llamadas_realizadas = 0;
-            $operario->llamadas_clasificadas = 0;
-            $operario->llamadas_pendientes = 0;
-            $operario->porcentaje_objetivo = 0;
-            $operario->porcentaje_barra = 0;
-            $operario->dias_restantes_objetivo = null;
-
-            if (!$objetivoActual) {
-                continue;
-            }
-
-            $fechaInicio = Carbon::parse(
-                $objetivoActual->fecha_inicio
-            )->startOfDay();
-
-            $fechaFin = Carbon::parse(
-                $objetivoActual->fecha_fin
-            )->startOfDay();
-
-            /*
-            |--------------------------------------------------------------------------
-            | ACTIVAR OBJETIVO CUANDO INICIA SU PERIODO
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                $objetivoActual->estado === 'pendiente' &&
-                !$fechaInicio->isFuture()
-            ) {
-                $objetivoActual->update([
-                    'estado' => 'en_progreso',
-                ]);
-
-                $objetivoActual->estado = 'en_progreso';
-            }
-
-            $baseLlamadas = DB::table('llamadas')
-                ->where(
-                    'id_empresa',
-                    $operario->id_empresa
-                )
-                ->where(
-                    'id_usuario',
-                    $operario->id_usuario
-                )
-                ->where(
-                    'tipo_llamada',
-                    'saliente'
-                )
-                ->whereDate(
-                    'fecha_inicio',
-                    '>=',
-                    $objetivoActual->fecha_inicio
-                )
-                ->whereDate(
-                    'fecha_inicio',
-                    '<=',
-                    $objetivoActual->fecha_fin
-                );
-
-            /*
-            |--------------------------------------------------------------------------
-            | INTENTOS
-            |--------------------------------------------------------------------------
-            |
-            | Toda llamada saliente creada dentro del periodo.
-            |--------------------------------------------------------------------------
-            */
-
-            $llamadasIntentadas =
-                (clone $baseLlamadas)->count();
-
-            /*
-            |--------------------------------------------------------------------------
-            | REALIZADAS
-            |--------------------------------------------------------------------------
-            |
-            | Solo llamadas cuyo cierre ya fue registrado.
-            | Estas son las que avanzan el objetivo.
-            |--------------------------------------------------------------------------
-            */
-
-            $llamadasRealizadas =
-                (clone $baseLlamadas)
-                    ->whereNotNull('fecha_fin')
-                    ->count();
-
-            /*
-            |--------------------------------------------------------------------------
-            | CLASIFICADAS
-            |--------------------------------------------------------------------------
-            |
-            | Llamadas que además ya cuentan con resultado comercial.
-            |--------------------------------------------------------------------------
-            */
-
-            $llamadasClasificadas =
-                (clone $baseLlamadas)
-                    ->whereNotNull('id_resultado')
-                    ->count();
-
-            $meta =
-                max(
-                    (int) $objetivoActual->objetivo_llamadas,
-                    1
-                );
-
-            $pendientes =
-                max(
-                    $meta - $llamadasRealizadas,
-                    0
-                );
-
-            $porcentaje =
-                (int) round(
-                    ($llamadasRealizadas / $meta) * 100
-                );
-
-            $porcentajeBarra =
-                min(
-                    max($porcentaje, 0),
-                    100
-                );
-
-            $diasRestantes =
-                (int) $hoy->diffInDays(
-                    $fechaFin,
-                    false
-                );
-
-            $operario->llamadas_intentadas =
-                $llamadasIntentadas;
-
-            $operario->llamadas_realizadas =
-                $llamadasRealizadas;
-
-            $operario->llamadas_clasificadas =
-                $llamadasClasificadas;
-
-            $operario->llamadas_pendientes =
-                $pendientes;
-
-            $operario->porcentaje_objetivo =
-                $porcentaje;
-
-            $operario->porcentaje_barra =
-                $porcentajeBarra;
-
-            $operario->dias_restantes_objetivo =
-                $diasRestantes;
-
-            /*
-            |--------------------------------------------------------------------------
-            | SITUACIÓN DEL OBJETIVO
-            |--------------------------------------------------------------------------
-            */
-
-            if ($llamadasRealizadas >= $meta) {
-                $operario->situacion_objetivo =
-                    'cumplido';
-
-                if (
-                    $objetivoActual->estado !==
-                    'cumplido'
-                ) {
-                    $objetivoActual->update([
-                        'estado' => 'cumplido',
-                    ]);
-
-                    $objetivoActual->estado =
-                        'cumplido';
-                }
-
-                continue;
-            }
-
-            if ($fechaInicio->isFuture()) {
-                $operario->situacion_objetivo =
-                    'pendiente';
-
-                continue;
-            }
-
-            $operario->situacion_objetivo =
-                $diasRestantes <= 2
-                    ? 'proximo_vencer'
-                    : 'en_progreso';
+            $datosObjetivo = AvanceObjetivos::consultar($operario, false);
+            $avance = $datosObjetivo['actual'];
+            $operario->objetivo_actual = $avance['objetivo'] ?? null;
+            $operario->situacion_objetivo = $avance['situacion'] ?? 'sin_objetivo';
+            $operario->llamadas_intentadas = $avance['intentadas'] ?? 0;
+            $operario->llamadas_realizadas = $avance['realizadas'] ?? 0;
+            $operario->llamadas_clasificadas = $avance['clasificadas'] ?? 0;
+            $operario->llamadas_pendientes = $avance['restantes'] ?? 0;
+            $operario->porcentaje_objetivo = $avance['porcentaje'] ?? 0;
+            $operario->porcentaje_barra = $avance['barra'] ?? 0;
+            $operario->dias_restantes_objetivo = $avance['dias_restantes'] ?? null;
         }
 
         /*
@@ -825,7 +582,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -883,7 +641,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -1397,7 +1156,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -1647,7 +1407,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -1855,7 +1616,8 @@ class OperarioController extends Controller
 
     ) {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -2057,7 +1819,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -2243,7 +2006,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -2277,363 +2041,19 @@ class OperarioController extends Controller
 
             ->findOrFail($id);
 
-
-
-        /**
-
-*        |--------------------------------------------------------------------------*
-
-*        | VENCIMIENTO AUTOMÁTICO*
-
-*        |--------------------------------------------------------------------------*
-
-*/
-
-
-
-        ObjetivoOperario::query()
-
-            ->where(
-
-                'id_usuario',
-
-                $operario->id_usuario
-
-            )
-
-            ->whereIn(
-
-                'estado',
-
-                [
-
-                    'pendiente',
-
-                    'en_progreso',
-
-                ]
-
-            )
-
-            ->whereDate(
-
-                'fecha_fin',
-
-                '<',
-
-                now()->toDateString()
-
-            )
-
-            ->update([
-
-                'estado' => 'vencido',
-
-            ]);
-
-
-
-        /**
-
-*        |--------------------------------------------------------------------------*
-
-*        | OBJETIVO ACTUAL*
-
-*        |--------------------------------------------------------------------------*
-
-*/
-
-
-
-        $objetivoActual = null;
-
-        $llamadasRealizadas = 0;
-
-
-
-        if (
-
-            $this->operarioEstaAprobado(
-
-                $operario
-
-            ) &&
-
-            $operario->activo
-
-        ) {
-
-            $objetivoActual = ObjetivoOperario::query()
-
-                ->where(
-
-                    'id_usuario',
-
-                    $operario->id_usuario
-
-                )
-
-                ->whereIn(
-
-                    'estado',
-
-                    [
-
-                        'pendiente',
-
-                        'en_progreso',
-
-                    ]
-
-                )
-
-                ->whereDate(
-
-                    'fecha_inicio',
-
-                    '<=',
-
-                    now()->toDateString()
-
-                )
-
-                ->whereDate(
-
-                    'fecha_fin',
-
-                    '>=',
-
-                    now()->toDateString()
-
-                )
-
-                ->latest('id_objetivo')
-
-                ->first();
-
-
-
-            if ($objetivoActual) {
-
-                $llamadasRealizadas = DB::table(
-
-                    'llamadas'
-
-                )
-
-                    ->where(
-
-                        'id_usuario',
-
-                        $operario->id_usuario
-
-                    )
-
-                    ->whereDate(
-
-                        'fecha_inicio',
-
-                        '>=',
-
-                        $objetivoActual->fecha_inicio
-
-                    )
-
-                    ->whereDate(
-
-                        'fecha_inicio',
-
-                        '<=',
-
-                        $objetivoActual->fecha_fin
-
-                    )
-
-                    ->count();
-
-            }
-
-        }
-
-
-
-        /**
-
-*        |--------------------------------------------------------------------------*
-
-*        | SITUACIÓN*
-
-*        |--------------------------------------------------------------------------*
-
-*/
-
-
-
-        $situacionObjetivo = null;
-
-
-
-        if ($objetivoActual) {
-
-            $objetivo =
-
-                (int) $objetivoActual
-
-                    ->objetivo_llamadas;
-
-
-
-            if (
-
-                $llamadasRealizadas >=
-
-                $objetivo
-
-            ) {
-
-                $situacionObjetivo =
-
-                    'cumplido';
-
-
-
-                if (
-
-                    $objetivoActual->estado !==
-
-                    'cumplido'
-
-                ) {
-
-                    $objetivoActual->update([
-
-                        'estado' =>
-
-                            'cumplido',
-
-                    ]);
-
-                }
-
-            } else {
-
-                $hoy =
-
-                    now()->startOfDay();
-
-
-
-                $fechaFin =
-
-                    Carbon::parse(
-
-                        $objetivoActual
-
-                            ->fecha_fin
-
-                    )->startOfDay();
-
-
-
-                $diasRestantes =
-
-                    $hoy->diffInDays(
-
-                        $fechaFin,
-
-                        false
-
-                    );
-
-
-
-                $situacionObjetivo =
-
-                    $diasRestantes <= 2
-
-                        ? 'proximo_vencer'
-
-                        : 'en_progreso';
-
-            }
-
-        }
-
-
-
-        /**
-
-*        |--------------------------------------------------------------------------*
-
-*        | ÚLTIMO OBJETIVO VENCIDO*
-
-*        |--------------------------------------------------------------------------*
-
-*/
-
-
-
+        $datosObjetivo = AvanceObjetivos::consultar($operario, false);
+        $avance = $this->operarioEstaAprobado($operario) && $operario->activo
+            ? $datosObjetivo['actual'] : null;
+        $objetivoActual = $avance['objetivo'] ?? null;
+        $llamadasRealizadas = $avance['realizadas'] ?? 0;
+        $situacionObjetivo = $avance['situacion'] ?? null;
         $objetivoVencido = ObjetivoOperario::query()
-
-            ->where(
-
-                'id_usuario',
-
-                $operario->id_usuario
-
-            )
-
-            ->where(
-
-                'estado',
-
-                'vencido'
-
-            )
-
-            ->whereDate(
-
-                'fecha_fin',
-
-                '<',
-
-                now()->toDateString()
-
-            )
-
-            ->latest('fecha_fin')
-
-            ->first();
-
-
-
-        if (
-
-            !$objetivoActual &&
-
-            $objetivoVencido
-
-        ) {
-
-            $situacionObjetivo =
-
-                'vencido';
-
+            ->where('id_usuario', $operario->id_usuario)
+            ->where('estado', 'vencido')
+            ->orderByDesc('id_objetivo')->first();
+        if (!$objetivoActual && $objetivoVencido) {
+            $situacionObjetivo = 'vencido';
         }
-
-
-
-        /**
-
-*        |--------------------------------------------------------------------------*
-
-*        | HISTORIAL*
-
-*        |--------------------------------------------------------------------------*
-
-*/
-
-
 
         $objetivos = ObjetivoOperario::query()
 
@@ -2697,7 +2117,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -2781,7 +2202,8 @@ class OperarioController extends Controller
 
     ) {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -3221,7 +2643,8 @@ class OperarioController extends Controller
 
     ) {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -3361,6 +2784,9 @@ class OperarioController extends Controller
 
 
 
+        // Consolidar el avance anterior antes de sustituir su meta.
+        AvanceObjetivos::consultar($operario, false);
+
         ObjetivoOperario::query()
 
             ->where(
@@ -3497,7 +2923,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 
@@ -3611,7 +3038,8 @@ class OperarioController extends Controller
 
     {
 
-        $usuario = auth()->user();
+        /** @var \App\Models\User|null $usuario */
+        $usuario = Auth::user();
 
 
 

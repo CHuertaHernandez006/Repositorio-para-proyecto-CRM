@@ -26,5 +26,6 @@
             @if($esAsignacion && $totalClientes === 0)<div class="op-notice">Aún no tienes clientes asignados. Tu administrador puede asignártelos desde Clientes → Asignaciones.</div>@endif
         </div>
     </div>
+    @include('operarios.mis-objetivos')
 </section>
 @endsection

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Support\Comercial;
+use App\Support\CitasProspecto;
+use App\Support\FichaProspecto;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,16 +21,8 @@ class ComercialController extends Controller
             403
         );
 
-        // Próxima cita REAL de COMI por cliente.
-        // citas_agenda.conversation_id -> conversaciones.id_conversacion
-        // conversaciones aporta id_empresa + id_cliente.
-        $proximasCitas = DB::table('comi_citas_agenda as ca')
-            ->where('ca.estado', 'confirmada')
-            ->where('ca.fecha_hora_inicio', '>=', now())
-            ->whereNotNull('ca.id_cliente')
-            ->select('ca.id_empresa', 'ca.id_cliente')
-            ->selectRaw('MIN(ca.fecha_hora_inicio) as cita_fecha')
-            ->groupBy('ca.id_empresa', 'ca.id_cliente');
+        // Una sola fila de resumen por cliente: incluye solicitudes y citas con horario pasado.
+        $proximasCitas = CitasProspecto::resumen();
 
         $solicitudesCita = DB::table('comi_interacciones as ci')
             ->select('ci.id_empresa', 'ci.id_cliente')
@@ -62,19 +56,29 @@ class ComercialController extends Controller
             'p.*',
             'c.nombre',
             'c.apellido_paterno',
+            'c.apellido_materno',
+            'c.telefono_secundario',
+            'c.updated_at as contacto_actualizado_at',
             'c.organizacion',
             'c.correo',
             'c.telefono_principal',
             'a.nombre as asesor_nombre',
             'a.apellido_paterno as asesor_apellido',
             'pc.cita_fecha',
+            'pc.cita_id',
+            'pc.cita_fuente',
+            'pc.cita_estado',
+            'pc.cita_total',
+            'pc.cita_pasada',
+            'pc.cita_agenda',
+            'pc.cita_asesor',
             DB::raw('COALESCE(sc.cita_solicitada_comi, FALSE) as cita_solicitada_comi')
         );
     }
 
     /**
      * Incorpora automáticamente prospectos detectados por COMI.
-     * También incorpora clientes que tengan una cita en citas_agenda,
+     * También incorpora clientes que tengan una cita comercial en comi_citas_agenda o citas_agenda,
      * aunque no exista una fila correspondiente en comi_interacciones.
      */
     private function sincronizarProspectosComi(): int
@@ -102,6 +106,18 @@ class ComercialController extends Controller
                         FROM comi_calificaciones_lead q
                         WHERE q.id_empresa = c.id_empresa
                           AND q.id_cliente = c.id_cliente
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM comi_citas_agenda nueva
+                        JOIN comi_proyectos pr ON pr.id_proyecto = nueva.id_proyecto
+                          AND pr.id_empresa = nueva.id_empresa AND pr.tipo = 'comercial' AND pr.activo = TRUE
+                        JOIN comi_agendas ag ON ag.id_agenda = nueva.id_agenda
+                          AND ag.id_empresa = nueva.id_empresa AND ag.activo = TRUE
+                        LEFT JOIN conversaciones co ON co.id_conversacion = nueva.id_conversacion
+                          AND co.id_empresa = nueva.id_empresa
+                        WHERE nueva.id_empresa = c.id_empresa
+                          AND COALESCE(nueva.id_cliente, co.id_cliente) = c.id_cliente
                     )
                     OR EXISTS (
                         SELECT 1
@@ -149,6 +165,8 @@ class ComercialController extends Controller
                     'programada',
                     'solicitada',
                     'sin_cita',
+                    'con_registro',
+                    'historica',
                 ]),
             ],
             'desde' => 'nullable|date_format:Y-m-d',
@@ -203,16 +221,22 @@ class ComercialController extends Controller
         }
 
         if ($cita === 'programada') {
-            $base->whereNotNull('pc.cita_fecha');
+            $base->where('pc.cita_estado', 'confirmada')->where('pc.cita_pasada', false);
         } elseif ($cita === 'solicitada') {
-            $base->whereNull('pc.cita_fecha')
-                ->where('sc.cita_solicitada_comi', true);
+            $base->where(function ($q) {
+                $q->where('pc.cita_estado', 'pendiente_aprobacion')
+                    ->orWhere(function ($q) {
+                        $q->whereNull('pc.cita_id')->where('sc.cita_solicitada_comi', true);
+                    });
+            });
+        } elseif ($cita === 'con_registro') {
+            $base->whereNotNull('pc.cita_id');
+        } elseif ($cita === 'historica') {
+            $base->where('pc.cita_pasada', true);
         } elseif ($cita === 'sin_cita') {
-            $base->whereNull('pc.cita_fecha')
-                ->where(function ($q) {
-                    $q->whereNull('sc.cita_solicitada_comi')
-                        ->orWhere('sc.cita_solicitada_comi', false);
-                });
+            $base->whereNull('pc.cita_id')->where(function ($q) {
+                $q->whereNull('sc.cita_solicitada_comi')->orWhere('sc.cita_solicitada_comi', false);
+            });
         }
 
         if ($desde !== '') {
@@ -280,6 +304,11 @@ class ComercialController extends Controller
             ->orderByDesc('id_calificacion')
             ->first();
 
+        $ficha = FichaProspecto::datos($prospecto);
+        $citasProspecto = CitasProspecto::registros($prospecto)
+            ->orderByDesc('cita_fecha')->orderByDesc('cita_id')
+            ->paginate(10, ['*'], 'citas');
+
         $historial = DB::table('comercial_seguimientos as s')
             ->join('usuarios as u', 'u.id_usuario', '=', 's.id_usuario')
             ->where('s.id_prospecto', $id)
@@ -314,10 +343,92 @@ class ComercialController extends Controller
             'prospecto',
             'interacciones',
             'calificacion',
+            'ficha',
+            'citasProspecto',
             'historial',
             'asesores',
             'empresas'
         ));
+    }
+
+    public function editarInformacion(Request $request, $id)
+    {
+        $prospecto = $this->registro($request, $id);
+        $ficha = FichaProspecto::datos($prospecto);
+        $version = FichaProspecto::version($ficha);
+        return view('comercial.editar-informacion', compact('prospecto', 'ficha', 'version'));
+    }
+
+    public function actualizarInformacion(Request $request, $id)
+    {
+        $this->registro($request, $id); // Rechazar otros asesores antes de procesar el formulario.
+        $datos = $request->validate([
+            'version' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/'],
+            'nombre' => 'required|string|max:100',
+            'apellido_paterno' => 'required|string|max:100',
+            'apellido_materno' => 'present|nullable|string|max:100',
+            'organizacion' => 'present|nullable|string|max:150',
+            'telefono_principal' => ['present', 'nullable', 'string', 'regex:/^\+?[0-9]{7,15}$/'],
+            'telefono_secundario' => ['present', 'nullable', 'string', 'regex:/^\+?[0-9]{7,15}$/'],
+            'correo' => ['present', 'nullable', 'email:rfc', 'max:150', 'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/u'],
+            'giro' => 'present|nullable|string|max:150',
+            'numero_colaboradores' => 'present|nullable|string|max:100',
+            'canal_principal' => 'present|nullable|string|max:100',
+            'volumen_estimado' => 'present|nullable|string|max:100',
+            'presupuesto_aproximado' => 'present|nullable|string|max:100',
+            'objetivo_principal' => 'present|nullable|string|max:5000',
+        ]);
+        $cambiado = DB::transaction(function () use ($request, $id, $datos) {
+            $p = $this->registro($request, $id, true); // Revalidar asignación dentro de la transacción.
+            $ficha = FichaProspecto::datos($p, true);
+            if (!hash_equals(FichaProspecto::version($ficha), $datos['version'])) {
+                throw ValidationException::withMessages([
+                    'version' => 'La información cambió mientras editabas. Abre de nuevo Editar información para revisar los datos actuales antes de guardar.',
+                ]);
+            }
+            $contacto = [];
+            $necesidades = [];
+            $etiquetas = [];
+            foreach (FichaProspecto::CONTACTO as $campo => $etiqueta) {
+                $contacto[$campo] = $datos[$campo];
+                if (($ficha['cliente']->$campo ?? null) !== $datos[$campo]) {
+                    $etiquetas[] = $etiqueta;
+                }
+            }
+            foreach (FichaProspecto::NECESIDADES as $campo => $etiqueta) {
+                $necesidades[$campo] = $datos[$campo];
+                if ($ficha['necesidades'][$campo] !== $datos[$campo]) {
+                    $etiquetas[] = $etiqueta;
+                }
+            }
+            if (!$etiquetas) {
+                return false;
+            }
+            $ahora = now();
+            $cambioContacto = false;
+            foreach ($contacto as $campo => $valor) {
+                $cambioContacto = $cambioContacto || ($ficha['cliente']->$campo ?? null) !== $valor;
+            }
+            if ($cambioContacto) {
+                DB::table('clientes')->where('id_empresa', $p->id_empresa_origen)
+                    ->where('id_cliente', $p->id_cliente)->whereNull('deleted_at')
+                    ->update(array_merge($contacto, ['updated_at' => $ahora]));
+            }
+            $guardado = array_merge($necesidades, ['id_editor' => $request->user()->getKey(), 'updated_at' => $ahora]);
+            if ($ficha['manual']) {
+                DB::table('comercial_fichas_prospecto')->where('id_prospecto', $p->id)->update($guardado);
+            } else {
+                DB::table('comercial_fichas_prospecto')->insert(array_merge($guardado, [
+                    'id_prospecto' => $p->id, 'created_at' => $ahora,
+                ]));
+            }
+            $this->bitacora($request, $p, 'actualizacion_datos',
+                'Información revisada. Campos actualizados: '.implode(', ', $etiquetas).'.',
+                $p->estado, $p->proximo_contacto);
+            return true;
+        });
+        return redirect()->route('comercial.prospectos.show', $id)
+            ->with('exito', $cambiado ? 'Información del prospecto actualizada.' : 'No hubo cambios en la información.');
     }
 
     private function bitacora(

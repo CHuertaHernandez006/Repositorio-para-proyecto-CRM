@@ -71,6 +71,11 @@ Route::middleware([
     );
 
 
+    Route::get('/prospectos/{id}/informacion/editar', [ComercialController::class, 'editarInformacion'])
+        ->whereNumber('id')->name('prospectos.informacion.edit');
+    Route::put('/prospectos/{id}/informacion', [ComercialController::class, 'actualizarInformacion'])
+        ->whereNumber('id')->name('prospectos.informacion.update');
+
     /*
     |--------------------------------------------------------------------------
     | SEGUIMIENTO

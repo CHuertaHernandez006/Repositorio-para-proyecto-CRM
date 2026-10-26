@@ -201,42 +201,10 @@
                 Cita
             </label>
 
-            <select
-                id="cita"
-                name="cita"
-            >
-
-                <option value="">
-                    Todas
-                </option>
-
-                <option
-                    value="programada"
-                    @selected(
-                        $cita === 'programada'
-                    )
-                >
-                    Cita programada
-                </option>
-
-                <option
-                    value="solicitada"
-                    @selected(
-                        $cita === 'solicitada'
-                    )
-                >
-                    Solicitada por COMI
-                </option>
-
-                <option
-                    value="sin_cita"
-                    @selected(
-                        $cita === 'sin_cita'
-                    )
-                >
-                    Sin cita
-                </option>
-
+            <select id="cita" name="cita">
+                @foreach(['' => 'Todas', 'programada' => 'Confirmada futura', 'solicitada' => 'Pendiente / solicitada', 'con_registro' => 'Con cita registrada', 'historica' => 'Con horario pasado', 'sin_cita' => 'Sin cita ni solicitud'] as $valor => $texto)
+                    <option value="{{ $valor }}" @selected($cita === $valor)>{{ $texto }}</option>
+                @endforeach
             </select>
 
         </div>
@@ -497,55 +465,7 @@
 
                         <td>
 
-                            @if($p->cita_fecha)
-
-                                <strong>
-
-                                    {{
-                                        \Carbon\Carbon::parse(
-                                            $p->cita_fecha
-                                        )
-                                        ->timezone(
-                                            config('app.timezone')
-                                        )
-                                        ->format('d/m/Y')
-                                    }}
-
-                                </strong>
-
-                                <small>
-
-                                    {{
-                                        \Carbon\Carbon::parse(
-                                            $p->cita_fecha
-                                        )
-                                        ->timezone(
-                                            config('app.timezone')
-                                        )
-                                        ->format('H:i')
-                                    }}
-
-                                </small>
-
-
-                            @elseif($p->cita_solicitada_comi)
-
-                                <strong>
-                                    Solicitada
-                                </strong>
-
-                                <small>
-                                    COMI pidió agendar cita
-                                </small>
-
-
-                            @else
-
-                                <span class="muted">
-                                    Sin cita
-                                </span>
-
-                            @endif
+                            @include('comercial.cita-prospecto', ['p' => $p])
 
                         </td>
 

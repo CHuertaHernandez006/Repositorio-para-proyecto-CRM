@@ -19,9 +19,10 @@ class AsteriskAmiService
         try {
             $this->login();
 
+            // El servidor utiliza exclusivamente endpoints PJSIP.
+            // No dependemos de ASTERISK_AGENT_TECH para evitar canales SIP/ incorrectos.
             $channel = sprintf(
-                '%s/%s',
-                config('asterisk.agent_tech', 'PJSIP'),
+                'PJSIP/%s',
                 $this->cleanValue($extensionOperario)
             );
 

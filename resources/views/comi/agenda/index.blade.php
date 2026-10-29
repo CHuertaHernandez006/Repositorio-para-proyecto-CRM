@@ -3,7 +3,7 @@
 @section('title', 'Agenda COMI - COMICenter')
 
 @section('content')
-
+@include('partials.crm-auto-refresh')
 <style>
 
     .comi-agenda-page,

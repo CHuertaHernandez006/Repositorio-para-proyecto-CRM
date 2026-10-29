@@ -2005,7 +2005,53 @@
         };
     }
 
-    $esAsesorComercial = \App\Support\Comercial::asesor($usuarioActual);
+    $esAsesorComercial = false;
+$esGestorAgendaInterna = false;
+$empresasAgendaInterna = null;
+
+// Una falla en una comprobacion del menu no debe inutilizar el Dashboard.
+// Las rutas y controladores siguen aplicando su propia autorizacion.
+try {
+    $esAsesorComercial = (bool) \App\Support\Comercial::asesor($usuarioActual);
+} catch (\Throwable $e) {
+    \Illuminate\Support\Facades\Log::error('CRM menu: fallo Comercial::asesor', [
+        'tipo' => get_class($e),
+        'mensaje' => $e->getMessage(),
+        'archivo' => $e->getFile(),
+        'linea' => $e->getLine(),
+        'traza' => $e->getTraceAsString(),
+    ]);
+}
+
+try {
+    $esGestorAgendaInterna = (bool) \App\Support\AgendaInterna::gestor($usuarioActual);
+} catch (\Throwable $e) {
+    \Illuminate\Support\Facades\Log::error('CRM menu: fallo AgendaInterna::gestor', [
+        'tipo' => get_class($e),
+        'mensaje' => $e->getMessage(),
+        'archivo' => $e->getFile(),
+        'linea' => $e->getLine(),
+        'traza' => $e->getTraceAsString(),
+    ]);
+}
+
+if (!$esGestorAgendaInterna) {
+    try {
+        $empresasAgendaInterna = \App\Support\AgendaInterna::empresas();
+        if (!is_array($empresasAgendaInterna)) {
+            throw new \UnexpectedValueException('AgendaInterna::empresas debe regresar un arreglo.');
+        }
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('CRM menu: fallo AgendaInterna::empresas', [
+            'tipo' => get_class($e),
+            'mensaje' => $e->getMessage(),
+            'archivo' => $e->getFile(),
+            'linea' => $e->getLine(),
+            'traza' => $e->getTraceAsString(),
+        ]);
+        $empresasAgendaInterna = null;
+    }
+}
     if ($esAsesorComercial) {
         $rolEtiqueta = 'Asesor comercial interno';
         $insigniaRol = ['nombre' => 'Asesor comercial', 'clase' => 'agente'];
@@ -2164,7 +2210,7 @@
             'patron' => 'comercial.agenda',
             'texto' => 'Agenda comercial',
             'icono' => 'calendar-check',
-            'visible' => $esAsesorComercial || \App\Support\AgendaInterna::gestor($usuarioActual),
+            'visible' => $esAsesorComercial || $esGestorAgendaInterna,
         ],
         [
             'ruta' => 'comercial.equipo',
@@ -2231,7 +2277,7 @@
 
     'icono' => 'calendar-days',
 
-    'visible' => Auth::check() && (\App\Support\AgendaInterna::gestor($usuarioActual) || !in_array((int) $usuarioActual->id_empresa, \App\Support\AgendaInterna::empresas(), true)),
+    'visible' => Auth::check() && ($esGestorAgendaInterna || (is_array($empresasAgendaInterna) && !in_array((int) $usuarioActual->id_empresa, $empresasAgendaInterna, true))),
 ],
 
 [

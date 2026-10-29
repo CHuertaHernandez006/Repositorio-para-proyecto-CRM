@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
-use App\Support\AvanceObjetivos;
 use App\Models\Empresa;
+use App\Support\AvanceObjetivos;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -17,64 +17,43 @@ class DashboardController extends Controller
             return redirect()->route('login');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | SÚPER ADMIN
-        |--------------------------------------------------------------------------
-        */
-
+        // Super Admin: indicadores globales de la plataforma.
         if ((int) $usuario->id_rol === 1) {
-            $totalEmpresas =
-                Empresa::query()->count();
+            $totalEmpresas = Empresa::query()->count();
+            $empresasActivas = Empresa::query()->where('activo', true)->count();
+            $totalLeads = Cliente::query()->count();
+            $ultimasEmpresas = Empresa::query()
+                ->orderByDesc('created_at')
+                ->take(5)
+                ->get();
 
-            $empresasActivas =
-                Empresa::query()
-                    ->where('activo', true)
-                    ->count();
-
-            $totalLeads =
-                Cliente::query()->count();
-
-            $ultimasEmpresas =
-                Empresa::query()
-                    ->orderByDesc('created_at')
-                    ->take(5)
-                    ->get();
-
-            return view(
-                'dashboard',
-                compact(
-                    'totalEmpresas',
-                    'empresasActivas',
-                    'totalLeads',
-                    'ultimasEmpresas'
-                )
-            );
+            return view('dashboard', compact(
+                'totalEmpresas',
+                'empresasActivas',
+                'totalLeads',
+                'ultimasEmpresas'
+            ));
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | ADMIN CLIENTE
-        |--------------------------------------------------------------------------
-        */
-
+        // Admin Cliente: conserva la vista original; sin respuestas de prueba.
         if ((int) $usuario->id_rol === 2) {
             return view('dashboard');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | OPERARIO
-        |--------------------------------------------------------------------------
-        */
-
+        // Operario: conserva sus permisos, clientes y objetivos.
         if ((int) $usuario->id_rol === 3) {
             $totalClientes = \App\Support\AccesoClientes::consulta($usuario)->count();
             $esAsignacion = \App\Support\PerfilOperario::esAsignacion($usuario);
             $misObjetivos = AvanceObjetivos::consultar($usuario);
-            return view('operarios.inicio', compact('totalClientes', 'esAsignacion', 'misObjetivos'));
+
+            return view('operarios.inicio', compact(
+                'totalClientes',
+                'esAsignacion',
+                'misObjetivos'
+            ));
         }
 
+        // Usuarios comerciales: redireccion al panel especializado.
         if (\App\Support\Comercial::asesor($usuario)) {
             abort_unless($usuario->activo && !$usuario->deleted_at, 403);
             return redirect()->route('comercial.prospectos.index');

@@ -49,7 +49,8 @@ use App\Http\Controllers\ComiAgendaController;
 use App\Http\Controllers\AsignacionClienteController;
 
 use App\Http\Controllers\CRMRefreshController;
-// Mostrar formulario de inicio de sesión
+
+use App\Http\Controllers\ExtensionAsteriskController;
 
 
 Route::get('/', function () {
@@ -1320,7 +1321,12 @@ Route::middleware(['auth', 'rol:2'])->group(function () {
 Route::get('/crm/actualizaciones', [CRMRefreshController::class, 'estado'])
     ->name('crm.actualizaciones');
 });
-
-// Agregar a routes/web.php SIN borrar rutas existentes.
-// Reutiliza los middleware de autenticación y autorización de los listados.
-
+Route::middleware('auth')
+    ->prefix('admin/extensiones-sip')
+    ->name('extensiones-sip.')
+    ->group(function () {
+        Route::get('/', [ExtensionAsteriskController::class, 'index'])->name('index');
+        Route::post('/registrar', [ExtensionAsteriskController::class, 'registrar'])->name('registrar');
+        Route::post('/asignar', [ExtensionAsteriskController::class, 'asignar'])->name('asignar');
+        Route::post('/liberar', [ExtensionAsteriskController::class, 'liberar'])->name('liberar');
+    });

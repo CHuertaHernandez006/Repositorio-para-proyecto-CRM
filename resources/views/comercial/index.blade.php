@@ -21,6 +21,8 @@
     MÉTRICAS
 ============================================================ --}}
 
+{{-- Actualización silenciosa: métricas, filtros y listado --}}
+<div id="panel-comercial">
 <div class="metrics">
 
     <div class="card metric">
@@ -684,5 +686,113 @@
     )
 
 </section>
+</div>
+
+{{-- Polling silencioso de prospectos COMI (cada 5 segundos) --}}
+<script>
+(() => {
+    'use strict';
+
+    const INTERVALO_MS = 5000;
+    const PANEL_ID = 'panel-comercial';
+    let solicitudActiva = false;
+    let avisoRespuestaInvalida = false;
+
+    // Evitar que el refresco interrumpa filtros, selección o edición.
+    function usuarioInteractuando(panel) {
+        const activo = document.activeElement;
+        if (activo && panel.contains(activo)) {
+            if (activo.matches('input, select, textarea, button, [contenteditable=""], [contenteditable="true"]')) {
+                return true;
+            }
+        }
+
+        // No tocar la tabla si el usuario está seleccionando contenido.
+        const seleccion = window.getSelection();
+        if (seleccion && !seleccion.isCollapsed) {
+            return true;
+        }
+
+        return false;
+    }
+
+    async function actualizarPanel() {
+        const panel = document.getElementById(PANEL_ID);
+        if (!panel || solicitudActiva || document.hidden || usuarioInteractuando(panel)) {
+            return;
+        }
+
+        solicitudActiva = true;
+        try {
+            // Respetar los filtros y la página actual leyendo la URL completa.
+            // No mandar X-Requested-With: algunas rutas Laravel devuelven JSON a AJAX.
+            const respuesta = await fetch(window.location.href, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'Accept': 'text/html' }
+            });
+
+            if (!respuesta.ok || !respuesta.headers.get('content-type')?.includes('text/html')) {
+                throw new Error('El servidor no devolvió la vista HTML (HTTP ' + respuesta.status + ')');
+            }
+
+            const html = await respuesta.text();
+            const documentoNuevo = new DOMParser().parseFromString(html, 'text/html');
+            const panelNuevo = documentoNuevo.getElementById(PANEL_ID);
+            const panelActual = document.getElementById(PANEL_ID);
+
+            // Si la respuesta fue redirigida al login o es distinta, no tocar la UI.
+            if (!panelNuevo || !panelActual) {
+                if (!avisoRespuestaInvalida) {
+                    console.warn('Auto-refresh comercial: no se encontró el panel en la respuesta. Comprueba la ruta y la autenticación.');
+                    avisoRespuestaInvalida = true;
+                }
+                return;
+            }
+            avisoRespuestaInvalida = false;
+
+            // Mientras llegó la respuesta pudo empezar a escribir o elegir un asesor.
+            if (usuarioInteractuando(panelActual)) {
+                return;
+            }
+
+            // No recrear la tabla ni los controles cuando nada ha cambiado.
+            if (panelActual.innerHTML === panelNuevo.innerHTML) {
+                return;
+            }
+
+            // Mantener el desplazamiento horizontal de la tabla al renovar filas.
+            const scrollAnterior = panelActual.querySelector('.scroll');
+            const scrollX = scrollAnterior ? scrollAnterior.scrollLeft : 0;
+            const scrollY = scrollAnterior ? scrollAnterior.scrollTop : 0;
+
+            panelActual.innerHTML = panelNuevo.innerHTML;
+
+            const scrollNuevo = panelActual.querySelector('.scroll');
+            if (scrollNuevo) {
+                scrollNuevo.scrollLeft = scrollX;
+                scrollNuevo.scrollTop = scrollY;
+            }
+        } catch (error) {
+            console.warn('Auto-refresh del panel comercial:', error);
+        } finally {
+            solicitudActiva = false;
+        }
+    }
+
+    function iniciarPolling() {
+        // La vista es tradicional (Blade); no requiere modificar rutas ni controladores.
+        actualizarPanel();
+        window.setInterval(actualizarPanel, INTERVALO_MS);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciarPolling, { once: true });
+    } else {
+        iniciarPolling();
+    }
+})();
+</script>
 
 @endsection

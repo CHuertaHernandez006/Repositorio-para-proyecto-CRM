@@ -3940,7 +3940,7 @@ if (!$esGestorAgendaInterna) {
 
 
 
-
+<script src="{{ asset('js/crm-autorefresh.js') }}" defer></script>
 
 </body>
 

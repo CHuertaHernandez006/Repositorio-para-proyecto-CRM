@@ -22,8 +22,8 @@
 ============================================================ --}}
 
 {{-- Actualización silenciosa: métricas, filtros y listado --}}
-<div id="panel-comercial">
-<div class="metrics">
+<div id="panel-comercial" data-autorefresh>
+    <div class="metrics">
 
     <div class="card metric">
 

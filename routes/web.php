@@ -1330,3 +1330,6 @@ Route::middleware('auth')
         Route::post('/asignar', [ExtensionAsteriskController::class, 'asignar'])->name('asignar');
         Route::post('/liberar', [ExtensionAsteriskController::class, 'liberar'])->name('liberar');
     });
+
+// Importación de clientes con permisos y lotes separados por empresa.
+require __DIR__.'/importacion_clientes.php';

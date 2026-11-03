@@ -44,7 +44,7 @@
 
 <style>
 
-    */* Estilos limitados a esta vista para evitar conflictos con layouts.app. */*
+    /* Estilos limitados a esta vista para evitar conflictos con layouts.app. */
 
     .comi-clientes {
 
@@ -90,6 +90,10 @@
 
     .comi-clientes .cc-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 26px; flex-wrap: wrap; }
 
+    .comi-clientes .cc-header-copy { flex: 1 1 340px; min-width: 0; }
+
+    .comi-clientes .cc-header-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-left: auto; }
+
     .comi-clientes .cc-title { color: var(--cc-text); margin: 0; font-size: clamp(26px, 3vw, 34px); font-weight: 700; letter-spacing: -.035em; line-height: 1.2; }
 
     .comi-clientes .cc-subtitle { margin: 10px 0 0; color: var(--cc-muted); font-size: 14px; }
@@ -99,6 +103,10 @@
     .comi-clientes .cc-btn-primary { background: #0284c7; color: #fff; border-color: #0284c7; }
 
     .comi-clientes .cc-btn-primary:hover { background: #0369a1; border-color: #38bdf8; }
+
+    .comi-clientes .cc-btn-import { background: #047857; color: #fff; border-color: #059669; }
+
+    .comi-clientes .cc-btn-import:hover { background: #065f46; border-color: #34d399; }
 
     .comi-clientes .cc-btn-secondary { background: #172337; color: #e2e8f0; border-color: #475569; }
 
@@ -216,7 +224,11 @@
 
         .comi-clientes .cc-header { align-items: stretch; gap: 18px; }
 
-        .comi-clientes .cc-header > .cc-btn { width: 100%; }
+        .comi-clientes .cc-header-copy { flex-basis: 100%; }
+
+        .comi-clientes .cc-header-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
+
+        .comi-clientes .cc-header-actions .cc-btn { flex: 1 1 150px; white-space: normal; }
 
         .comi-clientes .cc-toolbar, .comi-clientes .cc-footer { padding: 16px; }
 
@@ -236,7 +248,7 @@
 
     <header class="cc-header">
 
-        <div>
+        <div class="cc-header-copy">
 
             <p class="cc-eyebrow">COMICenter / Gestión comercial</p>
 
@@ -250,22 +262,23 @@
 
         </div>
 
-        @if ($puedeCrear)
+        @if ($puedeCrear || $esAdminCliente)
+            <div class="cc-header-actions" role="group" aria-label="Acciones de clientes">
+                @if ($puedeCrear)
+                    <a href="{{ route('clientes.create') }}" class="cc-btn cc-btn-primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo cliente
+                    </a>
+                @endif
 
-
-            <a href="{{ route('clientes.create') }}" class="cc-btn cc-btn-primary">
-
-
-                <i class="bi bi-plus-lg" aria-hidden="true"></i> Nuevo cliente
-
-
-            </a>
-
-
-        @endif
-
-        @if ($esAdminCliente)
-            <a href="{{ route('clientes.asignaciones.index') }}" class="cc-btn cc-btn-primary">Asignaciones</a>
+                @if ($esAdminCliente)
+                    <a href="{{ route('clientes.importacion.index') }}" class="cc-btn cc-btn-import">
+                        <i class="bi bi-upload" aria-hidden="true"></i> Importar clientes
+                    </a>
+                    <a href="{{ route('clientes.asignaciones.index') }}" class="cc-btn cc-btn-secondary">
+                        <i class="bi bi-person-check" aria-hidden="true"></i> Asignaciones
+                    </a>
+                @endif
+            </div>
         @endif
     </header>
 

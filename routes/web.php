@@ -1333,3 +1333,6 @@ Route::middleware('auth')
 
 // Importación de clientes con permisos y lotes separados por empresa.
 require __DIR__.'/importacion_clientes.php';
+
+// Telefono WebRTC - modulo de pruebas
+require __DIR__ . '/webrtc.php';

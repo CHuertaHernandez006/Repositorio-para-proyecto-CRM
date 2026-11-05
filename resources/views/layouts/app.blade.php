@@ -3942,6 +3942,14 @@ if (!$esGestorAgendaInterna) {
 
 <script src="{{ asset('js/crm-autorefresh.js') }}" defer></script>
 
+{{-- TelÃ©fono WebRTC: pestaÃ±a independiente para mantener la llamada al navegar por el CRM. --}}
+@if(auth()->check() && (int) auth()->user()->id_rol === 3 && Route::has('telefono.index') && !request()->routeIs('telefono.*'))
+    <a id="webtel-global-launcher"
+       href="{{ route('telefono.index') }}" target="_blank" rel="noopener"
+       style="position:fixed;bottom:22px;right:22px;z-index:1000;padding:12px 17px;border:1px solid #276789;border-radius:13px;background:#123952;color:#d9f5ff;box-shadow:0 12px 32px #0006;font-size:13px;font-weight:700;text-decoration:none;">
+       â˜Ž TelÃ©fono WebRTC Â· Pruebas
+    </a>
+@endif
 </body>
 
 

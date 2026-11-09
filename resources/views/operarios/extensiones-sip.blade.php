@@ -36,7 +36,7 @@
         .layout { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr); align-items:start; gap:16px; }
         .stack { display:grid; gap:16px; }
         .table-wrap { width:100%; overflow-x:auto; margin-top:14px; }
-        table { border-collapse:collapse; min-width:600px; width:100%; }
+        table { border-collapse:collapse; min-width:760px; width:100%; }
         td,th { padding:13px 10px; text-align:left; border-bottom:1px solid #30415a; vertical-align:middle; }
         th { color:#a8b7c9; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
         tr:last-child td { border-bottom:none; }
@@ -74,7 +74,7 @@
     <div class="top">
         <div>
             <h1>Asignación de extensiones SIP</h1>
-            <p class="sub">Administra las extensiones disponibles y asígnalas a los operarios autorizados.</p>
+            <p class="sub">Administra extensiones y sincroniza la telefonia WebRTC con Asterisk sin mostrar las claves SIP.</p>
         </div>
         @if((int) auth()->user()->id_rol === 1)
             <form method="GET" action="{{ route('extensiones-sip.index') }}" style="min-width:260px">
@@ -87,6 +87,13 @@
             </form>
         @endif
     </div>
+
+    @if(!$provisionadorListo)
+        <div class="message error" role="status">
+            Servicio de aprovisionamiento aun sin configurar por Infraestructura. Las asignaciones pueden quedar pendientes;
+            no se modificara Asterisk hasta disponer de un helper privado autenticado.
+        </div>
+    @endif
 
     @if(session('exito'))
         <div class="message success" role="status">{{ session('exito') }}</div>
@@ -113,11 +120,16 @@
             <p class="muted">Selecciona una extensión libre. La anterior se libera si reasignas al operario.</p>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Operario</th><th>Extensión actual</th><th>Asignación</th></tr></thead>
+                    <thead><tr><th>Operario</th><th>Extensión actual</th><th>WebRTC</th><th>Asignación</th></tr></thead>
                     <tbody>
                     @forelse($operarios as $operario)
                         @php
                             $propiasDisponibles = $inventario->filter(fn ($e) => $e->activa && (!$e->asignado_a || (int) $e->asignado_a === (int) $operario->id_usuario));
+                            $webExtension = (string) ($operario->extension_asterisk ?? '');
+                            $webGestionada = in_array($webExtension, $extensionesGestionadas, true);
+                            $webCredencial = $credencialesWebRtc->get($operario->id_usuario);
+                            $webOperacion = $ultimasOperacionesWebRtc->get($webExtension);
+                            $webEstado = $webCredencial->estado ?? 'sin_provisionar';
                         @endphp
                         <tr>
                             <td>
@@ -138,6 +150,38 @@
                                 @endif
                             </td>
                             <td>
+                                @if(!$webGestionada)
+                                    <span class="pill off">No gestionada</span>
+                                @else
+                                    @if($webEstado === 'provisionada')
+                                        <span class="pill ok">Provisionada</span>
+                                    @elseif($webEstado === 'error' || ($webOperacion && $webOperacion->estado === 'error'))
+                                        <span class="pill warn">Error de sincronizacion</span>
+                                    @else
+                                        <span class="pill warn">Pendiente</span>
+                                    @endif
+                                    @if($webOperacion && $webOperacion->ultimo_error)
+                                        <div class="muted">{{ $webOperacion->ultimo_error }}</div>
+                                    @endif
+                                    @if($webOperacion && in_array($webOperacion->estado, ['pendiente', 'error'], true))
+                                        <form class="mini" method="POST" action="{{ route('extensiones-sip.reintentar-web') }}">
+                                            @csrf
+                                            <input type="hidden" name="id_empresa" value="{{ $idEmpresa }}">
+                                            <input type="hidden" name="id_operacion" value="{{ $webOperacion->id }}">
+                                            <button class="secondary" type="submit">Reintentar</button>
+                                        </form>
+                                    @elseif($webExtension !== '')
+                                        <form class="mini" method="POST" action="{{ route('extensiones-sip.renovar-web') }}"
+                                              onsubmit="return confirm('Se renovara la clave SIP y puede desconectar la sesion WebRTC actual. ¿Continuar?')">
+                                            @csrf
+                                            <input type="hidden" name="id_empresa" value="{{ $idEmpresa }}">
+                                            <input type="hidden" name="id_usuario" value="{{ $operario->id_usuario }}">
+                                            <button class="secondary" type="submit">{{ $webCredencial ? 'Renovar clave' : 'Activar WebRTC' }}</button>
+                                        </form>
+                                    @endif
+                                @endif
+                            </td>
+                            <td>
                                 <form class="assign" method="POST" action="{{ route('extensiones-sip.asignar') }}">
                                     @csrf
                                     <input type="hidden" name="id_empresa" value="{{ $idEmpresa }}">
@@ -155,7 +199,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="muted">No hay operarios registrados para esta empresa.</td></tr>
+                        <tr><td colspan="4" class="muted">No hay operarios registrados para esta empresa.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -165,12 +209,25 @@
         <aside class="stack">
             <section class="panel">
                 <h2>Catálogo de extensiones</h2>
-                <p class="muted">Las extensiones registradas en el CRM, con su estado actual.</p>
+                <p class="muted">Las extensiones WebRTC gestionadas se definen en configuracion segura de Infraestructura.</p>
                 <div class="inventory">
                     @forelse($inventario as $extension)
                         <div class="chip {{ !$extension->activa ? 'disabled' : ($extension->asignado_a ? 'busy' : '') }}">
                             <strong>{{ $extension->extension }}</strong>
                             <small>{{ !$extension->activa ? 'Inactiva' : ($extension->asignado_a ? 'Asignada' : 'Libre') }}</small>
+                            @if(in_array((string) $extension->extension, $extensionesGestionadas, true))
+                                <small>WebRTC gestionada</small>
+                                @php $ultimaWebOp = $ultimasOperacionesWebRtc->get((string) $extension->extension); @endphp
+                                @if($ultimaWebOp && in_array($ultimaWebOp->estado, ['pendiente', 'error'], true))
+                                    <small>{{ $ultimaWebOp->tipo }}: {{ $ultimaWebOp->estado }}</small>
+                                    <form method="POST" action="{{ route('extensiones-sip.reintentar-web') }}" class="mini">
+                                        @csrf
+                                        <input type="hidden" name="id_empresa" value="{{ $idEmpresa }}">
+                                        <input type="hidden" name="id_operacion" value="{{ $ultimaWebOp->id }}">
+                                        <button class="secondary" type="submit" style="padding:4px 7px;font-size:10px">Reintentar</button>
+                                    </form>
+                                @endif
+                            @endif
                         </div>
                     @empty
                         <p class="muted">No hay extensiones registradas.</p>

@@ -6,6 +6,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\AsteriskWebRtcProvisioningService;
+use App\Jobs\SincronizarSipWebRtc;
 
 class ExtensionAsteriskController extends Controller
 {
@@ -64,8 +66,20 @@ class ExtensionAsteriskController extends Controller
                 'u.nombre as asignado_nombre', 'u.apellido_paterno as asignado_apellido',
             ]);
 
+        $credencialesWebRtc = DB::table('webrtc_credenciales')
+            ->whereIn('id_usuario', $operarios->pluck('id_usuario'))
+            ->get()->keyBy('id_usuario');
+        $ultimasOperacionesWebRtc = DB::table('webrtc_operaciones')
+            ->where('id_empresa', $idEmpresa)
+            ->orderByDesc('id')->get()->unique('extension_asterisk')
+            ->keyBy('extension_asterisk');
+        $extensionesGestionadas = config('webrtc_provisioning.managed_extensions', []);
+        $provisionadorListo = app(AsteriskWebRtcProvisioningService::class)->estaListo();
+
         return view('operarios.extensiones-sip', compact(
-            'empresas', 'idEmpresa', 'operarios', 'inventario'
+            'empresas', 'idEmpresa', 'operarios', 'inventario',
+            'credencialesWebRtc', 'ultimasOperacionesWebRtc',
+            'extensionesGestionadas', 'provisionadorListo'
         ));
     }
 
@@ -123,25 +137,26 @@ class ExtensionAsteriskController extends Controller
             ->with('exito', count($codigos) . ' extensiones registradas en el catálogo CRM.');
     }
 
-    public function asignar(Request $request)
+    public function asignar(Request $request, AsteriskWebRtcProvisioningService $provisionador)
     {
         $idEmpresa = $this->empresaAutorizada($request);
         $datos = $request->validate([
             'id_usuario' => ['required', 'integer'],
             'extension' => ['required', 'regex:/^[0-9]{3,6}$/D'],
         ]);
+        $operaciones = [];
 
         try {
-            DB::transaction(function () use ($idEmpresa, $datos) {
-                // Primero se bloquea el código para evitar asignaciones simultáneas.
+            $operaciones = DB::transaction(function () use ($idEmpresa, $datos, $provisionador) {
+                $nueva = (string) $datos['extension'];
                 $extension = DB::table('extensiones_asterisk')
                     ->where('id_empresa', $idEmpresa)
-                    ->where('extension', $datos['extension'])
+                    ->where('extension', $nueva)
                     ->lockForUpdate()->first();
 
                 if (!$extension || !$extension->activa) {
                     throw ValidationException::withMessages([
-                        'extension' => 'La extensión no está disponible en esta empresa.',
+                        'extension' => 'La extension no esta disponible en esta empresa.',
                     ]);
                 }
 
@@ -151,7 +166,6 @@ class ExtensionAsteriskController extends Controller
                     ->where('id_rol', 3)
                     ->whereNull('deleted_at')
                     ->lockForUpdate()->first();
-
                 if (!$operario) {
                     throw ValidationException::withMessages([
                         'id_usuario' => 'El operario no pertenece a esta empresa.',
@@ -159,38 +173,68 @@ class ExtensionAsteriskController extends Controller
                 }
 
                 $ocupada = DB::table('usuarios')
-                    ->where('extension_asterisk', $datos['extension'])
+                    ->where('extension_asterisk', $nueva)
                     ->where('id_usuario', '<>', $operario->id_usuario)
                     ->exists();
-
                 if ($ocupada) {
                     throw ValidationException::withMessages([
-                        'extension' => 'La extensión ya está asignada a otro usuario.',
+                        'extension' => 'La extension ya esta asignada a otro usuario.',
                     ]);
+                }
+                $provisionador->validarRevocacionPrevia($nueva);
+
+                $anterior = trim((string) ($operario->extension_asterisk ?? ''));
+                $ids = [];
+                if ($anterior !== '' && $anterior !== $nueva) {
+                    $revocacion = $provisionador->prepararRevocacion(
+                        (int) $operario->id_usuario, $idEmpresa, $anterior
+                    );
+                    if ($revocacion !== null) $ids[] = $revocacion;
                 }
 
                 DB::table('usuarios')->where('id_usuario', $operario->id_usuario)
-                    ->update([
-                        'extension_asterisk' => $datos['extension'],
-                        'updated_at' => now(),
-                    ]);
+                    ->update(['extension_asterisk' => $nueva, 'updated_at' => now()]);
+
+                if ($provisionador->esGestionada($nueva)) {
+                    $actual = DB::table('webrtc_credenciales')
+                        ->where('id_usuario', $operario->id_usuario)
+                        ->where('extension_asterisk', $nueva)->first();
+                    if (!$actual) {
+                        $ocupadaEnWeb = DB::table('webrtc_credenciales')
+                            ->where('extension_asterisk', $nueva)->exists();
+                        if ($ocupadaEnWeb) {
+                            throw ValidationException::withMessages([
+                                'extension' => 'Esta extension conserva otra credencial. Solicita revocacion previa.',
+                            ]);
+                        }
+                        $ids[] = $provisionador->prepararProvision(
+                            (int) $operario->id_usuario, $idEmpresa, $nueva
+                        );
+                    }
+                }
+                return $ids;
             }, 3);
         } catch (QueryException $e) {
             throw ValidationException::withMessages([
-                'extension' => 'No se pudo completar la asignación. Actualiza el listado e inténtalo de nuevo.',
+                'extension' => 'No se pudo completar la asignacion. Actualiza e intentalo de nuevo.',
             ]);
         }
 
+        $this->despacharSiConfigurado($operaciones, $provisionador);
+        $mensaje = $operaciones
+            ? 'Extension asignada. Sincronizacion WebRTC pendiente de confirmacion por Asterisk.'
+            : 'Extension asignada. No se modificaron credenciales SIP existentes.';
+
         return redirect()->route('extensiones-sip.index', ['id_empresa' => $idEmpresa])
-            ->with('exito', 'Extensión asignada correctamente.');
+            ->with('exito', $mensaje);
     }
 
-    public function liberar(Request $request)
+    public function liberar(Request $request, AsteriskWebRtcProvisioningService $provisionador)
     {
         $idEmpresa = $this->empresaAutorizada($request);
         $datos = $request->validate(['id_usuario' => ['required', 'integer']]);
 
-        DB::transaction(function () use ($idEmpresa, $datos) {
+        $operaciones = DB::transaction(function () use ($idEmpresa, $datos, $provisionador) {
             $operario = DB::table('usuarios')
                 ->where('id_empresa', $idEmpresa)
                 ->where('id_usuario', $datos['id_usuario'])
@@ -204,11 +248,92 @@ class ExtensionAsteriskController extends Controller
                 ]);
             }
 
+            $anterior = trim((string) ($operario->extension_asterisk ?? ''));
+            $operaciones = [];
+            if ($anterior !== '') {
+                $idOperacion = $provisionador->prepararRevocacion(
+                    (int) $operario->id_usuario, $idEmpresa, $anterior
+                );
+                if ($idOperacion !== null) $operaciones[] = $idOperacion;
+            }
+
             DB::table('usuarios')->where('id_usuario', $operario->id_usuario)
                 ->update(['extension_asterisk' => null, 'updated_at' => now()]);
-        });
+            return $operaciones;
+        }, 3);
 
+        $this->despacharSiConfigurado($operaciones, $provisionador);
         return redirect()->route('extensiones-sip.index', ['id_empresa' => $idEmpresa])
-            ->with('exito', 'La extensión quedó libre para otro operario.');
+            ->with('exito', $operaciones
+                ? 'Extension liberada en CRM; revocacion SIP pendiente de confirmacion.'
+                : 'Extension liberada. No se altero el Asterisk tradicional.');
     }
-};
+
+    public function renovar(Request $request, AsteriskWebRtcProvisioningService $provisionador)
+    {
+        $idEmpresa = $this->empresaAutorizada($request);
+        $datos = $request->validate(['id_usuario' => ['required', 'integer']]);
+
+        $idOperacion = DB::transaction(function () use ($idEmpresa, $datos, $provisionador) {
+            $operario = DB::table('usuarios')->where('id_empresa', $idEmpresa)
+                ->where('id_usuario', $datos['id_usuario'])->where('id_rol', 3)
+                ->whereNull('deleted_at')->lockForUpdate()->first();
+            if (!$operario) {
+                throw ValidationException::withMessages(['id_usuario' => 'Operario no autorizado.']);
+            }
+            $extension = trim((string) ($operario->extension_asterisk ?? ''));
+            if (!$provisionador->esGestionada($extension)) {
+                throw ValidationException::withMessages([
+                    'id_usuario' => 'Esta extension no esta habilitada para credenciales WebRTC automaticas.',
+                ]);
+            }
+            $pendientes = DB::table('webrtc_operaciones')
+                ->where('extension_asterisk', $extension)
+                ->whereNotIn('estado', ['completada', 'cancelada'])
+                ->exists();
+            if ($pendientes) {
+                throw ValidationException::withMessages([
+                    'id_usuario' => 'Hay una operacion WebRTC pendiente o con error. Resuelvela antes de renovar.',
+                ]);
+            }
+            return $provisionador->prepararProvision((int) $operario->id_usuario, $idEmpresa, $extension);
+        }, 3);
+        $this->despacharSiConfigurado([$idOperacion], $provisionador);
+        return redirect()->route('extensiones-sip.index', ['id_empresa' => $idEmpresa])
+            ->with('exito', 'Renovacion solicitada; Asterisk debe confirmar la nueva clave antes de usarla.');
+    }
+
+    public function reintentar(Request $request, AsteriskWebRtcProvisioningService $provisionador)
+    {
+        $idEmpresa = $this->empresaAutorizada($request);
+        $datos = $request->validate(['id_operacion' => ['required', 'integer']]);
+        $id = (int) $datos['id_operacion'];
+
+        DB::transaction(function () use ($idEmpresa, $id) {
+            $op = DB::table('webrtc_operaciones')->where('id', $id)
+                ->where('id_empresa', $idEmpresa)->lockForUpdate()->first();
+            if (!$op || !in_array($op->estado, ['pendiente', 'error'], true)) {
+                throw ValidationException::withMessages(['id_operacion' => 'Operacion inexistente o ya procesada.']);
+            }
+            DB::table('webrtc_operaciones')->where('id', $id)->update([
+                'estado' => 'pendiente', 'ultimo_error' => null, 'updated_at' => now(),
+            ]);
+            if ($op->tipo === 'provisionar') {
+                DB::table('webrtc_credenciales')
+                    ->where('solicitud_uuid', $op->solicitud_uuid)
+                    ->update(['estado' => 'pendiente', 'ultimo_error' => null, 'updated_at' => now()]);
+            }
+        }, 3);
+        $this->despacharSiConfigurado([$id], $provisionador);
+        return redirect()->route('extensiones-sip.index', ['id_empresa' => $idEmpresa])
+            ->with('exito', 'Se solicito reintentar la sincronizacion WebRTC.');
+    }
+
+    private function despacharSiConfigurado(array $ids, AsteriskWebRtcProvisioningService $provisionador): void
+    {
+        if (!$provisionador->estaListo()) return;
+        foreach ($ids as $id) {
+            SincronizarSipWebRtc::dispatch((int) $id);
+        }
+    }
+}

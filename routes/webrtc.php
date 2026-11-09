@@ -16,3 +16,14 @@ Route::middleware(['auth', 'rol:3'])
             ->middleware('throttle:5,1')
             ->name('credenciales');
     });
+
+// La gestion WebRTC es exclusivamente administrativa (no exponerla a operarios).
+Route::middleware(['auth', 'rol:1,2', 'throttle:15,1'])
+    ->prefix('admin/extensiones-sip')
+    ->name('extensiones-sip.')
+    ->group(function () {
+        Route::post('/renovar-web', [\App\Http\Controllers\ExtensionAsteriskController::class, 'renovar'])
+            ->name('renovar-web');
+        Route::post('/reintentar-web', [\App\Http\Controllers\ExtensionAsteriskController::class, 'reintentar'])
+            ->name('reintentar-web');
+    });

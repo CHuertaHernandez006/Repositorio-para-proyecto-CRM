@@ -53,11 +53,12 @@ class TelefonoWebRtcController extends Controller
         $credencial = DB::table('webrtc_credenciales')
             ->where('id_usuario', $usuario->id_usuario)
             ->where('extension_asterisk', $extension)
+            ->where('estado', 'provisionada')
             ->first(['secret_cifrado']);
 
         if (!$credencial) {
             return $this->sinCache([
-                'message' => 'Redes debe provisionar la extension SIP ' . $extension . ' para el telefono web.',
+                'message' => 'La extension SIP ' . $extension . ' aun no esta confirmada en Asterisk. Revisa el estado en Extensiones SIP.',
             ], 409);
         }
 

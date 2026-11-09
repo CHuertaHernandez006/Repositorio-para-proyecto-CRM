@@ -22,6 +22,8 @@ if (root) {
     let timer = null;
     let muted = false;
     let held = false;
+    // Impide que eventos tardios de una conexion anterior cambien el estado actual.
+    let versionConexion = 0;
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
     let clientesAbort = null;
     let clientesPagina = 1;
@@ -38,9 +40,10 @@ if (root) {
     const label = (message) => { el('call-label').textContent = message; };
 
     const updateButtons = () => {
-        el('connect').disabled = !configured || registered || connecting || !!phone;
+        // Si SIP perdio el registro, permitir reintentar incluso con el objeto anterior presente.
+        el('connect').disabled = !configured || registered || connecting || active;
         el('disconnect').disabled = !phone || active || connecting;
-        el('call').disabled = !registered || active;
+        el('call').disabled = !phone || !registered || active;
         el('answer').disabled = !registered || !incoming || !active;
         el('reject').disabled = !registered || !incoming || !active;
         el('hangup').disabled = !registered || !active;
@@ -49,8 +52,11 @@ if (root) {
         el('mute').textContent = muted ? 'Activar micrófono' : 'Silenciar';
         el('hold').textContent = held ? 'Recuperar' : 'Espera';
         root.querySelectorAll('.webtel-client-call').forEach(button => {
-            button.disabled = active || !registered;
+            button.disabled = !phone || active || !registered;
         });
+        // Estado no sensible disponible para diagnostico en DevTools.
+        root.dataset.sipEstado = registered ? 'registrada' : (connecting ? 'conectando' : 'sin-registro');
+        root.dataset.llamadaEstado = active ? 'en-curso' : 'inactiva';
     };
 
     const clearClock = () => {
@@ -87,10 +93,19 @@ if (root) {
     }
 
     async function conectar() {
-        if (!configured || connecting || phone || !window.isSecureContext) return;
+        if (!configured || connecting || registered || active || !window.isSecureContext) return;
         connecting = true;
+        const miConexion = ++versionConexion;
         updateButtons();
         try {
+            // Si habia un registro anterior perdido, liberar su agente antes de volver a conectar.
+            // Los eventos de ese agente se ignoran usando versionConexion.
+            if (phone) {
+                const anterior = phone;
+                phone = null;
+                try { await anterior.unregister(); } catch (_) { /* registro previo ya perdido */ }
+                try { await anterior.disconnect(); } catch (_) { /* transporte previo ya cerrado */ }
+            }
             // Nunca incluir credenciales SIP en HTML, Git o almacenamiento local.
             const respuesta = await fetch(root.dataset.credentialsUrl, {
                 method: 'POST',
@@ -125,26 +140,36 @@ if (root) {
                     logConfiguration: false,
                 },
                 delegate: {
-                    onServerConnect: () => notify('WebSocket conectado. Registrando extensión…'),
+                    onServerConnect: () => {
+                        if (miConexion !== versionConexion) return;
+                        notify('WebSocket conectado. Registrando extensión…');
+                    },
                     onServerDisconnect: () => {
+                        if (miConexion !== versionConexion) return;
                         registered = false;
-                        notify('Conexión WSS perdida. Comprueba el servidor.', true);
+                        notify('Se perdió la conexión WSS. Si no se recupera, pulsa Reintentar conexión.', true);
                         updateButtons();
                     },
                     onRegistered: () => {
+                        if (miConexion !== versionConexion) return;
                         registered = true;
                         notify(`Extensión ${extension} registrada en Asterisk.`);
                         updateButtons();
                     },
                     onUnregistered: () => {
+                        if (miConexion !== versionConexion) return;
                         registered = false;
+                        notify('La extensión perdió el registro SIP. Revisa si está abierta en otra pestaña y pulsa Reintentar conexión.', true);
+                        console.warn('[COMICenter WebRTC] Registro SIP perdido. Revisar contactos PJSIP y sesiones duplicadas.');
                         updateButtons();
                     },
                     onCallCreated: () => {
+                        if (miConexion !== versionConexion) return;
                         active = true;
                         updateButtons();
                     },
                     onCallReceived: () => {
+                        if (miConexion !== versionConexion) return;
                         active = true;
                         incoming = true;
                         label('Llamada entrante · número pendiente de identificación');
@@ -152,6 +177,7 @@ if (root) {
                         updateButtons();
                     },
                     onCallAnswered: () => {
+                        if (miConexion !== versionConexion) return;
                         active = true;
                         incoming = false;
                         label('En curso');
@@ -160,11 +186,15 @@ if (root) {
                         updateButtons();
                     },
                     onCallHold: (value) => {
+                        if (miConexion !== versionConexion) return;
                         held = !!value;
                         label(held ? 'En espera' : 'En curso');
                         updateButtons();
                     },
-                    onCallHangup: onCallEnd,
+                    onCallHangup: () => {
+                        if (miConexion !== versionConexion) return;
+                        onCallEnd();
+                    },
                 },
             });
             credenciales.password = ''; // No conservar copia innecesaria del JSON.
@@ -187,8 +217,9 @@ if (root) {
     el('connect').addEventListener('click', conectar);
 
     el('disconnect').addEventListener('click', async () => {
-        if (!phone || active) return;
+        if (!phone || active || connecting) return;
         connecting = true;
+        ++versionConexion; // Ignorar callbacks tardios del agente que se va a cerrar.
         updateButtons();
         try {
             await phone.unregister();

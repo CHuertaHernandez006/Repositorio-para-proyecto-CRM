@@ -124,8 +124,8 @@ class AsteriskWebRtcProvisioningService
 
         $url = (string) config('webrtc_provisioning.url');
         $scheme = parse_url($url, PHP_URL_SCHEME);
-        if (!in_array($scheme, ['http', 'https'], true)) {
-            throw new RuntimeException('URL de aprovisionamiento invalida.');
+        if ($scheme !== 'https' && !(app()->environment('local', 'testing') && $scheme === 'http')) {
+            throw new RuntimeException('El helper debe usar HTTPS con un certificado válido.');
         }
 
         $payload = [
@@ -165,6 +165,7 @@ class AsteriskWebRtcProvisioningService
         if (!$response->successful()
             || !is_array($ack)
             || ($ack['ok'] ?? false) !== true
+            || ($ack['applied'] ?? false) !== true
             || ($ack['request_id'] ?? null) !== $uuid
             || ($ack['extension'] ?? null) !== $extension
             || ($ack['operation'] ?? null) !== $tipo

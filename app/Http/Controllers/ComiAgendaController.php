@@ -1477,11 +1477,12 @@ class ComiAgendaController extends Controller
         }
 
         /*
-         * Súper Admin: todas.
+         * Súper Admin: todas (excepto Línea Blanca).
          */
         if ($this->esSuperAdmin($usuario)) {
             return ComiAgenda::query()
                 ->where('activo', true)
+                ->where('id_empresa', '!=', 57) // <--- Oculta Línea Blanca para el ID 1
                 ->pluck('id_agenda')
                 ->map(
                     fn ($id) => (int) $id

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Clientes\LectorClientes;
+use App\Services\Clientes\HistorialImportaciones;
 use App\Services\Clientes\PreparadorClientes;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -121,6 +122,7 @@ class ImportacionClientesController extends Controller
                 $opciones = json_decode($lote->opciones, true, 512, JSON_THROW_ON_ERROR);
                 // Revalidar catálogos y duplicados: pudieron cambiar desde la vista previa.
                 $resultado = PreparadorClientes::preparar($filas, $opciones, (int) $usuario->id_empresa);
+                $miembros = [];
                 foreach ($resultado as &$fila) {
                     if ($fila['estado'] !== 'valido') {
                         continue;
@@ -130,7 +132,11 @@ class ImportacionClientesController extends Controller
                         'id_usuario_responsable' => null, 'created_at' => now(), 'updated_at' => now(),
                     ]);
                     // PostgreSQL conserva las restricciones de unicidad aunque otro proceso escriba simultáneamente.
-                    $insertado = DB::table('clientes')->insertOrIgnore($registro);
+                    $idCreado = HistorialImportaciones::insertarCliente($registro);
+                    $insertado = $idCreado !== null;
+                    if ($insertado) {
+                        $miembros[] = ['id_cliente' => $idCreado, 'fila' => $fila['fila']];
+                    }
                     if (!$insertado && !PreparadorClientes::hayDuplicado($registro, (int) $usuario->id_empresa)) {
                         throw ValidationException::withMessages(['importacion' => 'Hubo un conflicto de unicidad interna al guardar. Se revirtió todo este intento. Soporte debe revisar las secuencias e índices antes de reintentar.']);
                     }
@@ -139,6 +145,7 @@ class ImportacionClientesController extends Controller
                         : ['Se omitió por una restricción de unicidad al guardar. No se modificó el registro existente.'];
                 }
                 unset($fila);
+                HistorialImportaciones::guardar($lote, $resultado, $miembros);
                 DB::table('importaciones_clientes')->where('id_importacion', $importacion)
                     ->where('id_empresa', $usuario->id_empresa)->where('id_usuario', $usuario->getKey())
                     ->update(['estado' => 'completada', 'datos' => null,

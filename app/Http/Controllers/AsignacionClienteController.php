@@ -64,7 +64,11 @@ class AsignacionClienteController extends Controller
             }
             $cliente->id_usuario_responsable = $responsable;
             $cliente->save();
-        });
+            // Una decisión individual también se protege si el cliente provino de una importación.
+            DB::table('lote_importacion_clientes')->where('id_empresa', $usuario->id_empresa)
+                ->where('id_cliente', $cliente->id_cliente)
+                ->update(['excepcion' => true, 'updated_at' => now()]);
+        }, 3);
         return back()->with('success', 'Responsable actualizado correctamente.');
     }
 }

@@ -13,6 +13,7 @@
     </div>
     @if(session('success'))<div role="status" class="op-notice op-success">{{ session('success') }}</div>@endif
     @if($errors->any())<div role="alert" class="op-notice op-error">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+    <div class="op-card"><div class="op-row op-between"><div><h2 style="margin:0 0 8px">Asignar por importación</h2><p class="op-muted">Reparte un archivo completo y conserva las excepciones individuales.</p></div><a href="{{ route('clientes.lotes.index') }}" class="op-btn op-primary">Ver importaciones</a></div></div>
     <div class="op-notice">Solo aparecen operarios de Asignación activos y aprobados de tu empresa. Reasignar cambia el acceso al cliente; sus citas y llamadas anteriores conservan su autor y no se transfieren automáticamente.</div>
     @if($operarios->isEmpty())<div class="op-notice">No hay operarios disponibles. Activa y aprueba un operario de Asignación desde Operarios.</div>@endif
     <div class="op-card">

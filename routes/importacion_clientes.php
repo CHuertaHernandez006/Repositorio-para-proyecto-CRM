@@ -14,3 +14,5 @@ Route::middleware('auth')->prefix('clientes/importar')->name('clientes.importaci
     Route::delete('/lotes/{importacion}', [ImportacionClientesController::class, 'cancelar'])->whereUuid('importacion')->name('cancelar');
     Route::get('/lotes/{importacion}/reporte', [ImportacionClientesController::class, 'reporte'])->whereUuid('importacion')->name('reporte');
 });
+
+require __DIR__.'/lotes_clientes.php';

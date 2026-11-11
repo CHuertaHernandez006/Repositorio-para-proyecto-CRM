@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(request()->query('flotante') === '1' ? 'telefono.flotante' : 'layouts.app')
 
 @section('title', 'Teléfono WebRTC - COMICenter')
 @section('header-title', 'Teléfono WebRTC')

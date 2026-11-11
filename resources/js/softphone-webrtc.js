@@ -195,6 +195,9 @@ if (root) {
         el('volume-value').textContent = `${el('volume').value}%`;
     });
     remoteAudio.volume = Number(el('volume').value) / 100;
+    remoteAudio.addEventListener('loadedmetadata', () => {
+        if (active && !incoming) void reproducirAudioRemoto();
+    });
     // Si Asterisk envía early media, no mezclarla con nuestro tono local de progreso.
     remoteAudio.addEventListener('playing', () => {
         if (phase === 'dialing') silenceTones();
@@ -227,6 +230,143 @@ if (root) {
         el('status').classList.toggle('webtel-error', error);
     };
     const label = (message) => { el('call-label').textContent = message; };
+
+    // Diagnostico de audio WebRTC: no transmite datos a terceros ni expone credenciales.
+    // SIP conectado NO implica que ICE/DTLS ni la reproduccion de audio funcionen.
+    const audioEstado = el('audio-estado');
+    const audioDiagnostico = el('audio-diagnostico');
+    function mensajeAudio(texto, falla = false) {
+        audioEstado.textContent = texto;
+        audioEstado.dataset.error = falla ? '1' : '0';
+    }
+
+    async function reproducirAudioRemoto() {
+        if (!active || incoming) return;
+        remoteAudio.autoplay = true;
+        remoteAudio.playsInline = true;
+        remoteAudio.muted = false;
+
+        // SimpleUser publica remoteMediaStream; puede llegar despues del evento de llamada.
+        const flujoSIP = phone?.remoteMediaStream;
+        if (!remoteAudio.srcObject && flujoSIP?.getAudioTracks?.().length) {
+            remoteAudio.srcObject = flujoSIP;
+        }
+        const pistas = remoteAudio.srcObject?.getAudioTracks?.() || [];
+        if (!pistas.length) {
+            mensajeAudio('La llamada SIP existe, pero aun no se recibe una pista remota de audio.', true);
+            return;
+        }
+        try {
+            await remoteAudio.play();
+            mensajeAudio('Reproduccion de audio habilitada. Si sigue mudo, revisa las estadisticas RTP/ICE.', false);
+        } catch (error) {
+            mensajeAudio(`El navegador bloqueo la reproduccion (${error?.name || 'error'}). Pulsa Activar audio.`, true);
+        }
+    }
+
+    function programarAudioRemoto() {
+        // SIP.js puede adjuntar las pistas unos instantes despues de onCallAnswered.
+        for (const milisegundos of [0, 500, 1600]) {
+            window.setTimeout(() => {
+                if (active && !incoming && ['connected', 'held'].includes(phase)) {
+                    void reproducirAudioRemoto();
+                }
+            }, milisegundos);
+        }
+    }
+
+    el('audio-activar').addEventListener('click', () => {
+        // La llamada a play() ocurre como consecuencia de una accion del usuario.
+        void reproducirAudioRemoto();
+    });
+
+    el('audio-bocinas').addEventListener('click', async () => {
+        try {
+            const ConstructorAudio = window.AudioContext || window.webkitAudioContext;
+            if (!ConstructorAudio) throw new Error('AudioContext no disponible');
+            const contexto = new ConstructorAudio();
+            await contexto.resume();
+            const oscilador = contexto.createOscillator();
+            const volumen = contexto.createGain();
+            oscilador.type = 'sine';
+            oscilador.frequency.value = 660;
+            volumen.gain.value = 0.035;
+            oscilador.connect(volumen).connect(contexto.destination);
+            oscilador.start();
+            oscilador.stop(contexto.currentTime + 0.35);
+            oscilador.onended = () => { void contexto.close().catch(() => {}); };
+            mensajeAudio('Prueba de bocinas enviada. Si no la escuchaste, revisa la salida predeterminada.', false);
+        } catch (error) {
+            mensajeAudio(`No se pudieron probar las bocinas: ${error?.name || error?.message}`, true);
+        }
+    });
+
+    el('audio-microfono').addEventListener('click', async () => {
+        if (active) {
+            mensajeAudio('Prueba el microfono cuando no haya una llamada activa.', true);
+            return;
+        }
+        const boton = el('audio-microfono');
+        boton.disabled = true;
+        let flujo = null;
+        let contexto = null;
+        try {
+            flujo = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+            const pista = flujo.getAudioTracks()[0];
+            if (!pista || pista.readyState !== 'live') throw new Error('No se obtuvo una pista activa');
+            const ConstructorAudio = window.AudioContext || window.webkitAudioContext;
+            if (!ConstructorAudio) throw new Error('No hay analizador de audio');
+            contexto = new ConstructorAudio();
+            await contexto.resume();
+            const fuente = contexto.createMediaStreamSource(flujo);
+            const analizador = contexto.createAnalyser();
+            analizador.fftSize = 1024;
+            fuente.connect(analizador);
+            const datos = new Float32Array(analizador.fftSize);
+            let maximo = 0;
+            mensajeAudio('Escuchando tu microfono durante 2 segundos (no se graba nada)...');
+            for (let i = 0; i < 12; i++) {
+                analizador.getFloatTimeDomainData(datos);
+                const rms = Math.sqrt(datos.reduce((s, x) => s + x * x, 0) / datos.length);
+                maximo = Math.max(maximo, rms);
+                await new Promise(resolve => window.setTimeout(resolve, 160));
+            }
+            mensajeAudio(maximo > 0.008
+                ? 'Microfono permitido; se detecto sonido. Esto aun no garantiza que SIP.js lo envie.'
+                : 'Microfono permitido, pero no se detecto voz. Revisa el dispositivo de entrada y habla al probar.', maximo <= 0.008);
+        } catch (error) {
+            mensajeAudio(`Microfono no disponible: ${error?.name || error?.message}`, true);
+        } finally {
+            flujo?.getTracks().forEach(pista => pista.stop());
+            if (contexto) await contexto.close().catch(() => {});
+            boton.disabled = false;
+        }
+    });
+
+    el('audio-resumen').addEventListener('click', () => {
+        // Solamente estados tecnicos; NO imprimir SDP, IP, telefono, contrasenas ni SIP headers.
+        const enviar = phone?.localAudioTrack;
+        const recibir = phone?.remoteAudioTrack;
+        const flujo = remoteAudio.srcObject;
+        const politica = document.permissionsPolicy || document.featurePolicy;
+        const permiso = nombre => {
+            try { return politica?.allowsFeature?.(nombre) ?? 'no consultable'; }
+            catch (_) { return 'no consultable'; }
+        };
+        const resumen = {
+            navegador: navigator.userAgent.match(/(Edg|Chrome|Firefox|Version)\/[0-9.]+/)?.[0] || 'otro',
+            sipRegistrado: registered, llamada: phase,
+            microfonoPista: enviar ? {estado: enviar.readyState, habilitada: enviar.enabled, muted: enviar.muted} : 'no asignada',
+            remotoPista: recibir ? {estado: recibir.readyState, habilitada: recibir.enabled, muted: recibir.muted} : 'no asignada',
+            reproductor: {tieneFlujo: !!flujo, pistasAudio: flujo?.getAudioTracks?.().length || 0,
+                pausado: remoteAudio.paused, silenciado: remoteAudio.muted,
+                volumen: remoteAudio.volume, readyState: remoteAudio.readyState},
+            iframe: window.self !== window.top,
+            politica: {microphone: permiso('microphone'), autoplay: permiso('autoplay')}
+        };
+        audioDiagnostico.hidden = false;
+        audioDiagnostico.textContent = JSON.stringify(resumen, null, 2);
+    });
 
     const updateButtons = () => {
         // Si SIP perdio el registro, permitir reintentar incluso con el objeto anterior presente.
@@ -332,7 +472,7 @@ if (root) {
             // Esto permite registrar la extensión sin intervención inicial.
             phone = new Web.SimpleUser(wss, {
                 aor: `sip:${extension}@${domain}`,
-                media: { remote: { audio: el('remote-audio') } },
+                media: { constraints: { audio: true, video: false }, remote: { audio: el('remote-audio') } },
                 reconnectionAttempts: 3,
                 reconnectionDelay: 4,
                 userAgentOptions: {
@@ -398,8 +538,9 @@ if (root) {
                         incoming = false;
                         changePhase('connected');
                         label('En curso · audio conectado mediante WebRTC.');
-                        notify('Llamada conectada. Audio mediante WebRTC.');
+                        notify('Llamada SIP establecida. Verificando audio WebRTC...');
                         if (!answeredAt) startClock();
+                        programarAudioRemoto();
                         updateButtons();
                     },
                     onCallHold: (value) => {

@@ -103,6 +103,14 @@
   @media (max-width:1060px){.webtel .wt-layout{grid-template-columns:1fr}.webtel .wt-call-panel{order:-1}.webtel .wt-call-stage{min-height:265px}.webtel .wt-left{grid-template-columns:1fr 1.15fr;align-items:start}.webtel .wt-connect{height:100%}}
   @media (max-width:710px){.webtel .wt-hero{align-items:flex-start;flex-wrap:wrap}.webtel .wt-registration{font-size:11px}.webtel .wt-left{grid-template-columns:1fr}.webtel .wt-pad{padding:16px}.webtel .wt-call-stage{min-height:258px}.webtel .wt-avatar-shell{width:120px;height:120px;margin-bottom:17px}.webtel .wt-avatar-shell svg{width:55px;height:55px}.webtel .wt-control button{width:54px;height:54px}.webtel .wt-control{min-width:62px}.webtel .wt-call-controls{gap:12px}.webtel .wt-bottom{padding:13px 16px}.webtel .wt-volume input{width:125px}}
   @media (prefers-reduced-motion: reduce){.webtel *{animation:none!important;transition:none!important}}
+  /* Diagnostico opt-in: no altera estilos globales ni SIP */
+  .webtel .wt-audio-diagnostic{border-top:1px solid #30425f;padding-top:12px}
+  .webtel .wt-audio-tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .webtel .wt-audio-tools button{border:1px solid #466080;background:#203653;border-radius:9px;padding:8px 10px;color:#e4f4ff;font-size:12px}
+  .webtel .wt-audio-tools button:hover{background:#28517b}
+  .webtel #webtel-audio-estado{font-size:12px;color:#8ce9d3;margin-top:10px}
+  .webtel #webtel-audio-estado[data-error="1"]{color:#fda4af}
+  .webtel #webtel-audio-diagnostico{padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #3c4f6b;border-radius:8px;background:#08182a;color:#b8d5f1;font-size:11px}
 </style>
 
 <div class="webtel" id="webtel-root"
@@ -211,7 +219,18 @@
         <div class="wt-volume"><svg class="wt-icon"><use href="#wt-ico-sound"/></svg><label for="webtel-volume">Volumen llamada</label><input id="webtel-volume" type="range" min="0" max="100" value="80" step="5"><output id="webtel-volume-value" for="webtel-volume">80%</output></div>
         <span class="wt-bottom-note">Conexión segura WSS · SIP.js</span>
       </div>
-      <details class="wt-audio-settings"><summary>Opciones de audio</summary><audio id="webtel-remote-audio" autoplay playsinline controls aria-label="Audio remoto de la llamada"></audio></details>
+      <details class="wt-audio-settings wt-audio-diagnostic">
+        <summary>Audio y diagnóstico (para llamadas sin sonido)</summary>
+        <div class="wt-audio-tools">
+          <button type="button" id="webtel-audio-activar">Activar audio de llamada</button>
+          <button type="button" id="webtel-audio-bocinas">Probar bocinas</button>
+          <button type="button" id="webtel-audio-microfono">Probar micrófono</button>
+          <button type="button" id="webtel-audio-resumen">Ver estado técnico</button>
+        </div>
+        <p id="webtel-audio-estado" role="status" aria-live="polite">Si la llamada conecta pero no se escucha, pulsa Activar audio.</p>
+        <pre id="webtel-audio-diagnostico" hidden></pre>
+        <audio id="webtel-remote-audio" autoplay playsinline controls aria-label="Audio remoto de la llamada"></audio>
+      </details>
     </section>
   </div>
 </div>

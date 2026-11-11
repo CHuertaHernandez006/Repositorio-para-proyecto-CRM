@@ -25,9 +25,9 @@
     };
 
     const styles = `
-      .cfp-menu-link{position:fixed!important;top:auto!important;left:22px!important;right:auto!important;bottom:22px!important;z-index:2147482000!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;box-sizing:border-box!important;width:244px!important;min-width:0!important;max-width:calc(100vw - 32px)!important;height:54px!important;margin:0!important;padding:11px 14px!important;transform:none!important;overflow:hidden!important;white-space:nowrap!important;border-radius:14px!important;border:1px solid #2781a7!important;background:linear-gradient(115deg,#103a54,#144c68)!important;color:#e8f7ff!important;text-decoration:none!important;box-shadow:0 12px 28px #0007!important;line-height:1.2!important}
+            .cfp-menu-link{position:static!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;z-index:auto!important;display:flex!important;align-items:center!important;gap:9px!important;box-sizing:border-box!important;width:calc(100% - 20px)!important;min-width:0!important;max-width:244px!important;min-height:46px!important;height:auto!important;margin:8px 10px!important;padding:10px 12px!important;transform:none!important;overflow:hidden!important;white-space:nowrap!important}
       .cfp-menu-link .cfp-menu-icon{width:19px;height:19px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-      .cfp-menu-link .cfp-menu-text{font:inherit;color:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+            .cfp-menu-link .cfp-menu-text{font:inherit;color:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       #cfp-window{--cfp-ink:#eaf2ff;--cfp-line:#304765;position:fixed;z-index:2147483000;
         right:18px;bottom:18px;width:min(1100px,calc(100vw - 36px));height:min(790px,calc(100dvh - 36px));
         background:#101b2e;border:1px solid #395675;border-radius:17px;box-shadow:0 22px 95px #000a;
@@ -55,7 +55,7 @@
       #cfp-window.cfp-minimized{height:54px!important;max-height:54px!important;width:min(340px,calc(100vw - 36px))!important}
       #cfp-window.cfp-minimized #cfp-body{height:0;min-height:0;flex:0 1 0;overflow:hidden}
       #cfp-window.cfp-minimized #cfp-bar{border-bottom:0}
-      @media(max-width:620px){.cfp-menu-link{left:12px!important;bottom:12px!important;width:224px!important;height:50px!important}#cfp-window{inset:8px!important;width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;right:auto!important;bottom:auto!important;border-radius:12px}
+      @media(max-width:620px){#cfp-window{inset:8px!important;width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;right:auto!important;bottom:auto!important;border-radius:12px}
         #cfp-window.cfp-minimized{inset:auto 8px 8px auto!important;width:min(320px,calc(100vw - 16px))!important;height:54px!important}
         .cfp-bar-button{width:37px;height:35px}}
     `;

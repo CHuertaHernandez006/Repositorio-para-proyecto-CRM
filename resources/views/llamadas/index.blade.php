@@ -949,11 +949,11 @@
 
                                         <div>
                                             <div class="client-name">
-                                                {{ $nombreCliente($llamada->cliente) }}
+                                                {{ $llamada->cliente ? $nombreCliente($llamada->cliente) : ($llamada->origen_registro === 'webrtc' ? 'Extensión / contacto sin identificar' : 'Cliente no disponible') }}
                                             </div>
 
                                             <div class="client-phone">
-                                                {{ $llamada->numero_origen ?: ($llamada->cliente->telefono_principal ?? 'Sin número') }}
+                                                {{ $llamada->tipo_llamada === 'saliente' ? ($llamada->numero_destino ?: 'Sin destino') : ($llamada->numero_origen ?: 'Origen desconocido') }}
                                             </div>
                                         </div>
                                     </div>
@@ -987,6 +987,9 @@
                                 <td>
                                     <span class="badge-call badge-status">
                                         {{ $llamada->estadoLlamada->nombre ?? 'Sin estado' }}
+                                        @if($llamada->origen_registro === 'webrtc')
+                                            <span title="Evento generado por el navegador; sin corroboración de CDR/CEL" style="display:block;font-size:10px;color:#93c5fd;margin-top:4px">WebRTC · provisional</span>
+                                        @endif
                                     </span>
                                 </td>
 

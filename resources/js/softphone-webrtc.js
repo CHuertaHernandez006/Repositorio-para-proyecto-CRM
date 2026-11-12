@@ -1,6 +1,6 @@
 import { Web } from 'sip.js';
 
-// Softphone SIP.js. No reemplaza AMI ni registra por si mismo el historial.
+// Softphone SIP.js. Registra eventos provisionales, no sustituye CDR/CEL de Asterisk.
 // Cualquier evento definitivo de llamadas debe provenir de Asterisk.
 // La clave SIP se solicita SOLO al backend autenticado, en memoria, y no se persiste.
 const root = document.getElementById('webtel-root');
@@ -27,6 +27,105 @@ if (root) {
     // Impide que eventos tardios de una conexion anterior cambien el estado actual.
     let versionConexion = 0;
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    // COMICenter: historial provisional WebRTC (sin atribuir eventos al CDR de Asterisk).
+    let historialSesion = null;
+    let historialCreacion = null;
+    let historialCola = Promise.resolve();
+    let historialLatido = null;
+    let motivoCierreHistorial = 'terminada';
+
+    async function solicitarHistorial(url, datos, keepalive = false) {
+        if (!url) throw new Error('Falta configurar la ruta de historial WebRTC.');
+        const respuesta = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            keepalive,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(datos),
+        });
+        const json = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok) {
+            throw new Error(json.message || `Historial HTTP ${respuesta.status}`);
+        }
+        return json;
+    }
+
+    async function iniciarRegistroHistorial(datos) {
+        if (historialSesion && historialCreacion) return historialCreacion;
+        const sesion = window.crypto?.randomUUID?.();
+        if (!sesion) throw new Error('Este navegador no admite identificadores seguros para el historial.');
+        historialSesion = sesion;
+        motivoCierreHistorial = 'terminada';
+        historialCola = Promise.resolve();
+        historialCreacion = solicitarHistorial(root.dataset.historyStartUrl, { sesion, ...datos });
+        try {
+            await historialCreacion;
+            if (historialSesion === sesion && !historialLatido) {
+                historialLatido = window.setInterval(() => {
+                    void enviarEventoHistorial('latido').catch(() => {
+                        // Se conserva la llamada; el historial podrá marcarse Sin confirmar.
+                    });
+                }, 30000);
+            }
+            return historialCreacion;
+        } catch (error) {
+            if (historialSesion === sesion) {
+                historialSesion = null;
+                historialCreacion = null;
+            }
+            throw error;
+        }
+    }
+
+    function enviarEventoHistorial(evento, keepalive = false) {
+        const sesion = historialSesion;
+        const pendiente = historialCreacion;
+        if (!sesion || !pendiente) return Promise.resolve();
+        // Preserva el orden contestada -> terminada incluso con latencia HTTP.
+        const tarea = historialCola.catch(() => {}).then(async () => {
+            await pendiente;
+            return solicitarHistorial(root.dataset.historyEventUrl, { sesion, evento }, keepalive);
+        });
+        historialCola = tarea;
+        return tarea;
+    }
+
+    function cerrarRegistroHistorial(motivo = 'terminada') {
+        if (!historialSesion) return;
+        const tarea = enviarEventoHistorial(motivo);
+        historialSesion = null;
+        historialCreacion = null;
+        if (historialLatido) window.clearInterval(historialLatido);
+        historialLatido = null;
+        void tarea.catch(error => console.warn('[COMICenter] El cierre WebRTC quedó pendiente:', error.message));
+    }
+
+    window.addEventListener('pagehide', () => {
+        if (!historialSesion || !active) return;
+        // sendBeacon es best-effort; la CSRF viaja como campo POST, nunca en URL.
+        // No declarar una llamada como finalizada cuando solo se cerró la pestaña.
+        try {
+            const body = new URLSearchParams({
+                _token: csrf, sesion: historialSesion, evento: 'interrumpida',
+            });
+            const blob = new Blob([body.toString()], {
+                type: 'application/x-www-form-urlencoded;charset=UTF-8',
+            });
+            if (!navigator.sendBeacon?.(root.dataset.historyEventUrl, blob)) {
+                void enviarEventoHistorial('interrumpida', true).catch(() => {});
+            }
+        } catch (_) {
+            void enviarEventoHistorial('interrumpida', true).catch(() => {});
+        }
+    });
+
     let clientesAbort = null;
     let clientesPagina = 1;
     let clientesUltimaPagina = 1;
@@ -405,6 +504,8 @@ if (root) {
 
     const onCallEnd = () => {
         if (!active && !['dialing', 'connected', 'held', 'incoming'].includes(phase)) return;
+        cerrarRegistroHistorial(motivoCierreHistorial);
+        motivoCierreHistorial = 'terminada';
         const endedFrom = phase;
         active = false;
         incoming = false;
@@ -490,7 +591,7 @@ if (root) {
                     onServerDisconnect: () => {
                         if (miConexion !== versionConexion) return;
                         registered = false;
-                        if (active) onCallEnd();
+                        if (active) { motivoCierreHistorial = 'interrumpida'; onCallEnd(); }
                         silenceTones();
                         notify('Se perdió la conexión WSS. Si no se recupera, pulsa Reintentar conexión.', true);
                         updateButtons();
@@ -525,6 +626,8 @@ if (root) {
                         currentContact = '';
                         const caller = String(phone?.session?.remoteIdentity?.uri?.user || '');
                         currentNumber = /^[+0-9]{3,20}$/.test(caller) ? caller : '';
+                        void iniciarRegistroHistorial({ sentido: 'entrante', origen: currentNumber, destino: extension })
+                            .catch(error => console.warn('[COMICenter] No se registró la llamada entrante:', error.message));
                         label('Llamada entrante. Pulsa Contestar o Rechazar.');
                         changePhase('incoming');
                         startRingtone('incoming');
@@ -537,6 +640,8 @@ if (root) {
                         active = true;
                         incoming = false;
                         changePhase('connected');
+                        void enviarEventoHistorial('contestada').catch(error =>
+                            console.warn('[COMICenter] Contestación sin registrar:', error.message));
                         label('En curso · audio conectado mediante WebRTC.');
                         notify('Llamada SIP establecida. Verificando audio WebRTC...');
                         if (!answeredAt) startClock();
@@ -649,6 +754,8 @@ if (root) {
             }
             currentNumber = destino;
             currentContact = data.cliente || contactName || (data.tipo_destino === 'interno' ? `Extensión ${destino}` : '');
+            // Crear el registro ANTES de iniciar SIP; si falla PostgreSQL no marcar.
+            await iniciarRegistroHistorial({ sentido: 'saliente', origen: extension, destino });
             label('Solicitando conexión SIP. El tono es local y no confirma que el destino esté timbrando.');
             changePhase('dialing');
             el('dialer').open = false;
@@ -657,6 +764,7 @@ if (root) {
             updateButtons();
             await phone.call(`sip:${destino}@${domain}`);
         } catch (error) {
+            cerrarRegistroHistorial('fallida');
             active = false;
             incoming = false;
             silenceTones();
@@ -684,6 +792,7 @@ if (root) {
     el('reject').addEventListener('click', async () => {
         if (!phone || !incoming) return;
         silenceTones();
+        motivoCierreHistorial = 'rechazada';
         try { await phone.decline(); onCallEnd(); }
         catch (error) { notify(`Error al rechazar: ${error?.message || ''}`, true); }
     });

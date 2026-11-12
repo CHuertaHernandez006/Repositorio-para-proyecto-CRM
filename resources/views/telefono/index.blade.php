@@ -122,6 +122,8 @@
      data-credentials-url="{{ route('telefono.credenciales') }}"
      data-clients-url="{{ route('telefono.clientes-disponibles') }}"
      data-validate-url="{{ route('telefono.validar-destino') }}"
+     data-history-start-url="{{ route('telefono.historial.iniciar') }}"
+     data-history-event-url="{{ route('telefono.historial.evento') }}"
      data-incoming-url="{{ route('telefono.buscar-entrante') }}"
      data-sip-estado="sin-registro" data-call-phase="idle">
   {{-- Iconos originales SVG; sin bibliotecas ni recursos externos. --}}

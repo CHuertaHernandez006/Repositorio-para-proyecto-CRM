@@ -34,6 +34,12 @@ Route::middleware(['auth', 'rol:3'])
         ])->name('buscar-entrante');
 
         // Credenciales SIP: límite individual por operario.
+        // Eventos de historial: autenticación de operario + CSRF + límite por usuario.
+        Route::post('/historial/iniciar', [\App\Http\Controllers\HistorialWebRtcController::class, 'iniciar'])
+            ->middleware('throttle:30,1')->name('historial.iniciar');
+        Route::post('/historial/evento', [\App\Http\Controllers\HistorialWebRtcController::class, 'evento'])
+            ->middleware('throttle:120,1')->name('historial.evento');
+
         Route::post('/credenciales', [
             TelefonoWebRtcController::class,
             'credenciales'

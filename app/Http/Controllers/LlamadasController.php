@@ -332,7 +332,8 @@ class LlamadasController extends Controller
         $llamadasEnCurso =
             (clone $baseKpis)
                 ->whereNull('fecha_fin')
-                ->count();
+                    ->where('id_estado_llamada', DB::table('estados_llamada')->where('nombre', 'En curso')->value('id_estado_llamada'))
+                    ->count();
 
         $llamadasFinalizadas =
             (clone $baseKpis)
@@ -894,7 +895,22 @@ class LlamadasController extends Controller
     ): Builder {
         $consulta =
             Llamada::query();
-        \App\Support\AccesoClientes::filtrarRelacion($consulta, $usuario, 'llamadas.id_cliente');
+        // Mantener filtro de clientes; también mostrar llamadas internas sin cliente
+        // únicamente dentro de la empresa y rol autorizados.
+        $consulta->where(function (Builder $grupo) use ($usuario) {
+            $grupo->where(function (Builder $conCliente) use ($usuario) {
+                $conCliente->whereNotNull('llamadas.id_cliente');
+                \App\Support\AccesoClientes::filtrarRelacion($conCliente, $usuario, 'llamadas.id_cliente');
+            })->orWhere(function (Builder $sinCliente) use ($usuario) {
+                $sinCliente->whereNull('llamadas.id_cliente');
+                if ((int) $usuario->id_rol !== 1) {
+                    $sinCliente->where('llamadas.id_empresa', $usuario->id_empresa);
+                }
+                if ((int) $usuario->id_rol === 3) {
+                    $sinCliente->where('llamadas.id_usuario', $usuario->id_usuario);
+                }
+            });
+        });
 
         if ((int) $usuario->id_rol === 1) {
             return $consulta;

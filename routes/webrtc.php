@@ -64,3 +64,6 @@ Route::middleware(['auth', 'rol:1,2', 'throttle:15,1'])
             'reintentar'
         ])->name('reintentar-web');
     });
+
+// COMICenter: piloto Twilio aislado. SIP.js y Asterisk no cambian.
+require __DIR__ . '/twilio_voice.php';

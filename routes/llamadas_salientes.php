@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LlamadaSalienteController;
 use App\Http\Controllers\LlamadasController;
+use App\Http\Controllers\AsteriskTelefoniaController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -93,6 +94,16 @@ Route::post(
 | ENDPOINT API PARA ASTERISK (Validación de Clientes)
 |--------------------------------------------------------------------------
 */
+
+Route::get(
+    '/asterisk/extensiones/autorizar',
+    [AsteriskTelefoniaController::class, 'autorizarInterna']
+)->name('asterisk.extensiones.autorizar');
+
+Route::get(
+    '/asterisk/extensiones/entrantes',
+    [AsteriskTelefoniaController::class, 'destinosEntrantes']
+)->name('asterisk.extensiones.entrantes');
 
 Route::get('/asterisk/clientes/validar', function (\Illuminate\Http\Request $request) {
 

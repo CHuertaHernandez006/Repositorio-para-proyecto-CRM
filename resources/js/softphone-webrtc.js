@@ -1,4 +1,5 @@
 import { Web } from 'sip.js';
+import { TwilioVoice } from './twilio-voice.js';
 
 // Softphone SIP.js. Registra eventos provisionales, no sustituye CDR/CEL de Asterisk.
 // Cualquier evento definitivo de llamadas debe provenir de Asterisk.
@@ -11,7 +12,6 @@ if (root) {
     const wss = root.dataset.wss?.trim() || '';
     const domain = root.dataset.domain?.trim() || '';
     // Lista de marcacion interna; no implica permiso para aprovisionar claves SIP.
-    const internas = new Set((root.dataset.internos || '').split(',').map(s => s.trim()).filter(Boolean));
     const enabled = root.dataset.enabled === '1';
     const configured = enabled && /^wss:\/\//i.test(wss) && domain && /^\d{3,6}$/.test(extension);
 
@@ -27,6 +27,10 @@ if (root) {
     // Impide que eventos tardios de una conexion anterior cambien el estado actual.
     let versionConexion = 0;
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const twilioEnabled = root.dataset.twilioEnabled === '1';
+    let twilioVoice = null;
+    let twilioRemoteAudio = null;
+    let activeProvider = null; // null | 'sip' | 'twilio'
 
     // COMICenter: historial provisional WebRTC (sin atribuir eventos al CDR de Asterisk).
     let historialSesion = null;
@@ -259,9 +263,10 @@ if (root) {
         const callActions = {
             answer: phase === 'incoming',
             reject: phase === 'incoming',
-            hangup: ['dialing','connected','held'].includes(phase),
-            mute: ['connected','held'].includes(phase),
-            hold: ['connected','held'].includes(phase),
+            hangup: ['dialing', 'connected', 'held'].includes(phase),
+            mute: ['connected', 'held'].includes(phase),
+            hold: activeProvider === 'sip'
+                && ['connected', 'held'].includes(phase),
         };
         for (const [button, visible] of Object.entries(callActions)) {
             el(`${button}-wrap`).hidden = !visible;
@@ -290,16 +295,27 @@ if (root) {
         if (details.open) el('destination').focus();
     });
     el('volume').addEventListener('input', () => {
-        remoteAudio.volume = Number(el('volume').value) / 100;
+        const volumen = Number(el('volume').value) / 100;
+        remoteAudio.volume = volumen;
+
+        if (twilioRemoteAudio) {
+            twilioRemoteAudio.volume = volumen;
+        }
+
         el('volume-value').textContent = `${el('volume').value}%`;
     });
+
     remoteAudio.volume = Number(el('volume').value) / 100;
     remoteAudio.addEventListener('loadedmetadata', () => {
-        if (active && !incoming) void reproducirAudioRemoto();
+        if (active && !incoming && activeProvider === 'sip') {
+            void reproducirAudioRemoto();
+        }
     });
     // Si Asterisk envía early media, no mezclarla con nuestro tono local de progreso.
     remoteAudio.addEventListener('playing', () => {
-        if (phase === 'dialing') silenceTones();
+        if (activeProvider === 'sip' && phase === 'dialing') {
+            silenceTones();
+        }
     });
     // Los navegadores pueden bloquear timbres entrantes hasta la primera interacción.
     document.addEventListener('pointerdown', () => { unlockAudio(); }, { once: true, passive: true });
@@ -340,7 +356,7 @@ if (root) {
     }
 
     async function reproducirAudioRemoto() {
-        if (!active || incoming) return;
+        if (!active || incoming || activeProvider !== 'sip') return;
         remoteAudio.autoplay = true;
         remoteAudio.playsInline = true;
         remoteAudio.muted = false;
@@ -374,8 +390,20 @@ if (root) {
         }
     }
 
-    el('audio-activar').addEventListener('click', () => {
-        // La llamada a play() ocurre como consecuencia de una accion del usuario.
+    el('audio-activar').addEventListener('click', async () => {
+        if (activeProvider === 'twilio' && twilioRemoteAudio) {
+            try {
+                await twilioRemoteAudio.play();
+                mensajeAudio('Reproducción de audio Twilio habilitada.', false);
+            } catch (error) {
+                mensajeAudio(
+                    `El navegador bloqueó el audio (${error?.name || 'error'}).`,
+                    true
+                );
+            }
+            return;
+        }
+
         void reproducirAudioRemoto();
     });
 
@@ -468,23 +496,67 @@ if (root) {
     });
 
     const updateButtons = () => {
-        // Si SIP perdio el registro, permitir reintentar incluso con el objeto anterior presente.
-        el('connect').disabled = !configured || registered || connecting || active;
-        el('disconnect').disabled = !phone || active || connecting;
-        el('call').disabled = !phone || !registered || active;
-        el('answer').disabled = !phone || !incoming || !active;
-        el('reject').disabled = !phone || !incoming || !active;
-        el('hangup').disabled = !phone || !active;
-        el('mute').disabled = !phone || !active || incoming || !['connected', 'held'].includes(phase);
-        el('hold').disabled = !phone || !active || incoming || !['connected', 'held'].includes(phase);
-        el('mute').setAttribute('aria-label', muted ? 'Activar micrófono' : 'Silenciar micrófono');
-        el('hold').setAttribute('aria-label', held ? 'Reanudar llamada' : 'Poner llamada en espera');
+        const sipDisponible = !!phone && registered;
+        const twilioDisponible = !!twilioVoice?.enabled;
+
+        const puedeSilenciar = active
+            && !incoming
+            && ['connected', 'held'].includes(phase)
+            && (
+                (activeProvider === 'sip' && !!phone)
+                || (activeProvider === 'twilio' && !!twilioVoice?.hasCall)
+            );
+
+        const puedeColgar = active && (
+            (activeProvider === 'sip' && !!phone)
+            || (activeProvider === 'twilio' && !!twilioVoice?.hasAttempt)
+        );
+
+        el('connect').disabled =
+            !configured || registered || connecting || active;
+
+        el('disconnect').disabled =
+            !phone || active || connecting;
+
+        // Se puede marcar externamente aunque SIP no esté registrado.
+        el('call').disabled =
+            active || !(sipDisponible || twilioDisponible);
+
+        el('answer').disabled =
+            !phone || !incoming || !active;
+
+        el('reject').disabled =
+            !phone || !incoming || !active;
+
+        el('hangup').disabled = !puedeColgar;
+        el('mute').disabled = !puedeSilenciar;
+
+        // El botón de espera solo funciona con llamadas SIP.
+        el('hold').disabled =
+            !puedeSilenciar || activeProvider !== 'sip';
+
+        el('mute').setAttribute(
+            'aria-label',
+            muted ? 'Activar micrófono' : 'Silenciar micrófono'
+        );
+
+        el('hold').setAttribute(
+            'aria-label',
+            held ? 'Reanudar llamada' : 'Poner llamada en espera'
+        );
+
+        // Las fichas del directorio representan clientes externos.
         root.querySelectorAll('.webtel-client-call').forEach(button => {
-            button.disabled = !phone || active || !registered;
+            button.disabled = !twilioDisponible || active;
         });
-        // Estado no sensible disponible para diagnostico en DevTools.
-        root.dataset.sipEstado = registered ? 'registrada' : (connecting ? 'conectando' : 'sin-registro');
+
+        root.dataset.sipEstado = registered
+            ? 'registrada'
+            : (connecting ? 'conectando' : 'sin-registro');
+
         root.dataset.llamadaEstado = active ? 'en-curso' : 'inactiva';
+        root.dataset.llamadaProveedor = activeProvider || 'ninguno';
+
         renderStage();
     };
 
@@ -503,37 +575,215 @@ if (root) {
     };
 
     const onCallEnd = () => {
-        if (!active && !['dialing', 'connected', 'held', 'incoming'].includes(phase)) return;
-        cerrarRegistroHistorial(motivoCierreHistorial);
+        if (!active
+            && !['dialing', 'connected', 'held', 'incoming'].includes(phase)) {
+            return;
+        }
+
+        const endedProvider = activeProvider;
+
+        if (endedProvider === 'sip') {
+            cerrarRegistroHistorial(motivoCierreHistorial);
+        }
+
         motivoCierreHistorial = 'terminada';
+
         const endedFrom = phase;
+
         active = false;
         incoming = false;
+        activeProvider = null;
+        twilioRemoteAudio = null;
+
         muted = false;
         held = false;
+
         ++incomingLookupVersion;
         silenceTones();
-        if (endedFrom === 'connected' || endedFrom === 'held') playTone([660, 520], 170, 0.022);
+
+        if (endedFrom === 'connected' || endedFrom === 'held') {
+            playTone([660, 520], 170, 0.022);
+        }
+
         clearClock();
+
         label('Llamada finalizada. Puedes iniciar otra cuando gustes.');
         changePhase('ended');
-        notify(registered ? 'Extensión registrada. Lista para otra llamada.' : 'No conectado.');
+
+        notify(
+            registered
+                ? 'Extensión registrada. Lista para otra llamada.'
+                : (twilioEnabled
+                    ? 'Twilio disponible para llamadas externas.'
+                    : 'No conectado.')
+        );
+
         updateButtons();
+
         finishUiTimer = window.setTimeout(() => {
             if (phase !== 'ended' || active) return;
+
             currentContact = '';
             currentNumber = '';
+
             label('Elige un cliente o marca un número para iniciar una llamada.');
             changePhase('idle');
         }, 4200);
     };
 
-    if (!configured) {
-        notify('Módulo pendiente: redes debe habilitar WebRTC y proporcionar WEBRTC_WSS_URL / WEBRTC_SIP_DOMAIN; el operario necesita extensión asignada.', true);
-    } else if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-        notify('El navegador necesita HTTPS y permiso de micrófono para usar WebRTC.', true);
+
+    function manejarEventoTwilio(evento) {
+        if (evento.type === 'attempt-created') {
+            if (activeProvider === 'twilio') {
+                updateButtons();
+            }
+            return;
+        }
+
+        if (evento.type === 'ended') {
+            if (activeProvider === 'twilio') {
+                onCallEnd();
+            }
+            return;
+        }
+
+        if ([
+            'device-error',
+            'token-error',
+            'call-error',
+        ].includes(evento.type)) {
+            notify(
+                `Twilio: ${evento.message || 'Error de conexión.'}`,
+                true
+            );
+
+            if (activeProvider === 'twilio') {
+                label('Problema de conexión con Twilio.');
+            }
+
+            return;
+        }
+
+        if (activeProvider !== 'twilio' || !active) {
+            return;
+        }
+
+        switch (evento.type) {
+            case 'ringing':
+                silenceTones();
+
+                label(evento.hasEarlyMedia
+                    ? 'Recibiendo audio de espera…'
+                    : 'El teléfono de destino está timbrando…');
+
+                notify(evento.hasEarlyMedia
+                    ? 'Twilio está enviando audio de espera.'
+                    : 'El teléfono de destino está timbrando.');
+                break;
+
+            case 'media-ready':
+                // La conexión de medios NO confirma que el cliente contestó.
+                label('Conexión de medios lista; esperando respuesta…');
+
+                notify(
+                    'Conexión con Twilio establecida. Esperando que conteste el cliente.'
+                );
+                break;
+
+            case 'audio-element':
+                if (evento.audioElement) {
+                    twilioRemoteAudio = evento.audioElement;
+
+                    twilioRemoteAudio.volume =
+                        Number(el('volume').value) / 100;
+
+                    twilioRemoteAudio.autoplay = true;
+                    twilioRemoteAudio.playsInline = true;
+
+                    void twilioRemoteAudio.play().catch(error => {
+                        mensajeAudio(
+                            `El navegador bloqueó el audio Twilio (${error?.name || 'error'}).`,
+                            true
+                        );
+                    });
+                }
+                break;
+
+            case 'answered':
+                incoming = false;
+                silenceTones();
+
+                changePhase('connected');
+
+                label('En curso · audio conectado mediante Twilio Voice.');
+
+                notify('El cliente contestó. Llamada externa establecida.');
+
+                if (!answeredAt) {
+                    startClock();
+                }
+
+                updateButtons();
+                break;
+
+            case 'media-disconnected':
+                label(
+                    'Conexión de medios finalizada; esperando confirmación del servidor…'
+                );
+
+                notify(
+                    'Twilio está confirmando la finalización de la llamada.'
+                );
+
+                updateButtons();
+                break;
+
+            case 'remote-cancel':
+                notify('La llamada externa fue cancelada por el proveedor.');
+                break;
+
+            case 'remote-reject':
+                notify('El destino rechazó la llamada.');
+                break;
+        }
+    }
+
+
+    if (twilioEnabled) {
+        twilioVoice = new TwilioVoice(
+            root,
+            csrf,
+            manejarEventoTwilio
+        );
+    }
+
+    if (!window.isSecureContext
+        || !navigator.mediaDevices?.getUserMedia) {
+
+        notify(
+            'El navegador necesita HTTPS y permiso de micrófono para usar WebRTC.',
+            true
+        );
+
+    } else if (!configured && twilioEnabled) {
+
+        notify(
+            'Twilio está habilitado para llamadas externas. Las llamadas internas requieren configurar WebRTC SIP.'
+        );
+
+    } else if (!configured) {
+
+        notify(
+            'Módulo pendiente: redes debe habilitar WebRTC y proporcionar WEBRTC_WSS_URL / WEBRTC_SIP_DOMAIN; el operario necesita extensión asignada.',
+            true
+        );
+
     } else {
-        notify('Conectando automáticamente a la extensión asignada…');
+
+        notify(
+            'Conectando automáticamente a la extensión asignada…'
+        );
+
     }
 
     async function conectar() {
@@ -586,40 +836,110 @@ if (root) {
                 delegate: {
                     onServerConnect: () => {
                         if (miConexion !== versionConexion) return;
-                        notify('WebSocket conectado. Registrando extensión…');
+                        if (activeProvider !== 'twilio') {
+                            notify('WebSocket conectado. Registrando extensión…');
+                        }
                     },
                     onServerDisconnect: () => {
                         if (miConexion !== versionConexion) return;
+
+                        const twilioEnCurso =
+                            active && activeProvider === 'twilio';
+
                         registered = false;
-                        if (active) { motivoCierreHistorial = 'interrumpida'; onCallEnd(); }
-                        silenceTones();
-                        notify('Se perdió la conexión WSS. Si no se recupera, pulsa Reintentar conexión.', true);
+
+                        if (active && activeProvider === 'sip') {
+                            motivoCierreHistorial = 'interrumpida';
+                            onCallEnd();
+                        }
+
+                        if (!twilioEnCurso) {
+                            silenceTones();
+                            notify(
+                                'Se perdió la conexión WSS. Si no se recupera, pulsa Reintentar conexión.',
+                                true
+                            );
+                        }
+
                         updateButtons();
                     },
                     onRegistered: () => {
                         if (miConexion !== versionConexion) return;
                         registered = true;
-                        notify(`Extensión ${extension} registrada en Asterisk.`);
+
+                        if (activeProvider !== 'twilio') {
+                            notify(`Extensión ${extension} registrada en Asterisk.`);
+                        }
+
                         updateButtons();
                     },
                     onUnregistered: () => {
                         if (miConexion !== versionConexion) return;
                         registered = false;
-                        if (phase === 'dialing' || phase === 'incoming') silenceTones();
-                        notify('La extensión perdió el registro SIP. Revisa si está abierta en otra pestaña y pulsa Reintentar conexión.', true);
-                        console.warn('[COMICenter WebRTC] Registro SIP perdido. Revisar contactos PJSIP y sesiones duplicadas.');
+
+                        if (activeProvider !== 'twilio') {
+                            if (phase === 'dialing' || phase === 'incoming') {
+                                silenceTones();
+                            }
+
+                            notify(
+                                'La extensión perdió el registro SIP. Revisa si está abierta en otra pestaña y pulsa Reintentar conexión.',
+                                true
+                            );
+
+                            console.warn(
+                                '[COMICenter WebRTC] Registro SIP perdido. Revisar contactos PJSIP y sesiones duplicadas.'
+                            );
+                        }
+
                         updateButtons();
                     },
                     onCallCreated: () => {
                         if (miConexion !== versionConexion) return;
-                        active = true;
-                        if (phase !== 'incoming' && phase !== 'connected') {
-                            changePhase('dialing');
-                        }
-                        updateButtons();
+
+                        // SIP.js dispara onCallCreated también para llamadas
+                        // entrantes, antes de ejecutar onCallReceived.
+                        // Diferimos el cambio de estado para distinguirlas.
+                        Promise.resolve().then(() => {
+                            if (miConexion !== versionConexion) return;
+
+                            // Si ya se identificó como entrante, no marcarla
+                            // como una llamada saliente activa.
+                            if (incoming || phase === 'incoming') {
+                                updateButtons();
+                                return;
+                            }
+
+                            activeProvider = 'sip';
+                            active = true;
+
+                            if (phase !== 'connected') {
+                                changePhase('dialing');
+                            }
+
+                            updateButtons();
+                        });
                     },
                     onCallReceived: () => {
                         if (miConexion !== versionConexion) return;
+
+                        if (active) {
+                            console.warn(
+                                '[COMICenter] Llamada SIP entrante rechazada: ya existe una llamada activa.',
+                                activeProvider
+                            );
+
+                            void phone?.decline().catch(error => {
+                                console.warn(
+                                    '[COMICenter] No se pudo rechazar la llamada entrante:',
+                                    error?.message
+                                );
+                            });
+
+                            return;
+                        }
+
+                        activeProvider = 'sip';
                         active = true;
                         incoming = true;
                         ++incomingLookupVersion;
@@ -637,6 +957,8 @@ if (root) {
                     },
                     onCallAnswered: () => {
                         if (miConexion !== versionConexion) return;
+                        if (active && activeProvider === 'twilio') return;
+                        activeProvider = 'sip';
                         active = true;
                         incoming = false;
                         changePhase('connected');
@@ -649,14 +971,17 @@ if (root) {
                         updateButtons();
                     },
                     onCallHold: (value) => {
-                        if (miConexion !== versionConexion || !active) return;
+                        if (miConexion !== versionConexion
+                            || !active
+                            || activeProvider !== 'sip') return;
                         held = !!value;
                         changePhase(held ? 'held' : 'connected');
                         label(held ? 'Llamada en espera' : 'En curso');
                         updateButtons();
                     },
                     onCallHangup: () => {
-                        if (miConexion !== versionConexion) return;
+                        if (miConexion !== versionConexion
+                            || activeProvider !== 'sip') return;
                         onCallEnd();
                     },
                 },
@@ -703,78 +1028,192 @@ if (root) {
     });
 
     async function iniciarLlamada(rawPhone, contactName = '') {
-        if (!phone || !registered || active) {
-            if (!registered) notify('La extensión aún no está registrada.', true);
-            return;
-        }
-        unlockAudio(); // Debe iniciarse dentro del clic para respetar restricciones del navegador.
+        if (active) return;
+
+        unlockAudio();
+
         const numero = (rawPhone || '').trim();
-        if (!numero) { notify('Selecciona un cliente o escribe una extensión permitida.', true); return; }
-        const digitos = numero.replace(/\D/g, '');
-        // Filtro UX: el backend valida además empresa, inventario y cliente.
-        if (/^\d{4}$/.test(numero) && !internas.has(numero)) {
-            notify('La extensión interna no está permitida.', true); return;
-        }
-        if (!/^\d{4}$/.test(numero) && (digitos.length < 10 || digitos.length > 15)) {
-            notify('Escribe una extensión interna de 4 dígitos autorizada o un número mexicano válido.', true);
+
+        if (!numero) {
+            notify(
+                'Selecciona un cliente o escribe una extensión permitida.',
+                true
+            );
             return;
         }
+
+        const digitos = numero.replace(/\D/g, '');
+
+        if (!/^\d{4}$/.test(numero)
+            && (digitos.length < 10 || digitos.length > 15)) {
+            notify(
+                'Escribe una extensión interna autorizada o un número mexicano válido.',
+                true
+            );
+            return;
+        }
+
         currentNumber = numero;
         currentContact = contactName;
         el('destination').value = numero;
-        active = true; // Evita solicitudes dobles durante la validación del backend.
+
+        active = true;
+        activeProvider = null;
+
         label('Verificando que el destino esté autorizado…');
         changePhase('validating');
         updateButtons();
+
         try {
             const respuesta = await fetch(root.dataset.validateUrl, {
-                method: 'POST', credentials: 'same-origin',
+                method: 'POST',
+                credentials: 'same-origin',
                 headers: {
-                    'Accept': 'application/json', 'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrf,
                 },
                 body: JSON.stringify({ telefono: numero }),
             });
+
             const data = await respuesta.json().catch(() => ({}));
-            if (!respuesta.ok) throw new Error(data.message || `Validación HTTP ${respuesta.status}`);
-            const destino = data.telefono_marcacion;
-            // Compatible tanto con el backend actual (sin tipo_destino y 10 dígitos)
-            // como con el clasificador interno/externo, si CRM lo incorpora después.
-            // Siempre exigimos validación exitosa de Laravel antes de usar SIP.js.
-            if (data.tipo_destino === 'interno') {
-                if (!/^\d{4}$/.test(destino) || !internas.has(destino)) {
-                    throw new Error('El backend devolvió una extensión interna no autorizada.');
-                }
-            } else if (data.tipo_destino === 'externo' || (!data.tipo_destino && /^\d{10}$/.test(destino))) {
-                if (!/^\d{10}$/.test(destino)) {
-                    throw new Error('El backend no devolvió un teléfono mexicano válido.');
-                }
-            } else {
-                throw new Error('El backend devolvió un destino o tipo de marcación desconocido.');
+
+            if (!respuesta.ok) {
+                throw new Error(
+                    data.message || `Validación HTTP ${respuesta.status}`
+                );
             }
+
+            const destino = String(data.telefono_marcacion ?? '');
+
+            const tipoDestino = data.tipo_destino
+                || (/^\d{10}$/.test(destino)
+                    ? 'externo'
+                    : (/^\d{4}$/.test(destino) ? 'interno' : ''));
+
+            if (tipoDestino === 'interno') {
+                // Laravel ya validó la extensión contra PostgreSQL.
+                if (!/^\d{4}$/.test(destino)) {
+                    throw new Error(
+                        'El backend devolvió una extensión interna inválida.'
+                    );
+                }
+
+                if (!phone || !registered) {
+                    throw new Error(
+                        'Tu extensión SIP todavía no está registrada en Asterisk.'
+                    );
+                }
+
+                activeProvider = 'sip';
+
+            } else if (tipoDestino === 'externo') {
+                if (!/^\d{10}$/.test(destino)) {
+                    throw new Error(
+                        'El backend no devolvió un teléfono mexicano válido.'
+                    );
+                }
+
+                if (!twilioVoice?.enabled) {
+                    throw new Error(
+                        'Twilio no está habilitado para llamadas externas.'
+                    );
+                }
+
+                if (!window.isSecureContext
+                    || !navigator.mediaDevices?.getUserMedia) {
+                    throw new Error(
+                        'Se necesita HTTPS y permiso de micrófono para llamar mediante Twilio.'
+                    );
+                }
+
+                activeProvider = 'twilio';
+
+            } else {
+                throw new Error(
+                    'El backend devolvió un destino o tipo de marcación desconocido.'
+                );
+            }
+
             currentNumber = destino;
-            currentContact = data.cliente || contactName || (data.tipo_destino === 'interno' ? `Extensión ${destino}` : '');
-            // Crear el registro ANTES de iniciar SIP; si falla PostgreSQL no marcar.
-            await iniciarRegistroHistorial({ sentido: 'saliente', origen: extension, destino });
-            label('Solicitando conexión SIP. El tono es local y no confirma que el destino esté timbrando.');
+
+            currentContact = data.cliente
+                || contactName
+                || (tipoDestino === 'interno'
+                    ? `Extensión ${destino}`
+                    : '');
+
+            label(tipoDestino === 'interno'
+                ? 'Solicitando conexión SIP…'
+                : 'Preparando llamada externa mediante Twilio…');
+
             changePhase('dialing');
             el('dialer').open = false;
             startRingtone('outgoing');
-            notify('Solicitando llamada SIP desde el navegador…');
             updateButtons();
-            await phone.call(`sip:${destino}@${domain}`);
+
+            if (activeProvider === 'sip') {
+                // El historial provisional corresponde únicamente a SIP.
+                await iniciarRegistroHistorial({
+                    sentido: 'saliente',
+                    origen: extension,
+                    destino,
+                });
+
+                notify('Solicitando llamada SIP desde el navegador…');
+
+                await phone.call(`sip:${destino}@${domain}`);
+
+            } else {
+                // Twilio registra la llamada en CRM mediante sus webhooks.
+                // No crear un segundo historial provisional.
+                notify('Solicitando llamada externa mediante Twilio…');
+
+                await twilioVoice.connect(destino);
+            }
+
         } catch (error) {
-            cerrarRegistroHistorial('fallida');
+            if (activeProvider === 'sip') {
+                cerrarRegistroHistorial('fallida');
+            }
+
+            if (activeProvider === 'twilio') {
+                try {
+                    twilioVoice?.abortPending();
+                } catch (_) {
+                    // Limpieza de intento fallido.
+                }
+            }
+
             active = false;
             incoming = false;
+            activeProvider = null;
+            muted = false;
+            held = false;
+
+            clearClock();
             silenceTones();
-            label('No se pudo iniciar la llamada. Puedes corregir el destino e intentarlo de nuevo.');
+
+            label(
+                'No se pudo iniciar la llamada. Puedes corregir el destino e intentarlo de nuevo.'
+            );
+
             changePhase('error');
-            notify(`No se inició la llamada: ${error?.message || 'Error desconocido'}`, true);
+
+            notify(
+                `No se inició la llamada: ${error?.message || 'Error desconocido'}`,
+                true
+            );
+
             finishUiTimer = window.setTimeout(() => {
-                if (phase === 'error' && !active) changePhase('idle');
+                if (phase === 'error' && !active) {
+                    changePhase('idle');
+                }
             }, 4200);
-        } finally { updateButtons(); }
+
+        } finally {
+            updateButtons();
+        }
     }
 
     el('call').addEventListener('click', () => iniciarLlamada(el('destination').value));
@@ -797,21 +1236,80 @@ if (root) {
         catch (error) { notify(`Error al rechazar: ${error?.message || ''}`, true); }
     });
     el('hangup').addEventListener('click', async () => {
-        if (!phone || !active) return;
+        if (!active) return;
+
         silenceTones();
-        try { await phone.hangup(); onCallEnd(); }
-        catch (error) { notify(`Error al colgar: ${error?.message || ''}`, true); }
-    });
-    el('mute').addEventListener('click', async () => {
-        if (!phone || !active || incoming) return;
+
         try {
-            if (muted) await phone.unmute(); else await phone.mute();
-            muted = !muted;
-            updateButtons();
-        } catch (error) { notify(`No se pudo cambiar el micrófono: ${error?.message || ''}`, true); }
+            if (activeProvider === 'twilio') {
+                twilioVoice.hangup();
+
+                label('Finalizando llamada externa…');
+
+                notify(
+                    'Solicitando a Twilio la finalización de la llamada.'
+                );
+
+                updateButtons();
+                return;
+            }
+
+            if (activeProvider !== 'sip' || !phone) {
+                return;
+            }
+
+            await phone.hangup();
+            onCallEnd();
+
+        } catch (error) {
+            notify(
+                `Error al colgar: ${error?.message || ''}`,
+                true
+            );
+        }
     });
+
+    el('mute').addEventListener('click', async () => {
+        if (!active || incoming) return;
+
+        try {
+            const nuevoEstado = !muted;
+
+            if (activeProvider === 'sip' && phone) {
+
+                if (nuevoEstado) {
+                    await phone.mute();
+                } else {
+                    await phone.unmute();
+                }
+
+            } else if (
+                activeProvider === 'twilio'
+                && twilioVoice?.hasCall
+            ) {
+
+                twilioVoice.mute(nuevoEstado);
+
+            } else {
+                return;
+            }
+
+            muted = nuevoEstado;
+            updateButtons();
+
+        } catch (error) {
+            notify(
+                `No se pudo cambiar el micrófono: ${error?.message || ''}`,
+                true
+            );
+        }
+    });
+
     el('hold').addEventListener('click', async () => {
-        if (!phone || !active || incoming) return;
+        if (!phone
+            || !active
+            || incoming
+            || activeProvider !== 'sip') return;
         try {
             const debePonerEnEspera = !held;
             if (debePonerEnEspera) await phone.hold(); else await phone.unhold();
@@ -821,17 +1319,38 @@ if (root) {
             updateButtons();
         } catch (error) { notify(`No se pudo cambiar la espera: ${error?.message || ''}`, true); }
     });
-    root.querySelectorAll('[data-webtel-digit]').forEach(button => button.addEventListener('click', async () => {
-        const digit = button.dataset.webtelDigit;
-        unlockAudio();
-        keyClick(digit);
-        if (active && !incoming && phone) {
-            try { await phone.sendDTMF(digit); }
-            catch (error) { notify(`DTMF no disponible: ${error?.message || ''}`, true); }
-        } else if (!active) {
-            el('destination').value += digit;
-        }
-    }));
+    root.querySelectorAll('[data-webtel-digit]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const digit = button.dataset.webtelDigit;
+
+            unlockAudio();
+            keyClick(digit);
+
+            if (active && !incoming) {
+                try {
+                    if (activeProvider === 'sip' && phone) {
+                        await phone.sendDTMF(digit);
+
+                    } else if (
+                        activeProvider === 'twilio'
+                        && twilioVoice?.hasCall
+                    ) {
+                        twilioVoice.sendDigits(digit);
+                    }
+
+                } catch (error) {
+                    notify(
+                        `DTMF no disponible: ${error?.message || ''}`,
+                        true
+                    );
+                }
+
+            } else if (!active) {
+                el('destination').value += digit;
+            }
+        });
+    });
+
     const listaClientes = el('clients-list');
     const botonMas = el('clients-more');
     const contador = el('clients-count');
@@ -870,7 +1389,7 @@ if (root) {
             boton.innerHTML = '<svg class="wt-icon" aria-hidden="true"><use href="#wt-ico-phone"></use></svg><span></span>';
             boton.querySelector('span').textContent = etiqueta === 'Principal' ? 'Llamar' : 'Secundario';
             boton.title = `Llamar al ${etiqueta.toLowerCase()} de ${cliente.nombre}`;
-            boton.disabled = !registered || active;
+            boton.disabled = !twilioEnabled || active;
             boton.addEventListener('click', () => iniciarLlamada(telefono, cliente.nombre || ''));
             botones.appendChild(boton);
         }

@@ -25,6 +25,7 @@ class TelefonoWebRtcController extends Controller
             'wssWebRtc' => (string) config('webrtc.wss_url', ''),
             'dominioWebRtc' => (string) config('webrtc.sip_domain', ''),
             'habilitadoWebRtc' => (bool) config('webrtc.enabled', false),
+            'twilioVoiceEnabled' => (bool) config('twilio_voice.enabled', false),
         ]);
     }
 
@@ -131,30 +132,73 @@ class TelefonoWebRtcController extends Controller
         ])->header('Cache-Control', 'private, no-store');
     }
 
-    /** La interfaz SOLO puede llamar a clientes del conjunto autorizado. */
+    /**
+     * Clasifica el destino y valida su autorización en el servidor.
+     * Las extensiones se consultan dinámicamente en el inventario Asterisk.
+     */
     public function validarDestino(Request $request): JsonResponse
     {
         $usuario = $request->user();
         $this->validarOperario($usuario);
 
-        $datos = $request->validate(['telefono' => ['required', 'string', 'max:40']]);
-        $telefono = $this->ultimosDiezDigitos($datos['telefono']);
+        $datos = $request->validate([
+            'telefono' => ['required', 'string', 'max:40'],
+        ]);
+
+        $entrada = trim($datos['telefono']);
+
+        // Destino interno: debe existir en el inventario activo y estar
+        // asignado a un operario activo de la misma empresa.
+        if (preg_match('/^\d{4}$/D', $entrada)) {
+            $asignada = DB::table('extensiones_asterisk as e')
+                ->join('usuarios as u', function ($join) {
+                    $join->on('u.id_empresa', '=', 'e.id_empresa')
+                        ->on('u.extension_asterisk', '=', 'e.extension');
+                })
+                ->where('e.id_empresa', (int) $usuario->id_empresa)
+                ->where('e.extension', $entrada)
+                ->where('e.activa', true)
+                ->where('u.id_rol', 3)
+                ->where('u.activo', true)
+                ->whereNull('u.deleted_at')
+                ->exists();
+
+            if (!$asignada) {
+                return $this->sinCache([
+                    'message' => 'La extensión interna no existe, no está activa o no está asignada.',
+                ], 404);
+            }
+
+            return $this->sinCache([
+                'tipo_destino' => 'interno',
+                'telefono_marcacion' => $entrada,
+                'id_cliente' => null,
+                'cliente' => null,
+            ]);
+        }
+
+        // Destino externo: debe corresponder a un teléfono de un cliente
+        // dentro del alcance autorizado del operario.
+        $telefono = $this->ultimosDiezDigitos($entrada);
+
         if (!$telefono) {
-            return response()->json([
-                'message' => 'Ingresa un numero mexicano valido de al menos 10 digitos.',
+            return $this->sinCache([
+                'message' => 'Ingresa una extensión de 4 dígitos o un teléfono mexicano válido.',
             ], 422);
         }
 
         $cliente = $this->clienteAutorizadoPorTelefono($usuario, $telefono);
+
         if (!$cliente) {
-            return response()->json([
-                'message' => 'El numero no corresponde a un cliente autorizado para tu operario.',
+            return $this->sinCache([
+                'message' => 'El número no corresponde a un cliente autorizado para tu operario.',
             ], 404);
         }
 
-        return response()->json([
+        return $this->sinCache([
+            'tipo_destino' => 'externo',
             'telefono_marcacion' => $telefono,
-            'id_cliente' => $cliente->id_cliente,
+            'id_cliente' => (int) $cliente->id_cliente,
             'cliente' => $this->nombreCliente($cliente),
         ]);
     }

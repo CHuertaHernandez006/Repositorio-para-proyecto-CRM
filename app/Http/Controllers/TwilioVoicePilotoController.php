@@ -25,7 +25,7 @@ class TwilioVoicePilotoController extends Controller
     {
         $this->operario($request);
         return view('telefono.twilio-prueba', [
-            'twilioPilotoActivo' => (bool) config('twilio_voice.pilot_enabled', false),
+            'twilioPilotoActivo' => (bool) config('twilio_voice.enabled', false),
         ]);
     }
 
@@ -68,12 +68,6 @@ class TwilioVoicePilotoController extends Controller
         }
         $nacional = $m[1];
         $e164 = '+52' . $nacional;
-
-        // Para evitar llamadas arbitrarias/costosas: lista explícita de números de prueba.
-        $permitidos = array_values(array_filter(array_map('trim', explode(',', (string) config('twilio_voice.pilot_allowlist', '')))));
-        if (!in_array($e164, $permitidos, true)) {
-            return $this->noCache(['message' => 'Este número no está habilitado para el piloto Twilio.'], 403);
-        }
 
         // Mismo alcance de "Mis clientes"; ningún número elegido por JS se confía directamente.
         $cliente = AccesoClientes::consulta($usuario)
@@ -307,7 +301,7 @@ class TwilioVoicePilotoController extends Controller
         $auth = (string) config('twilio_voice.auth_token', '');
         $cuenta = (string) config('twilio_voice.account_sid', '');
         $firma = (string) $request->header('X-Twilio-Signature', '');
-        abort_unless((bool) config('twilio_voice.pilot_enabled', false) && $auth !== ''
+        abort_unless((bool) config('twilio_voice.enabled', false) && $auth !== ''
             && $cuenta !== '' && $firma !== ''
             && hash_equals($cuenta, (string) $request->input('AccountSid', '')), 403);
 
@@ -326,8 +320,8 @@ class TwilioVoicePilotoController extends Controller
 
     private function configurado(): void
     {
-        abort_unless((bool) config('twilio_voice.pilot_enabled', false), 503, 'El piloto Twilio está deshabilitado.');
-        foreach (['account_sid', 'api_key_sid', 'api_key_secret', 'auth_token', 'twiml_app_sid', 'caller_id', 'webhook_base_url', 'pilot_allowlist'] as $campo) {
+        abort_unless((bool) config('twilio_voice.enabled', false), 503, 'El piloto Twilio está deshabilitado.');
+        foreach (['account_sid', 'api_key_sid', 'api_key_secret', 'auth_token', 'twiml_app_sid', 'caller_id', 'webhook_base_url'] as $campo) {
             abort_if(trim((string) config('twilio_voice.' . $campo, '')) === '', 503,
                 'Falta configuración del piloto Twilio: ' . $campo);
         }
@@ -360,7 +354,9 @@ class TwilioVoicePilotoController extends Controller
 
     private function xml(VoiceResponse $response)
     {
-        return response((string) $response, 200)->header('Content-Type', 'text/xml; charset=utf-8')
+        // Twilio requiere que la declaracion XML comience en el primer byte.
+        $body = ltrim((string) $response);
+        return response($body, 200)->header('Content-Type', 'text/xml; charset=utf-8')
             ->header('Cache-Control', 'no-store');
     }
 

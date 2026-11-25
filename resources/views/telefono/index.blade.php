@@ -118,13 +118,16 @@
      data-extension="{{ $extensionWebRtc }}"
      data-wss="{{ $wssWebRtc }}"
      data-domain="{{ $dominioWebRtc }}"
-     data-internos="{{ implode(',', config('webrtc.internal_extensions', [])) }}"
      data-credentials-url="{{ route('telefono.credenciales') }}"
      data-clients-url="{{ route('telefono.clientes-disponibles') }}"
      data-validate-url="{{ route('telefono.validar-destino') }}"
      data-history-start-url="{{ route('telefono.historial.iniciar') }}"
      data-history-event-url="{{ route('telefono.historial.evento') }}"
      data-incoming-url="{{ route('telefono.buscar-entrante') }}"
+     data-twilio-enabled="{{ $twilioVoiceEnabled ? '1' : '0' }}"
+     data-twilio-token-url="{{ route('telefono.twilio.token') }}"
+     data-twilio-prepare-url="{{ route('telefono.twilio.preparar') }}"
+     data-twilio-check-base-url="{{ url('/telefono/twilio/intentos') }}"
      data-sip-estado="sin-registro" data-call-phase="idle">
   {{-- Iconos originales SVG; sin bibliotecas ni recursos externos. --}}
   <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
